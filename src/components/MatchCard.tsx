@@ -31,8 +31,11 @@ const MatchCard = ({ match }: MatchCardProps) => {
   };
 
   return (
-    <Card className="p-4 hover:shadow-[var(--shadow-hover)] transition-all duration-200 bg-gradient-to-r from-card to-sport-light">
-      <div className="flex items-center justify-between">
+    <Card className="relative p-4 hover:shadow-[var(--shadow-hover)] transition-all duration-300 bg-gradient-to-r from-card to-sport-light border-l-4 border-l-transparent hover:border-l-sport-green group overflow-hidden">
+      {match.status === 'live' && (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-sport-green rounded-full animate-pulse shadow-[var(--live-pulse)]"></div>
+      )}
+      <div className="flex items-center justify-between relative z-10">
         <div className="flex items-center space-x-4 flex-1">
           {/* Home Team */}
           <div className="flex items-center space-x-2 flex-1">

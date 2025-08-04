@@ -47,25 +47,31 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-80 space-y-6">
+    <div className="w-80 space-y-6 sticky top-24">
       {/* Date Navigation */}
-      <Card className="p-4">
+      <Card className="p-5 bg-gradient-to-br from-card to-sport-light/30 border shadow-card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg text-foreground">Lundi</h2>
+          <h2 className="font-bold text-xl text-foreground">Lundi</h2>
           <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
               <Calendar className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-sport-blue/10 hover:text-sport-blue transition-all duration-300">
               <Filter className="w-4 h-4" />
             </Button>
           </div>
         </div>
         
-        <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
-          <button>←</button>
-          <span>4 août 2025</span>
-          <button>→</button>
+        <div className="flex items-center justify-center space-x-3 text-sm">
+          <button className="hover:text-sport-green transition-colors duration-300 p-1 rounded hover:bg-sport-green/10">
+            ←
+          </button>
+          <span className="font-medium bg-gradient-to-r from-sport-green to-sport-blue bg-clip-text text-transparent">
+            4 août 2025
+          </span>
+          <button className="hover:text-sport-green transition-colors duration-300 p-1 rounded hover:bg-sport-green/10">
+            →
+          </button>
         </div>
       </Card>
 

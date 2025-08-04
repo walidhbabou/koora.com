@@ -50,18 +50,25 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
       
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex gap-6">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex gap-8">
           {/* Sidebar */}
-          <Sidebar />
+          <div className="hidden lg:block">
+            <Sidebar />
+          </div>
           
           {/* Main Content */}
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-6">
-              <h1 className="text-2xl font-bold text-sport-dark">Actualités</h1>
+          <div className="flex-1 space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-sport-dark to-sport-green bg-clip-text text-transparent">
+                  Actualités Sport
+                </h1>
+                <p className="text-muted-foreground mt-1">Dernières nouvelles et résultats en direct</p>
+              </div>
             </div>
             
             {/* News Grid */}
