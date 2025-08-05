@@ -6,43 +6,43 @@ import MatchCard from "./MatchCard";
 const Sidebar = () => {
   const matches = [
     {
-      homeTeam: "Liverpool",
-      awayTeam: "A.Bilbao", 
+      homeTeam: "الأهلي",
+      awayTeam: "الزمالك", 
       homeScore: 3,
       awayScore: 0,
       time: "45:00",
       status: 'live' as const,
-      competition: "Première mi-temps"
+      competition: "الشوط الأول"
     },
     {
-      homeTeam: "Liverpool",
-      awayTeam: "A.Bilbao",
-      time: "08:00 pm",
+      homeTeam: "الهلال",
+      awayTeam: "النصر",
+      time: "08:00 مساءً",
       status: 'upcoming' as const,
-      competition: "Club Friendlies"
+      competition: "مباريات ودية"
     },
     {
-      homeTeam: "Sevilla",
-      awayTeam: "Al-Qadsiah",
-      time: "08:00 pm", 
+      homeTeam: "الاتحاد",
+      awayTeam: "الشباب",
+      time: "08:00 مساءً", 
       status: 'upcoming' as const,
-      competition: "Club Friendlies"
+      competition: "مباريات ودية"
     },
     {
-      homeTeam: "Al Ittihad",
-      awayTeam: "Uniao de Leiria",
-      time: "08:00 pm",
+      homeTeam: "التعاون",
+      awayTeam: "الفيصلي",
+      time: "08:00 مساءً",
       status: 'upcoming' as const,
-      competition: "Club Friendlies"
+      competition: "مباريات ودية"
     },
     {
-      homeTeam: "Daegu FC",
-      awayTeam: "Barcelona",
+      homeTeam: "الرجاء",
+      awayTeam: "الوداد",
       homeScore: 0,
       awayScore: 5,
-      time: "Terminé",
+      time: "انتهت",
       status: 'finished' as const,
-      competition: "Club Friendlies"
+      competition: "مباريات ودية"
     }
   ];
 
@@ -51,7 +51,7 @@ const Sidebar = () => {
       {/* Date Navigation */}
       <Card className="p-5 bg-gradient-to-br from-card to-sport-light/30 border shadow-card">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-xl text-foreground">Lundi</h2>
+          <h2 className="font-bold text-xl text-foreground">الاثنين</h2>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
               <Calendar className="w-4 h-4" />
@@ -67,7 +67,7 @@ const Sidebar = () => {
             ←
           </button>
           <span className="font-medium bg-gradient-to-r from-sport-green to-sport-blue bg-clip-text text-transparent">
-            4 août 2025
+            4 أغسطس 2025
           </span>
           <button className="hover:text-sport-green transition-colors duration-300 p-1 rounded hover:bg-sport-green/10">
             →
@@ -82,10 +82,10 @@ const Sidebar = () => {
             <div className="w-6 h-6 bg-gradient-to-br from-orange-400 to-red-500 rounded-sm flex items-center justify-center">
               <span className="text-white text-xs font-bold">CF</span>
             </div>
-            <h3 className="font-semibold text-foreground">Club Friendlies</h3>
+            <h3 className="font-semibold text-foreground">المباريات الودية</h3>
           </div>
           <Button variant="ghost" className="text-xs text-sport-blue">
-            Actualités
+            الأخبار
           </Button>
         </div>
         
@@ -102,18 +102,18 @@ const Sidebar = () => {
           <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded-sm flex items-center justify-center">
             <span className="text-white text-xs font-bold">SP</span>
           </div>
-          <h3 className="font-semibold text-foreground">Scottish Premiership</h3>
+          <h3 className="font-semibold text-foreground">الدوري الاسكتلندي الممتاز</h3>
         </div>
         
         <div className="flex space-x-4 text-sm">
           <button className="text-sport-blue font-medium border-b-2 border-sport-blue pb-1">
-            Buts
+            الأهداف
           </button>
           <button className="text-muted-foreground hover:text-sport-blue">
-            Classements
+            الترتيب
           </button>
           <button className="text-muted-foreground hover:text-sport-blue">
-            Actualités
+            الأخبار
           </button>
         </div>
       </Card>
