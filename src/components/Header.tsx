@@ -1,25 +1,23 @@
-import { Search, Settings, User, Menu, X } from "lucide-react";
+import { Search, Settings, Home, Trophy, Newspaper, BarChart3, Video, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
 
 const Header = () => {
   const location = useLocation();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const navItems = [
-    { name: "الرئيسية", path: "/" },
-    { name: "المباريات", path: "/matches" },
-    { name: "الأخبار", path: "/news" },
-    { name: "الترتيب", path: "/standings" },
-    { name: "الفيديوهات", path: "/videos" },
-    { name: "الانتقالات", path: "/transfers" }
+    { name: "الرئيسية", path: "/", icon: Home },
+    { name: "المباريات", path: "/matches", icon: Trophy },
+    { name: "الأخبار", path: "/news", icon: Newspaper },
+    { name: "الترتيب", path: "/standings", icon: BarChart3 },
+    { name: "الفيديوهات", path: "/videos", icon: Video },
+    { name: "الانتقالات", path: "/transfers", icon: ArrowLeftRight }
   ];
-
   return (
     <>
-      <header className="bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-all duration-300">
+      {/* Desktop Header */}
+      <header className="bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-all duration-300 hidden lg:block">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -35,13 +33,13 @@ const Header = () => {
                 <img 
                     src="/public/koora-logo/black-logo.png" 
                     alt="Koora Logo" 
-                    className="w-8 h-8 object-contain hidden sm:block"
+                    className="w-8 h-8 object-contain"
                   />
               </div>
             </div>
 
             {/* Navigation - Desktop */}
-            <nav className="hidden lg:flex space-x-8">
+            <nav className="flex space-x-8">
               {navItems.map((item, index) => (
                 <Link
                   key={item.name}
@@ -63,8 +61,8 @@ const Header = () => {
 
             {/* Actions */}
             <div className="flex items-center space-x-2">
-              {/* Search - Hidden on very small screens */}
-              <div className="relative hidden md:block">
+              {/* Search */}
+              <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
                   placeholder="ادخل للبحث..."
@@ -72,71 +70,90 @@ const Header = () => {
                 />
               </div>
               
-              {/* Login Button - Hidden on small screens */}
-              <Button variant="default" className="hidden sm:flex bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6">
+              {/* Login Button */}
+              <Button variant="default" className="bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6">
                 تسجيل الدخول
               </Button>
               
-              {/* Settings - Hidden on small screens */}
-              <Button variant="ghost" size="icon" className="hidden sm:flex hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
-                <Settings className="w-5 h-5" />
-              </Button>
-
-              {/* Mobile Menu Button */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="lg:hidden hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-background/95 backdrop-blur-md border-b border-border">
-          <div className="container mx-auto px-4 py-4">
-            {/* Mobile Search */}
-            <div className="relative mb-4 md:hidden">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="ادخل للبحث..."
-                className="pl-10 w-full bg-sport-light border-border"
-              />
-            </div>
-            
-            {/* Mobile Navigation */}
-            <nav className="space-y-2">
-              {navItems.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`block text-foreground hover:text-sport-green transition-all duration-300 font-medium py-3 px-4 rounded-lg hover:bg-sport-green/10 ${
-                    location.pathname === item.path ? 'text-sport-green bg-sport-green/10' : ''
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-            
-            {/* Mobile Actions */}
-            <div className="flex items-center space-x-2 mt-4 pt-4 border-t border-border">
-              <Button variant="default" className="flex-1 bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg transition-all duration-300 font-medium">
-                تسجيل الدخول
-              </Button>
+              {/* Settings */}
               <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
                 <Settings className="w-5 h-5" />
               </Button>
             </div>
           </div>
         </div>
-      )}
+      </header>
+
+      {/* Mobile Header - Only Logo and Search */}
+      <header className="bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-all duration-300 lg:hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-14">
+            {/* Logo */}
+            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 group cursor-pointer">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md">
+                  <img 
+                    src="/koora-logo/image.png" 
+                    alt="Koora Logo" 
+                    className="w-6 h-6 object-contain"
+                  />
+                </div>
+                <img 
+                    src="/public/koora-logo/black-logo.png" 
+                    alt="Koora Logo" 
+                    className="w-6 h-6 object-contain hidden sm:block"
+                  />
+              </div>
+            </div>
+
+            {/* Mobile Actions */}
+            <div className="flex items-center space-x-2">
+              {/* Search Icon */}
+              <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
+                <Search className="w-5 h-5" />
+              </Button>
+              
+              {/* Login Button - Compact */}
+              <Button variant="default" className="bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm">
+                دخول
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile Bottom Navigation - Similar to Image 1 */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
+        <div className="flex items-center justify-around px-2 py-2">
+          {navItems.slice(0, 6).map((item) => {
+            const IconComponent = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.name}
+                to={item.path}
+                className={`flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 ${
+                  isActive 
+                    ? 'text-sport-green' 
+                    : 'text-muted-foreground hover:text-sport-green'
+                }`}
+              >
+                <div className={`p-1.5 rounded-lg transition-all duration-300 ${
+                  isActive ? 'bg-sport-green/10' : 'hover:bg-sport-green/5'
+                }`}>
+                  <IconComponent className="w-5 h-5" />
+                </div>
+                <span className="text-xs mt-1 font-medium truncate w-full text-center leading-tight">
+                  {item.name}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Spacer for mobile bottom navigation */}
+      <div className="lg:hidden h-16"></div>
     </>
   );
 };

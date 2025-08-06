@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, TrendingUp, Clock, DollarSign, User, Calendar } from "lucide-react";
+import TeamsLogos from "@/components/TeamsLogos";
 
 const Transfers = () => {
   const latestTransfers = [
@@ -236,7 +237,7 @@ const Transfers = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
-      
+      <TeamsLogos />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           {/* Main Content */}

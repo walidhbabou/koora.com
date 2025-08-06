@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
 import NewsCard from "@/components/NewsCard";
 import { Card } from "@/components/ui/card";
@@ -82,7 +83,7 @@ const News = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
-      
+      <TeamsLogos />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           {/* Main Content */}
@@ -96,10 +97,7 @@ const News = () => {
               </div>
               
               <div className="flex gap-3">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input placeholder="البحث في الأخبار..." className="pl-10 w-64" />
-                </div>
+
                 <Button variant="outline" size="sm">
                   <Filter className="w-4 h-4 mr-2" />
                   تصفية

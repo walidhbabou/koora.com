@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trophy, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import TeamsLogos from "@/components/TeamsLogos";
 
 const Standings = () => {
   const premierLeagueStandings = [
@@ -155,7 +156,7 @@ const Standings = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
-      
+      <TeamsLogos />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           {/* Main Content */}

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Play, Clock, Eye, Heart, Share2, Filter } from "lucide-react";
+import TeamsLogos from "@/components/TeamsLogos";
 
 const Videos = () => {
   const featuredVideos = [
@@ -161,7 +162,7 @@ const Videos = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
-      
+      <TeamsLogos />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
           {/* Main Content */}
@@ -203,7 +204,7 @@ const Videos = () => {
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-sport-dark">الفيديوهات المميزة</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {featuredVideos.map((video) => (
                   <VideoCard key={video.id} video={video} size="large" />
                 ))}
@@ -214,7 +215,7 @@ const Videos = () => {
             <div className="space-y-6">
               <h2 className="text-xl font-bold text-sport-dark">أحدث الفيديوهات</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {latestVideos.map((video) => (
                   <VideoCard key={video.id} video={video} />
                 ))}

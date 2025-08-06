@@ -1,4 +1,5 @@
 import Header from "@/components/Header";
+import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
 import MatchCard from "@/components/MatchCard";
 import { Card } from "@/components/ui/card";
@@ -85,6 +86,7 @@ const Matches = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
+      <TeamsLogos />
       
       <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row gap-4 lg:gap-8">
