@@ -1,19 +1,118 @@
-import { Search, Settings, Home, Trophy, Newspaper, BarChart3, Video, ArrowLeftRight } from "lucide-react";
+import { Search, Home, Trophy, Newspaper, BarChart3, Video, ArrowLeftRight, Globe, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
+import { UserSettings } from "./UserSettings";
+import { useTranslation } from "../hooks/useTranslation";
+import { NAV_ITEMS, LanguageCode } from "../config/constants";
+import { useState } from "react";
 
 const Header = () => {
   const location = useLocation();
+  const { t, isRTL, direction, currentLanguage, setLanguage } = useTranslation();
+  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   
-  const navItems = [
-    { name: "الرئيسية", path: "/", icon: Home },
-    { name: "المباريات", path: "/matches", icon: Trophy },
-    { name: "الأخبار", path: "/news", icon: Newspaper },
-    { name: "الترتيب", path: "/standings", icon: BarChart3 },
-    { name: "الفيديوهات", path: "/videos", icon: Video },
-    { name: "الانتقالات", path: "/transfers", icon: ArrowLeftRight }
+  const languages = [
+    { code: 'fr' as LanguageCode, name: 'Français', flag: '🇫🇷' },
+    { code: 'ar' as LanguageCode, name: 'العربية', flag: '🇲🇦' },
+    { code: 'en' as LanguageCode, name: 'English', flag: '🇺🇸' }
   ];
+
+  const currentLang = languages.find(lang => lang.code === currentLanguage) || languages[0];
+  
+  const navItemsWithIcons = [
+    { ...NAV_ITEMS.find(item => item.key === 'home')!, icon: Home },
+    { ...NAV_ITEMS.find(item => item.key === 'matches')!, icon: Trophy },
+    { ...NAV_ITEMS.find(item => item.key === 'news')!, icon: Newspaper },
+    { ...NAV_ITEMS.find(item => item.key === 'standings')!, icon: BarChart3 },
+    { ...NAV_ITEMS.find(item => item.key === 'videos')!, icon: Video },
+    { ...NAV_ITEMS.find(item => item.key === 'transfers')!, icon: ArrowLeftRight }
+  ];
+
+  const ModernLanguageSwitcher = ({ mobile = false }) => (
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size={mobile ? "sm" : "default"}
+        onClick={() => setIsLanguageOpen(!isLanguageOpen)}
+        className={`
+          ${mobile ? 'h-8 px-2' : 'h-10 px-3'} 
+          bg-gradient-to-r from-sport-green/5 to-sport-blue/5 
+          hover:from-sport-green/10 hover:to-sport-blue/10 
+          border border-sport-green/20 
+          transition-all duration-300 
+          hover:shadow-lg hover:scale-105
+          text-foreground hover:text-sport-green
+          backdrop-blur-sm
+        `}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{currentLang.flag}</span>
+          {!mobile && (
+            <span className="font-medium text-sm">{currentLang.code.toUpperCase()}</span>
+          )}
+          <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isLanguageOpen ? 'rotate-180' : ''}`} />
+        </div>
+      </Button>
+
+      {/* Dropdown Menu */}
+      {isLanguageOpen && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setIsLanguageOpen(false)}
+          />
+          
+          {/* Menu */}
+          <div className={`
+            absolute ${mobile ? 'right-0' : isRTL ? 'left-0' : 'right-0'} 
+            top-full mt-2 z-50
+            bg-background/95 backdrop-blur-xl 
+            border border-border/50 
+            rounded-xl shadow-2xl 
+            overflow-hidden
+            min-w-[160px]
+            animate-in fade-in-0 zoom-in-95 duration-200
+          `}>
+            <div className="p-2">
+              {languages.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => {
+                    setLanguage(lang.code);
+                    setIsLanguageOpen(false);
+                  }}
+                  className={`
+                    w-full flex items-center gap-3 px-3 py-2.5 
+                    rounded-lg transition-all duration-200
+                    hover:bg-gradient-to-r hover:from-sport-green/10 hover:to-sport-blue/10
+                    hover:shadow-md
+                    ${currentLanguage === lang.code 
+                      ? 'bg-gradient-to-r from-sport-green/20 to-sport-blue/20 text-sport-green' 
+                      : 'text-foreground hover:text-sport-green'
+                    }
+                  `}
+                >
+                  <span className="text-lg">{lang.flag}</span>
+                  <div className="flex flex-col items-start flex-1 min-w-0">
+                    <span className="font-medium text-sm">{lang.name}</span>
+                    <span className="text-xs text-muted-foreground uppercase">
+                      {lang.code}
+                    </span>
+                  </div>
+                  {currentLanguage === lang.code && (
+                    <div className="w-2 h-2 bg-sport-green rounded-full animate-pulse" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
   return (
     <>
       {/* Desktop Header */}
@@ -31,26 +130,26 @@ const Header = () => {
                   />
                 </div>
                 <img 
-                    src="/public/koora-logo/black-logo.png" 
-                    alt="Koora Logo" 
-                    className="w-8 h-8 object-contain"
-                  />
+                  src="/public/koora-logo/black-logo.png" 
+                  alt="Koora Logo" 
+                  className="w-24 h-8 object-contain"
+                />
               </div>
             </div>
 
             {/* Navigation - Desktop */}
-            <nav className="flex space-x-8">
-              {navItems.map((item, index) => (
+            <nav className={`flex ${isRTL ? 'space-x-reverse' : ''} space-x-8`}>
+              {navItemsWithIcons.map((item) => (
                 <Link
-                  key={item.name}
-                  to={item.path}
+                  key={item.key}
+                  to={item.href}
                   className={`relative text-foreground hover:text-sport-green transition-all duration-300 font-medium py-2 px-1 group ${
-                    location.pathname === item.path ? 'text-sport-green' : ''
+                    location.pathname === item.href ? 'text-sport-green' : ''
                   }`}
                 >
-                  {item.name}
+                  {t(item.key)}
                   <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sport-green to-sport-blue transform transition-transform duration-300 ${
-                    location.pathname === item.path ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
+                    location.pathname === item.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                   }`}></span>
                 </Link>
               ))}
@@ -60,54 +159,58 @@ const Header = () => {
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center space-x-2">
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-3`}>
+              {/* Modern Language Switcher */}
+              <ModernLanguageSwitcher />
+              
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4`} />
                 <Input
-                  placeholder="ادخل للبحث..."
-                  className="pl-10 w-48 lg:w-64 bg-sport-light border-border"
+                  placeholder={t('search')}
+                  className={`${isRTL ? 'pr-10' : 'pl-10'} w-48 lg:w-64 bg-background/50 border-border/50 backdrop-blur-sm focus:bg-background focus:border-sport-green/50 transition-all duration-300`}
                 />
               </div>
               
               {/* Login Button */}
               <Button variant="default" className="bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6">
-                تسجيل الدخول
+                {t('login')}
               </Button>
               
-              {/* Settings */}
-              <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
-                <Settings className="w-5 h-5" />
-              </Button>
+              {/* User Settings */}
+              <UserSettings />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Header - Only Logo and Search */}
+      {/* Mobile Header */}
       <header className="bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-all duration-300 lg:hidden">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-3 group cursor-pointer">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md">
+              <div className="flex items-center space-x-2 group cursor-pointer">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sport-green to-sport-blue flex items-center justify-center shadow-md">
                   <img 
                     src="/koora-logo/image.png" 
                     alt="Koora Logo" 
-                    className="w-6 h-6 object-contain"
+                    className="w-6 h-6 object-contain filter brightness-0 invert"
                   />
                 </div>
                 <img 
-                    src="/public/koora-logo/black-logo.png" 
-                    alt="Koora Logo" 
-                    className="w-6 h-6 object-contain hidden sm:block"
-                  />
+                  src="/public/koora-logo/black-logo.png" 
+                  alt="Koora Logo" 
+                  className="w-16 h-6 object-contain hidden sm:block"
+                />
               </div>
             </div>
 
             {/* Mobile Actions */}
-            <div className="flex items-center space-x-2">
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-2`}>
+              {/* Modern Language Switcher - Mobile */}
+              <ModernLanguageSwitcher mobile={true} />
+              
               {/* Search Icon */}
               <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
                 <Search className="w-5 h-5" />
@@ -115,23 +218,23 @@ const Header = () => {
               
               {/* Login Button - Compact */}
               <Button variant="default" className="bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm">
-                دخول
+                {t('loginShort')}
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation - Similar to Image 1 */}
+      {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
         <div className="flex items-center justify-around px-2 py-2">
-          {navItems.slice(0, 6).map((item) => {
+          {navItemsWithIcons.slice(0, 6).map((item) => {
             const IconComponent = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.href;
             return (
               <Link
-                key={item.name}
-                to={item.path}
+                key={item.key}
+                to={item.href}
                 className={`flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 ${
                   isActive 
                     ? 'text-sport-green' 
@@ -144,7 +247,7 @@ const Header = () => {
                   <IconComponent className="w-5 h-5" />
                 </div>
                 <span className="text-xs mt-1 font-medium truncate w-full text-center leading-tight">
-                  {item.name}
+                  {t(item.key)}
                 </span>
               </Link>
             );
