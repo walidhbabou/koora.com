@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
 import NewsCard from "@/components/NewsCard";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const newsItems = [
@@ -91,6 +92,8 @@ const Index = () => {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };

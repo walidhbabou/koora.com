@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
 import NewsCard from "@/components/NewsCard";
+import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -198,6 +199,8 @@ const News = () => {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };

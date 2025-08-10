@@ -37,12 +37,12 @@ const Header = () => {
         onClick={() => setIsLanguageOpen(!isLanguageOpen)}
         className={`
           ${mobile ? 'h-8 px-2' : 'h-10 px-3'} 
-          bg-gradient-to-r from-sport-green/5 to-sport-blue/5 
-          hover:from-sport-green/10 hover:to-sport-blue/10 
-          border border-sport-green/20 
+          bg-gradient-to-r from-teal-50 to-teal-50 
+          hover:from-teal-100 hover:to-teal-100 
+          border border-teal-200 
           transition-all duration-300 
           hover:shadow-lg hover:scale-105
-          text-foreground hover:text-sport-green
+          text-foreground hover:text-teal-600
           backdrop-blur-sm
         `}
       >
@@ -86,11 +86,11 @@ const Header = () => {
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 
                     rounded-lg transition-all duration-200
-                    hover:bg-gradient-to-r hover:from-sport-green/10 hover:to-sport-blue/10
+                    hover:bg-gradient-to-r hover:from-teal-50 hover:to-teal-100
                     hover:shadow-md
                     ${currentLanguage === lang.code 
-                      ? 'bg-gradient-to-r from-sport-green/20 to-sport-blue/20 text-sport-green' 
-                      : 'text-foreground hover:text-sport-green'
+                      ? 'bg-gradient-to-r from-teal-100 to-teal-100 text-teal-600' 
+                      : 'text-foreground hover:text-teal-600'
                     }
                   `}
                 >
@@ -102,7 +102,7 @@ const Header = () => {
                     </span>
                   </div>
                   {currentLanguage === lang.code && (
-                    <div className="w-2 h-2 bg-sport-green rounded-full animate-pulse" />
+                    <div className="w-2 h-2 bg-teal-600 rounded-full animate-pulse" />
                   )}
                 </button>
               ))}
@@ -143,17 +143,17 @@ const Header = () => {
                 <Link
                   key={item.key}
                   to={item.href}
-                  className={`relative text-foreground hover:text-sport-green transition-all duration-300 font-medium py-2 px-1 group ${
-                    location.pathname === item.href ? 'text-sport-green' : ''
+                  className={`relative text-foreground hover:text-teal-600 transition-all duration-300 font-medium py-2 px-1 group ${
+                    location.pathname === item.href ? 'text-teal-600' : ''
                   }`}
                 >
                   {t(item.key)}
-                  <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-sport-green to-sport-blue transform transition-transform duration-300 ${
+                  <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-teal-600 transform transition-transform duration-300 ${
                     location.pathname === item.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                   }`}></span>
                 </Link>
               ))}
-              <button className="text-foreground hover:text-sport-green transition-colors">
+              <button className="text-foreground hover:text-teal-600 transition-colors">
                 <span className="text-2xl hover:scale-110 transition-transform duration-200">•••</span>
               </button>
             </nav>
@@ -168,12 +168,12 @@ const Header = () => {
                 <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4`} />
                 <Input
                   placeholder={t('search')}
-                  className={`${isRTL ? 'pr-10' : 'pl-10'} w-48 lg:w-64 bg-background/50 border-border/50 backdrop-blur-sm focus:bg-background focus:border-sport-green/50 transition-all duration-300`}
+                  className={`${isRTL ? 'pr-10' : 'pl-10'} w-48 lg:w-64 bg-background/50 border-border/50 backdrop-blur-sm focus:bg-background focus:border-teal-500 transition-all duration-300`}
                 />
               </div>
               
               {/* Login Button */}
-              <Button variant="default" className="bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6">
+              <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6 text-white">
                 {t('login')}
               </Button>
               
@@ -212,12 +212,12 @@ const Header = () => {
               <ModernLanguageSwitcher mobile={true} />
               
               {/* Search Icon */}
-              <Button variant="ghost" size="icon" className="hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300">
+              <Button variant="ghost" size="icon" className="hover:bg-teal-50 hover:text-teal-600 transition-all duration-300">
                 <Search className="w-5 h-5" />
               </Button>
               
               {/* Login Button - Compact */}
-              <Button variant="default" className="bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm">
+              <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm text-white">
                 {t('loginShort')}
               </Button>
             </div>
@@ -237,12 +237,12 @@ const Header = () => {
                 to={item.href}
                 className={`flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 ${
                   isActive 
-                    ? 'text-sport-green' 
-                    : 'text-muted-foreground hover:text-sport-green'
+                    ? 'text-teal-600' 
+                    : 'text-muted-foreground hover:text-teal-600'
                 }`}
               >
                 <div className={`p-1.5 rounded-lg transition-all duration-300 ${
-                  isActive ? 'bg-sport-green/10' : 'hover:bg-sport-green/5'
+                  isActive ? 'bg-teal-50' : 'hover:bg-teal-50'
                 }`}>
                   <IconComponent className="w-5 h-5" />
                 </div>

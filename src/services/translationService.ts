@@ -1,4 +1,4 @@
-import { translateAPI, TRANSLATE_CONFIG, MultilingualContent } from '../config/api';
+import { translateAPI, googleTranslateAPI, GOOGLE_TRANSLATE_CONFIG, MultilingualContent } from '../config/api';
 
 // Service de traduction spécialisé pour le contenu football
 export class FootballTranslationService {
@@ -19,7 +19,37 @@ export class FootballTranslationService {
     return btoa(text).substring(0, 50); // Base64 tronqué pour éviter les clés trop longues
   }
   
-  // Traduire le contenu d'actualités
+  // Traduire le contenu d'actualités avec Google Translate
+  async translateNewsContentFast(title: string, summary: string, content?: string): Promise<MultilingualContent> {
+    const cacheKey = this.getCacheKey(title + summary);
+    
+    if (this.translationCache.has(cacheKey)) {
+      return this.translationCache.get(cacheKey)!;
+    }
+    
+    try {
+      // Utiliser Google Translate pour une traduction plus rapide
+      const textsToTranslate = content ? [title, summary, content] : [title, summary];
+      const translatedTexts = await googleTranslateAPI.translateBatch(textsToTranslate, 'auto', 'ar');
+      
+      const [titleAr, summaryAr, contentAr] = translatedTexts;
+      
+      const result: MultilingualContent = {
+        french: `${title}\n\n${summary}${content ? '\n\n' + content : ''}`,
+        arabic: `${titleAr}\n\n${summaryAr}${contentAr ? '\n\n' + contentAr : ''}`,
+        original: `${title}\n\n${summary}${content ? '\n\n' + content : ''}`
+      };
+      
+      this.translationCache.set(cacheKey, result);
+      return result;
+    } catch (error) {
+      console.error('Fast translation failed, falling back to standard translation:', error);
+      // Fallback vers la méthode standard
+      return this.translateNewsContent(title, summary, content);
+    }
+  }
+  
+  // Traduire le contenu d'actualités (méthode originale avec l'API hybride)
   async translateNewsContent(title: string, summary: string, content?: string): Promise<MultilingualContent> {
     const cacheKey = this.getCacheKey(title + summary);
     
@@ -53,7 +83,32 @@ export class FootballTranslationService {
     }
   }
   
-  // Traduire les noms d'équipes et joueurs (avec cache)
+  // Traduire les noms d'équipes et joueurs avec Google Translate (plus rapide)
+  async translateTeamNameFast(teamName: string): Promise<MultilingualContent> {
+    const cacheKey = this.getCacheKey(`team_${teamName}`);
+    
+    if (this.translationCache.has(cacheKey)) {
+      return this.translationCache.get(cacheKey)!;
+    }
+    
+    try {
+      const arabicName = await googleTranslateAPI.translateToArabic(teamName);
+      
+      const result: MultilingualContent = {
+        french: teamName,
+        arabic: arabicName,
+        original: teamName
+      };
+      
+      this.translationCache.set(cacheKey, result);
+      return result;
+    } catch (error) {
+      console.error('Fast team name translation failed, falling back:', error);
+      return this.translateTeamName(teamName);
+    }
+  }
+  
+  // Traduire les noms d'équipes et joueurs (méthode originale avec cache)
   async translateTeamName(teamName: string): Promise<MultilingualContent> {
     const cacheKey = this.getCacheKey(`team_${teamName}`);
     
@@ -127,8 +182,8 @@ export class FootballTranslationService {
     };
     
     return commonDescriptions[description] || {
-      french: await translateAPI.translateToFrench(description),
-      arabic: await translateAPI.translateToArabic(description),
+      french: await googleTranslateAPI.translateToFrench(description),
+      arabic: await googleTranslateAPI.translateToArabic(description),
       original: description
     };
   }
@@ -145,7 +200,7 @@ export class FootballTranslationService {
     
     return transferTypes[transferType.toLowerCase()] || {
       french: transferType,
-      arabic: await translateAPI.translateToArabic(transferType),
+      arabic: await googleTranslateAPI.translateToArabic(transferType),
       original: transferType
     };
   }
@@ -159,6 +214,38 @@ export class FootballTranslationService {
   getCacheSize(): number {
     return this.translationCache.size;
   }
+  
+  // Nouvelles méthodes utilisant Google Translate directement
+  async quickTranslateToArabic(text: string): Promise<string> {
+    return googleTranslateAPI.translateToArabic(text);
+  }
+  
+  async quickTranslateToFrench(text: string): Promise<string> {
+    return googleTranslateAPI.translateToFrench(text);
+  }
+  
+  // Traduction en lot pour les listes (équipes, joueurs, etc.)
+  async translateBatchToArabic(texts: string[]): Promise<string[]> {
+    return googleTranslateAPI.translateBatch(texts, 'auto', 'ar');
+  }
+  
+  async translateBatchToFrench(texts: string[]): Promise<string[]> {
+    return googleTranslateAPI.translateBatch(texts, 'auto', 'fr');
+  }
+  
+  // Obtenir les statistiques de traduction
+  getTranslationStats() {
+    return {
+      cacheSize: this.getCacheSize(),
+      googleStats: googleTranslateAPI.getCacheStats()
+    };
+  }
+  
+  // Nettoyer tous les caches
+  clearAllCaches(): void {
+    this.clearCache();
+    googleTranslateAPI.clearCache();
+  }
 }
 
 // Instance singleton
@@ -167,12 +254,25 @@ export const footballTranslationService = FootballTranslationService.getInstance
 // Hook personnalisé pour React
 export const useFootballTranslation = () => {
   return {
+    // Méthodes rapides avec Google Translate
+    translateNewsFast: footballTranslationService.translateNewsContentFast.bind(footballTranslationService),
+    translateTeamFast: footballTranslationService.translateTeamNameFast.bind(footballTranslationService),
+    quickTranslateToArabic: footballTranslationService.quickTranslateToArabic.bind(footballTranslationService),
+    quickTranslateToFrench: footballTranslationService.quickTranslateToFrench.bind(footballTranslationService),
+    translateBatchToArabic: footballTranslationService.translateBatchToArabic.bind(footballTranslationService),
+    translateBatchToFrench: footballTranslationService.translateBatchToFrench.bind(footballTranslationService),
+    
+    // Méthodes originales (avec fallback)
     translateNews: footballTranslationService.translateNewsContent.bind(footballTranslationService),
     translateTeam: footballTranslationService.translateTeamName.bind(footballTranslationService),
     translateStatus: footballTranslationService.translateMatchStatus.bind(footballTranslationService),
     translateStanding: footballTranslationService.translateStandingDescription.bind(footballTranslationService),
     translateTransfer: footballTranslationService.translateTransferType.bind(footballTranslationService),
+    
+    // Gestion du cache
     clearCache: footballTranslationService.clearCache.bind(footballTranslationService),
-    getCacheSize: footballTranslationService.getCacheSize.bind(footballTranslationService)
+    clearAllCaches: footballTranslationService.clearAllCaches.bind(footballTranslationService),
+    getCacheSize: footballTranslationService.getCacheSize.bind(footballTranslationService),
+    getStats: footballTranslationService.getTranslationStats.bind(footballTranslationService)
   };
 };

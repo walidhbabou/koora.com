@@ -11,6 +11,7 @@ import Standings from "./pages/Standings";
 import Videos from "./pages/Videos";
 import Transfers from "./pages/Transfers";
 import LanguageTest from "./pages/LanguageTest";
+import TranslationDemo from "./pages/TranslationDemo";
 import NotFound from "./pages/NotFound";
 
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/videos" element={<Videos />} />
             <Route path="/transfers" element={<Transfers />} />
             <Route path="/language-test" element={<LanguageTest />} />
+            <Route path="/translation-demo" element={<TranslationDemo />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

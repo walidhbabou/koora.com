@@ -38,6 +38,19 @@ export const TRANSLATIONS = {
     videos: 'الفيديوهات',
     transfers: 'الانتقالات',
     
+    // Tournaments and Championships page
+    tournaments: 'البطولات',
+    standingsDescription: 'جداول ترتيب البطولات الأوروبية والعربية - الموسم {version}',
+    searchTournament: 'ابحث عن بطولة...',
+    active: 'نشط',
+    teams: 'الفرق',
+    season: 'الموسم',
+    matchday: 'الجولة',
+    viewStandings: 'عرض الترتيب',
+    viewResults: 'عرض النتائج',
+    featuredTournaments: 'البطولات المميزة',
+    countries: 'الدول',
+    
     // Statuts des matchs
     live: 'مباشر',
     upcoming: 'قادم',
@@ -138,6 +151,19 @@ export const TRANSLATIONS = {
     videos: 'Vidéos',
     transfers: 'Transferts',
     
+    // Tournaments and Championships page
+    tournaments: 'Tournois',
+    standingsDescription: 'Classements des championnats européens et arabes - Saison {version}',
+    searchTournament: 'Rechercher un tournoi...',
+    active: 'Actif',
+    teams: 'Équipes',
+    season: 'Saison',
+    matchday: 'Journée',
+    viewStandings: 'Voir le classement',
+    viewResults: 'Voir les résultats',
+    featuredTournaments: 'Tournois en vedette',
+    countries: 'Pays',
+    
     // Statuts des matchs
     live: 'En direct',
     upcoming: 'À venir',
@@ -237,6 +263,19 @@ export const TRANSLATIONS = {
     standings: 'Standings',
     videos: 'Videos',
     transfers: 'Transfers',
+    
+    // Tournaments and Championships page
+    tournaments: 'Tournaments',
+    standingsDescription: 'European and Arab championship standings - Season {version}',
+    searchTournament: 'Search for a tournament...',
+    active: 'Active',
+    teams: 'Teams',
+    season: 'Season',
+    matchday: 'Matchday',
+    viewStandings: 'View Standings',
+    viewResults: 'View Results',
+    featuredTournaments: 'Featured Tournaments',
+    countries: 'Countries',
     
     // Match statuses
     live: 'Live',
