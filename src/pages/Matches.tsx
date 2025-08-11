@@ -20,7 +20,8 @@ import MatchHeader from "@/components/MatchHeader";
 const AsyncMatchRow = ({ match }: { match: unknown }) => {
   const { currentLanguage } = useTranslation();
   const [translated, setTranslated] = useState<any>(null);
-  
+  const [showModal, setShowModal] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     
@@ -107,7 +108,30 @@ const AsyncMatchRow = ({ match }: { match: unknown }) => {
   }, [match, currentLanguage]);
 
   if (!translated) return <div className="py-4 text-center text-xs text-muted-foreground">Loading...</div>;
-  return <MatchRow match={translated} />;
+  return (
+    <>
+      <div onClick={() => setShowModal(true)} style={{cursor: 'pointer'}}>
+        <MatchRow match={translated} />
+      </div>
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 min-w-[300px] max-w-[90vw] shadow-lg">
+            <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowModal(false)}>
+              ×
+            </button>
+            <div className="flex flex-col items-center gap-2">
+              <span className="text-lg font-bold mb-2">تفاصيل المباراة</span>
+              <div className="flex justify-center gap-4 text-xs text-muted-foreground">
+                <span>الهدافون</span>
+                <span>الترتيب</span>
+                <span>...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
 
 const Matches = () => {

@@ -1,4 +1,5 @@
 import { Clock, Play } from "lucide-react";
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +20,7 @@ interface MatchCardProps {
 }
 
 const MatchCard = ({ match }: MatchCardProps) => {
+  const [showDetails, setShowDetails] = useState(false);
   const getStatusColor = () => {
     switch (match.status) {
       case 'live':
@@ -33,7 +35,8 @@ const MatchCard = ({ match }: MatchCardProps) => {
   };
 
   return (
-    <Card className="relative p-3 sm:p-4 hover:shadow-[var(--shadow-hover)] transition-all duration-300 bg-gradient-to-r from-card to-sport-light border-l-4 border-l-transparent hover:border-l-sport-green group overflow-hidden">
+    <Card className="relative p-3 sm:p-4 hover:shadow-[var(--shadow-hover)] transition-all duration-300 bg-gradient-to-r from-card to-sport-light border-l-4 border-l-transparent hover:border-l-sport-green group overflow-hidden"
+      onClick={() => setShowDetails(true)}>
       {match.status === 'live' && (
         <div className="absolute -top-1 -right-1 w-3 h-3 bg-sport-green rounded-full animate-pulse shadow-[var(--live-pulse)]"></div>
       )}
@@ -116,6 +119,7 @@ const MatchCard = ({ match }: MatchCardProps) => {
       <div className="mt-2 text-xs text-muted-foreground text-center">
         {match.competition}
       </div>
+      
     </Card>
   );
 };

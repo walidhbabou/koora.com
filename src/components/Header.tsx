@@ -13,9 +13,9 @@ const Header = () => {
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   
   const languages = [
-    { code: 'fr' as LanguageCode, name: 'Français', flag: '🇫🇷' },
+    //{ code: 'fr' as LanguageCode, name: 'Français', flag: '🇫🇷' },
     { code: 'ar' as LanguageCode, name: 'العربية', flag: '🇲🇦' },
-    { code: 'en' as LanguageCode, name: 'English', flag: '🇺🇸' }
+    //{ code: 'en' as LanguageCode, name: 'English', flag: '🇺🇸' }
   ];
 
   const currentLang = languages.find(lang => lang.code === currentLanguage) || languages[0];
@@ -25,7 +25,7 @@ const Header = () => {
     { ...NAV_ITEMS.find(item => item.key === 'matches')!, icon: Trophy },
     { ...NAV_ITEMS.find(item => item.key === 'news')!, icon: Newspaper },
     { ...NAV_ITEMS.find(item => item.key === 'standings')!, icon: BarChart3 },
-    { ...NAV_ITEMS.find(item => item.key === 'videos')!, icon: Video },
+    //{ ...NAV_ITEMS.find(item => item.key === 'videos')!, icon: Video },
     { ...NAV_ITEMS.find(item => item.key === 'transfers')!, icon: ArrowLeftRight }
   ];
 

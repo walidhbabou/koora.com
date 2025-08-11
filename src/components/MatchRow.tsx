@@ -117,18 +117,7 @@ const MatchRow: React.FC<MatchRowProps> = ({ match }) => {
         </div>
       </div>
 
-      {/* Actions - Hidden on mobile, visible on larger screens */}
-      <div className="flex-shrink-0 hidden lg:flex">
-        <div className="flex gap-1 text-gray-400">
-          <button className="hover:text-gray-600 text-xs px-2 py-1 transition-colors">
-            {currentLanguage === 'ar' ? 'الهدافون' : 'Buteurs'}
-          </button>
-          <button className="hover:text-gray-600 text-xs px-2 py-1 transition-colors">
-            {currentLanguage === 'ar' ? 'الترتيب' : 'Classement'}
-          </button>
-          <button className="hover:text-gray-600 text-xs px-2 py-1 transition-colors">...</button>
-        </div>
-      </div>
+      
     </div>
   );
 };
