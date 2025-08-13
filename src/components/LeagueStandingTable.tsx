@@ -247,15 +247,15 @@ const LeagueStandingTable = ({
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-800 dark:to-purple-900 p-4 rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={leagueLogo} alt={leagueName} className="w-10 h-10 bg-white rounded-full p-1" />
+            <img src={leagueLogo} alt={leagueName} className="w-12 h-12 sm:w-10 sm:h-10 bg-white rounded-full p-1 flex-shrink-0" />
             <div>
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-base sm:text-lg font-bold text-white">
                 {currentLanguage === 'ar' 
                   ? getArabicLeagueName(leagueName)
                   : leagueName
                 }
               </h3>
-              <p className="text-blue-100 text-sm">{flag} {country}</p>
+              <p className="text-blue-100 text-xs sm:text-sm">{flag} {country}</p>
             </div>
           </div>
         </div>
@@ -296,9 +296,9 @@ const LeagueStandingTable = ({
                 <div className="bg-gray-100 dark:bg-[#23262f] p-3 border-b border-gray-200 dark:border-gray-700">
                   <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
                     <div className="col-span-1 text-center">#</div>
-                    <div className="col-span-5">{currentLanguage === 'ar' ? 'الفريق' : 'Équipe'}</div>
+                    <div className="col-span-6 sm:col-span-5">{currentLanguage === 'ar' ? 'الفريق' : 'Équipe'}</div>
                     <div className="col-span-1 text-center hidden sm:block">{currentLanguage === 'ar' ? 'ل' : 'J'}</div>
-                    <div className="col-span-1 text-center">{currentLanguage === 'ar' ? 'نقاط' : 'Pts'}</div>
+                    <div className="col-span-2 sm:col-span-1 text-center">{currentLanguage === 'ar' ? 'نقاط' : 'Pts'}</div>
                     <div className="col-span-1 text-center hidden md:block">{currentLanguage === 'ar' ? 'الفارق' : '+/-'}</div>
                     <div className="col-span-3 text-center hidden lg:block">{currentLanguage === 'ar' ? 'الشكل' : 'Forme'}</div>
                   </div>
@@ -309,13 +309,13 @@ const LeagueStandingTable = ({
                   {displayStandings.map((team, index) => (
                     <div 
                       key={team.team.id} 
-                      className="grid grid-cols-12 gap-2 p-3 hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors"
+                      className="grid grid-cols-12 gap-2 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors"
                     >
                       {/* Position avec indicateur */}
                       <div className="col-span-1 flex items-center justify-center">
                         <div className="relative">
                           <div 
-                            className={`w-6 h-6 rounded-full ${getPositionColor(team.rank, team.status)} flex items-center justify-center text-white text-xs font-bold`}
+                            className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full ${getPositionColor(team.rank, team.status)} flex items-center justify-center text-white text-xs font-bold`}
                           >
                             {team.rank}
                           </div>
@@ -326,13 +326,13 @@ const LeagueStandingTable = ({
                       </div>
 
                       {/* Équipe */}
-                      <div className="col-span-5 flex items-center gap-3">
+                      <div className="col-span-6 sm:col-span-5 flex items-center gap-2 sm:gap-3">
                         <img 
                           src={team.team.logo} 
                           alt={team.team.name}
-                          className="w-8 h-8 object-contain"
+                          className="w-10 h-10 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                         />
-                        <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">
+                        <span className="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm sm:text-base">
                           {currentLanguage === 'ar' 
                             ? getArabicTeamName(team.team.name)
                             : team.team.name
@@ -346,8 +346,8 @@ const LeagueStandingTable = ({
                       </div>
 
                       {/* Points */}
-                      <div className="col-span-1 text-center">
-                        <span className="font-bold text-lg text-gray-800 dark:text-gray-200">
+                      <div className="col-span-2 sm:col-span-1 text-center">
+                        <span className="font-bold text-lg sm:text-lg text-gray-800 dark:text-gray-200">
                           {team.points}
                         </span>
                       </div>

@@ -130,7 +130,7 @@ const Header = () => {
                   />
                 </div>
                 <img 
-                  src="/public/koora-logo/black-logo.png" 
+                  src="/koora-logo/black-logo.png" 
                   alt="Koora Logo" 
                   className="w-24 h-8 object-contain"
                 />
@@ -190,20 +190,32 @@ const Header = () => {
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-2 group cursor-pointer">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sport-green to-sport-blue flex items-center justify-center shadow-md">
+              <Link to="/" className="flex items-center space-x-2 group cursor-pointer">
+                <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center shadow-md border border-gray-200">
                   <img 
                     src="/koora-logo/image.png" 
                     alt="Koora Logo" 
-                    className="w-6 h-6 object-contain filter brightness-0 invert"
+                    className="w-10 h-10 sm:w-8 sm:h-8 object-contain"
+                    onError={(e) => {
+                      console.log('Erreur de chargement du logo:', e);
+                      // Fallback vers une icône Football si l'image ne charge pas
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '⚽';
+                    }}
                   />
                 </div>
-                <img 
-                  src="/public/koora-logo/black-logo.png" 
-                  alt="Koora Logo" 
-                  className="w-16 h-6 object-contain hidden sm:block"
-                />
-              </div>
+                <div className="hidden sm:flex flex-col">
+                  <img 
+                    src="/koora-logo/black-logo.png" 
+                    alt="Koora Logo" 
+                    className="w-20 h-7 object-contain"
+                    onError={(e) => {
+                      console.log('Erreur de chargement du logo texte:', e);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              </Link>
             </div>
 
             {/* Mobile Actions */}
