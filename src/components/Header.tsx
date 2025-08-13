@@ -173,7 +173,7 @@ const Header = () => {
               </div>
               
               {/* Login Button */}
-              <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6 text-white">
+              {/* <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6 text-white">
                 {t('login')}
               </Button>
               
@@ -217,9 +217,9 @@ const Header = () => {
               </Button>
               
               {/* Login Button - Compact */}
-              <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm text-white">
-                {t('loginShort')}
-              </Button>
+              {/* <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm text-white"> */}
+                {/*t('loginShort')*/}
+                {/* </Button> */}
             </div>
           </div>
         </div>

@@ -1,3 +1,54 @@
+// Composant pour afficher une ligne de match avec noms traduits
+import { useEffect, useState } from "react";
+const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/config/api").Fixture, currentLanguage: string }) => {
+  const homeLogo = match.teams?.home?.logo;
+  const awayLogo = match.teams?.away?.logo;
+  const homeName = match.teams?.home?.name || "";
+  const awayName = match.teams?.away?.name || "";
+  const time = match.date ? new Date(match.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+  const homeScore = match.goals?.home ?? 0;
+  const awayScore = match.goals?.away ?? 0;
+
+  const [homeNameAr, setHomeNameAr] = useState(homeName);
+  const [awayNameAr, setAwayNameAr] = useState(awayName);
+  useEffect(() => {
+    let mounted = true;
+    if (currentLanguage === 'ar') {
+      import("@/services/translationService").then(({ footballTranslationService }) => {
+        footballTranslationService.translateTeamName(homeName).then(res => {
+          if (mounted) setHomeNameAr(res.arabic);
+        });
+        footballTranslationService.translateTeamName(awayName).then(res => {
+          if (mounted) setAwayNameAr(res.arabic);
+        });
+      });
+    } else {
+      setHomeNameAr(homeName);
+      setAwayNameAr(awayName);
+    }
+    return () => { mounted = false; };
+  }, [homeName, awayName, currentLanguage]);
+
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] last:border-b-0 bg-white dark:bg-[#181a20] dark:border-[#23262f]">
+      {/* Away team (right) */}
+      <div className="flex items-center gap-2 min-w-[120px] justify-end">
+        {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+        <span className="font-bold text-[#1a2a3a] dark:text-[#f2f2f2] text-base">{awayNameAr}</span>
+      </div>
+      {/* Score */}
+      <div className="flex flex-col items-center min-w-[70px]">
+        <span className="font-bold text-[#1a2a3a] dark:text-[#f2f2f2] text-base">{homeScore} - {awayScore}</span>
+        <span className="bg-blue-500 text-white dark:bg-blue-700 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1">{time}</span>
+      </div>
+      {/* Home team (left) */}
+      <div className="flex items-center gap-2 min-w-[120px] justify-start">
+        <span className="font-bold text-[#1a2a3a] dark:text-[#f2f2f2] text-base">{homeNameAr}</span>
+        {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+      </div>
+    </div>
+  );
+};
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import DatePicker from "@/components/DatePicker";
@@ -12,7 +63,7 @@ import { Clock, RefreshCw } from "lucide-react";
 import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAPI";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
-import { useState, useEffect } from "react";
+// ...existing code...
 import { footballTranslationService } from '../services/translationService';
 import MatchHeader from "@/components/MatchHeader";
 
@@ -158,37 +209,37 @@ const Matches = () => {
     refreshInterval: 300000
   });
 
-  // Données statiques pour les ligues
+  // Données statiques pour les ligues demandées
   const leagues = [
-    { 
-      name: currentLanguage === 'ar' ? "البريمير ليغ" : "Premier League", 
+    {
+      name: currentLanguage === 'ar' ? "البريمير ليغ" : "Premier League",
       id: MAIN_LEAGUES.PREMIER_LEAGUE,
-      matches: 8, 
-      flag: "🏴" 
+      logo: "https://media.api-sports.io/football/leagues/39.png"
     },
-    { 
-      name: currentLanguage === 'ar' ? "الليج 1" : "Ligue 1", 
+    {
+      name: currentLanguage === 'ar' ? "الليج 1" : "Ligue 1",
       id: MAIN_LEAGUES.LIGUE_1,
-      matches: 5, 
-      flag: "🇫🇷" 
+      logo: "https://media.api-sports.io/football/leagues/61.png"
     },
-    { 
-      name: currentLanguage === 'ar' ? "البوندسليجا" : "Bundesliga", 
-      id: MAIN_LEAGUES.BUNDESLIGA,
-      matches: 4, 
-      flag: "🇩🇪" 
+    {
+      name: currentLanguage === 'ar' ? "دوري أبطال أوروبا" : "Champions League",
+      id: MAIN_LEAGUES.CHAMPIONS_LEAGUE,
+      logo: "https://media.api-sports.io/football/leagues/2.png"
     },
-    { 
-      name: currentLanguage === 'ar' ? "الليغا الإسبانية" : "La Liga", 
+    {
+      name: currentLanguage === 'ar' ? "الليغا الإسبانية" : "La Liga",
       id: MAIN_LEAGUES.LA_LIGA,
-      matches: 6, 
-      flag: "🇪🇸" 
+      logo: "https://media.api-sports.io/football/leagues/140.png"
     },
-    { 
-      name: currentLanguage === 'ar' ? "الدوري الإيطالي" : "Serie A", 
-      id: MAIN_LEAGUES.SERIE_A,
-      matches: 7, 
-      flag: "🇮🇹" 
+    {
+      name: currentLanguage === 'ar' ? "البطولة المغربية" : "Botola Maroc",
+      id: 200, // Ajout Botola Maroc
+      logo: "https://media.api-sports.io/football/leagues/200.png"
+    },
+    {
+      name: currentLanguage === 'ar' ? "البوندسليجا" : "Bundesliga",
+      id: MAIN_LEAGUES.BUNDESLIGA,
+      logo: "https://media.api-sports.io/football/leagues/78.png"
     }
   ];
 
@@ -199,326 +250,87 @@ const Matches = () => {
     return ['LIVE', '1H', '2H', 'HT', 'ET'].includes(status || '');
   };
 
-  // Filtrer les matchs pour séparer en direct et programmés
-  const liveMatchesFromSelected = selectedMatches.data?.response 
-    ? selectedMatches.data.response.filter(match => isLiveMatch(match))
-    : [];
+  // Regrouper les matchs programmés par ligue
+  const scheduledMatchesByLeague: { [key: number]: unknown[] } = {};
+  if (selectedMatches.data?.response) {
+    leagues.forEach(league => {
+      scheduledMatchesByLeague[league.id] = selectedMatches.data.response.filter(
+        (match: any) => match.league?.id === league.id && !isLiveMatch(match)
+      );
+    });
+  }
 
-  const scheduledMatchesFromSelected = selectedMatches.data?.response 
-    ? selectedMatches.data.response.filter(match => !isLiveMatch(match))
-    : [];
-
-  // Combiner les matchs en direct
+  // Regrouper les matchs en direct par ligue
+  const liveMatchesByLeague: { [key: number]: unknown[] } = {};
   const allLiveMatches = [
     ...(liveMatches.data?.response || []),
-    ...liveMatchesFromSelected
+    ...(selectedMatches.data?.response || []).filter((match: any) => isLiveMatch(match))
   ];
-
-  const combinedLiveMatches = {
-    data: allLiveMatches.length > 0 ? { response: allLiveMatches } : null,
-    loading: liveMatches.loading,
-    error: liveMatches.error,
-    lastUpdated: liveMatches.lastUpdated || selectedMatches.lastUpdated
-  };
-
-  const selectedMatchesWithFilteredData = {
-    ...selectedMatches,
-    data: selectedMatches.data ? {
-      ...selectedMatches.data,
-      response: scheduledMatchesFromSelected
-    } : null
-  };
+  leagues.forEach(league => {
+    liveMatchesByLeague[league.id] = allLiveMatches.filter(
+      (match: any) => match.league?.id === league.id
+    );
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
+    <div className="min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419]">
       <Header />
       <TeamsLogos />
-      
-      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 lg:py-4 max-w-7xl">
-        <div className="flex flex-col lg:flex-row gap-3 sm:gap-3 lg:gap-6">
-          {/* Main Content */}
-          <div className="flex-1 space-y-3 sm:space-y-4 lg:space-y-6">
-            {/* Match Header avec filtres */}
-            <MatchHeader
-              selectedDate={selectedDate}
-              onDateChange={(date) => {
-                setSelectedDate(date);
-                setCurrentPage(1);
-              }}
-              selectedLeagues={selectedLeagues}
-              onLeaguesChange={(leagues) => {
-                setSelectedLeagues(leagues);
-                setCurrentPage(1);
-              }}
-              onReset={() => {
-                setSelectedDate(new Date().toISOString().split('T')[0]);
-                setSelectedLeagues([]);
-                setCurrentPage(1);
-                setCurrentLivePage(1);
-              }}
-            />
-            
-            {/* Alerte API Mock */}
-            <MockAPIAlert onRetry={() => {
-              liveMatches.refetch();
-              selectedMatches.refetch();
-            }} />
-
-            {/* Live Matches Section */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 justify-between bg-gradient-to-r from-red-50 to-red-100 p-2 rounded-lg border border-red-200">
-                <div className="flex items-center gap-2 flex-1">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <h2 className="text-sm sm:text-base font-bold text-sport-dark flex-1">
-                    {currentLanguage === 'ar' ? 'المباريات المباشرة' : 'Matchs en direct'}
-                  </h2>
-                  <Badge variant="destructive" className="bg-red-500 text-xs px-1 py-0.5">LIVE</Badge>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={liveMatches.refetch}
-                  disabled={liveMatches.loading}
-                  className="h-7 w-7 p-0 flex-shrink-0"
-                >
-                  <RefreshCw className={`w-3 h-3 ${liveMatches.loading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-              
-              {combinedLiveMatches.loading && (
-                <div className="text-center py-4 sm:py-6">
-                  <div className="animate-spin rounded-full h-5 w-5 sm:h-6 sm:w-6 border-b-2 border-sport-green mx-auto"></div>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    {currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...'}
-                  </p>
-                </div>
-              )}
-              
-              {combinedLiveMatches.error && (
-                <div className="text-center py-4 sm:py-6">
-                  <p className="text-red-500 text-xs">
-                    {currentLanguage === 'ar' ? 'خطأ في تحميل المباريات المباشرة' : 'Erreur lors du chargement des matchs en direct'}
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => {
-                      liveMatches.refetch();
-                      selectedMatches.refetch();
-                    }}
-                    className="mt-2 text-xs px-2 py-1 h-7"
-                  >
-                    {currentLanguage === 'ar' ? 'إعادة المحاولة' : 'Réessayer'}
-                  </Button>
-                </div>
-              )}
-              
-              {combinedLiveMatches.data?.response?.length > 0 ? (
-                <div className="space-y-2">
-                  {(() => {
-                    const allMatches = combinedLiveMatches.data.response;
-                    const startIndex = (currentLivePage - 1) * liveItemsPerPage;
-                    const endIndex = startIndex + liveItemsPerPage;
-                    const paginatedMatches = allMatches.slice(startIndex, endIndex);
-                    const totalPages = Math.ceil(allMatches.length / liveItemsPerPage);
-
-                    return (
-                      <div className="space-y-2">
-                        <div className="space-y-1">
-                          {paginatedMatches.map((match: unknown, index: number) => (
-                            <AsyncMatchRow 
-                              key={(match as {fixture?: {id?: number}}).fixture?.id || `live-${index}`}
-                              match={match}
-                            />
-                          ))}
-                        </div>
-
-                        {totalPages > 1 && (
-                          <div className="flex justify-center items-center gap-2 pt-3 px-3">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setCurrentLivePage(Math.max(1, currentLivePage - 1))}
-                              disabled={currentLivePage <= 1}
-                              className="h-7 px-2 text-xs"
-                            >
-                              ← {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
-                            </Button>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded-full">
-                              <span className="font-medium text-sport-dark">{currentLivePage}</span>
-                              <span>/</span>
-                              <span>{totalPages}</span>
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setCurrentLivePage(Math.min(totalPages, currentLivePage + 1))}
-                              disabled={currentLivePage >= totalPages}
-                              className="h-7 px-2 text-xs"
-                            >
-                              {currentLanguage === 'ar' ? 'التالي' : 'Suivant'} →
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              ) : !combinedLiveMatches.loading && (
-                <div className="text-center py-4 sm:py-6 bg-gray-50 rounded-lg">
-                  <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-400 rounded-full"></div>
+      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 lg:py-4 max-w-4xl">
+        <div className="flex flex-col gap-6">
+          <MatchHeader
+            selectedDate={selectedDate}
+            onDateChange={(date) => {
+              setSelectedDate(date);
+              setCurrentPage(1);
+            }}
+            selectedLeagues={selectedLeagues}
+            onLeaguesChange={(leagues) => {
+              setSelectedLeagues(leagues);
+              setCurrentPage(1);
+            }}
+            onReset={() => {
+              setSelectedDate(new Date().toISOString().split('T')[0]);
+              setSelectedLeagues([]);
+              setCurrentPage(1);
+              setCurrentLivePage(1);
+            }}
+          />
+          <MockAPIAlert onRetry={() => {
+            liveMatches.refetch();
+            selectedMatches.refetch();
+          }} />
+          {/* Affichage par ligue */}
+          {leagues.map(league => {
+            const matches = [
+              ...(liveMatchesByLeague[league.id] || []),
+              ...(scheduledMatchesByLeague[league.id] || [])
+            ];
+            if (matches.length === 0) return null;
+            return (
+              <div key={league.id} className="mb-8">
+                <div className="flex items-center justify-between px-4 py-2 bg-[#eef0f4] dark:bg-[#23262f] rounded-t-xl border-b border-[#e3e6ea] dark:border-[#181a20]">
+                  <div className="flex items-center gap-2">
+                    {league.logo && (
+                      <img src={league.logo} alt={league.name} className="w-6 h-6" />
+                    )}
+                    <span className="font-bold text-lg text-[#1a2a3a] dark:text-[#f2f2f2]">
+                      {league.name}
+                    </span>
                   </div>
-                  <p className="text-muted-foreground text-xs">
-                    {currentLanguage === 'ar' ? 'لا توجد مباريات مباشرة حالياً' : 'Aucun match en direct actuellement'}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {currentLanguage === 'ar' ? 'سيتم تحديث هذا القسم تلقائياً كل 30 ثانية' : 'Cette section se met à jour automatiquement toutes les 30 secondes'}
-                  </p>
                 </div>
-              )}
-            </div>
-
-            {/* Selected Matches Section */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 justify-between bg-gradient-to-r from-green-50 to-green-100 p-2 rounded-lg border border-green-200">
-                <div className="flex items-center gap-2 flex-1">
-                  <Clock className="w-3 h-3 text-sport-green flex-shrink-0" />
-                  <h2 className="text-sm sm:text-base font-bold text-sport-dark flex-1">
-                    {currentLanguage === 'ar' ? 'المباريات المختارة' : 'Matchs sélectionnés'}
-                  </h2>
-                  {selectedLeagues.length > 0 && (
-                    <Badge variant="outline" className="text-xs bg-white border-green-300 px-1 py-0.5">
-                      {selectedLeagues.length} {currentLanguage === 'ar' ? 'بطولة' : 'ligues'}
-                    </Badge>
-                  )}
+                <div className="flex flex-col gap-2 bg-white dark:bg-[#181a20] rounded-b-xl pb-2">
+                  {matches.map((match, idx) => (
+                    <TranslatedMatchRow key={idx} match={match as import("@/config/api").Fixture} currentLanguage={currentLanguage} />
+                  ))}
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={selectedMatches.refetch}
-                  disabled={selectedMatches.loading}
-                  className="h-7 w-7 p-0 flex-shrink-0"
-                >
-                  <RefreshCw className={`w-3 h-3 ${selectedMatches.loading ? 'animate-spin' : ''}`} />
-                </Button>
               </div>
-              
-              {selectedMatches.loading && (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-sport-green mx-auto"></div>
-                  <p className="mt-2 text-muted-foreground text-xs">
-                    {currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...'}
-                  </p>
-                </div>
-              )}
-              
-              {selectedMatches.error && (
-                <div className="text-center py-4">
-                  <p className="text-red-500 text-xs">
-                    {currentLanguage === 'ar' ? 'خطأ في تحميل المباريات' : 'Erreur lors du chargement des matchs'}
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={selectedMatches.refetch}
-                    className="mt-2 h-7 px-2 text-xs"
-                  >
-                    {currentLanguage === 'ar' ? 'إعادة المحاولة' : 'Réessayer'}
-                  </Button>
-                </div>
-              )}
-              
-              {selectedMatchesWithFilteredData.data?.response?.length > 0 ? (
-                <div className="space-y-2">
-                  {(() => {
-                    const allMatches = selectedMatchesWithFilteredData.data.response;
-                    const startIndex = (currentPage - 1) * itemsPerPage;
-                    const endIndex = startIndex + itemsPerPage;
-                    const paginatedMatches = allMatches.slice(startIndex, endIndex);
-                    const totalPages = Math.ceil(allMatches.length / itemsPerPage);
-
-                    return (
-                      <div className="space-y-2">
-                        <div className="space-y-1">
-                          {paginatedMatches.map((match: unknown, index: number) => (
-                            <AsyncMatchRow 
-                              key={(match as {fixture?: {id?: number}}).fixture?.id || `match-${index}`}
-                              match={match}
-                            />
-                          ))}
-                        </div>
-
-                        {totalPages > 1 && (
-                          <div className="flex justify-center items-center gap-2 pt-3 px-3">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                              disabled={currentPage <= 1}
-                              className="h-7 px-2 text-xs"
-                            >
-                              ← {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
-                            </Button>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded-full">
-                              <span className="font-medium text-sport-dark">{currentPage}</span>
-                              <span>/</span>
-                              <span>{totalPages}</span>
-                            </div>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                              disabled={currentPage >= totalPages}
-                              className="h-7 px-2 text-xs"
-                            >
-                              {currentLanguage === 'ar' ? 'التالي' : 'Suivant'} →
-                            </Button>
-                          </div>
-                        )}
-                        
-                        <div className="text-center text-xs text-muted-foreground bg-gray-50 py-1 px-3 rounded-lg">
-                          {currentLanguage === 'ar' ? 'عرض' : 'Affichage'} {startIndex + 1}-{Math.min(endIndex, allMatches.length)} {currentLanguage === 'ar' ? 'من' : 'sur'} {allMatches.length} {currentLanguage === 'ar' ? 'مباراة' : 'matchs'}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              ) : !selectedMatches.loading && (
-                <div className="text-center py-6 bg-gray-50 rounded-lg">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <Clock className="w-5 h-5 text-gray-400" />
-                  </div>
-                  <p className="text-muted-foreground text-xs mb-2">
-                    {(() => {
-                      if (selectedMatches.data?.response?.length === 0) {
-                        return currentLanguage === 'ar' 
-                          ? 'لا توجد مباريات للتاريخ والبطولات المختارة' 
-                          : 'Aucun match trouvé pour la date et les championnats sélectionnés';
-                      }
-                      if (selectedMatches.data?.response && selectedMatches.data.response.length > 0 && scheduledMatchesFromSelected.length === 0) {
-                        return currentLanguage === 'ar' 
-                          ? 'جميع المباريات معروضة في قسم المباريات المباشرة أعلاه' 
-                          : 'Tous les matchs sont affichés dans la section matchs en direct ci-dessus';
-                      }
-                      return currentLanguage === 'ar' 
-                        ? 'يرجى اختيار تاريخ للبحث عن المباريات' 
-                        : 'Veuillez sélectionner une date pour rechercher des matchs';
-                    })()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentLanguage === 'ar' ? 'جرب تغيير التاريخ أو البطولة المختارة' : 'Essayez de changer la date ou la compétition sélectionnée'}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
-      
       <Footer />
     </div>
   );
-};
-
+}
 export default Matches;

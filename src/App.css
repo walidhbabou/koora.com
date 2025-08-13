@@ -4,6 +4,42 @@
   padding: 2rem;
   text-align: center;
 }
+/* Palette de couleurs compatibles avec le logo */
+:root {
+  --primary-green: #C6FF00; /* Couleur du logo */
+  --primary-blue: #1A237E; /* Bleu foncé */
+  --secondary-gray: #212121; /* Gris anthracite */
+  --accent-yellow: #FFF59D; /* Jaune pastel */
+  --accent-blue: #64B5F6; /* Bleu clair */
+  --text-white: #FFFFFF;
+}
+
+body {
+  background: var(--secondary-gray);
+  color: var(--text-white);
+}
+
+/* Exemple d'utilisation pour les boutons */
+.button {
+  background: var(--primary-blue);
+  color: var(--text-white);
+  border-radius: 6px;
+  padding: 0.5em 1em;
+  border: none;
+  transition: background 0.2s;
+}
+.button:hover {
+  background: var(--accent-blue);
+  color: var(--primary-blue);
+}
+
+/* Accent sur les liens */
+a {
+  color: var(--accent-yellow);
+}
+a:hover {
+  color: var(--primary-green);
+}
 
 .logo {
   height: 6em;

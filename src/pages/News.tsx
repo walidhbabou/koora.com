@@ -161,7 +161,7 @@ const News = () => {
 
           {/* Right Sidebar */}
           <div className="hidden lg:block w-80 space-y-6">
-            <Sidebar />
+            
             
             {/* Trending Topics */}
             <Card className="p-6">

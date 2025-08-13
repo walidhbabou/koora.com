@@ -12,7 +12,10 @@ import Videos from "./pages/Videos";
 import Transfers from "./pages/Transfers";
 import LanguageTest from "./pages/LanguageTest";
 import TranslationDemo from "./pages/TranslationDemo";
+import TeamDetails from "./pages/TeamDetails";
 import NotFound from "./pages/NotFound";
+
+import DarkModeToggle from "./components/DarkModeToggle";
 
 
 const queryClient = new QueryClient();
@@ -21,6 +24,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <LanguageProvider>
       <TooltipProvider>
+    <DarkModeToggle />
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -31,6 +35,7 @@ const App = () => (
             <Route path="/standings" element={<Standings />} />
             <Route path="/videos" element={<Videos />} />
             <Route path="/transfers" element={<Transfers />} />
+            <Route path="/team/:teamId" element={<TeamDetails />} />
             <Route path="/language-test" element={<LanguageTest />} />
             <Route path="/translation-demo" element={<TranslationDemo />} />
             

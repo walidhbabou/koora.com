@@ -65,7 +65,10 @@ export const API_ENDPOINTS = {
   // Page transferts - الانتقالات
   TRANSFERS: '/transfers?team={teamId}',
   TRANSFERS_TODAY: '/transfers?date={date}',
-  PLAYER_TRANSFERS: '/transfers?player={playerId}'
+  PLAYER_TRANSFERS: '/transfers?player={playerId}',
+  
+  // Statistiques des joueurs
+  PLAYER_STATS: '/players/{statType}?league={leagueId}&season={season}'
 };
 
 // Ligues principales à afficher en priorité (plan gratuit de l'API Football)
@@ -246,6 +249,15 @@ export class FootballAPI {
   // Obtenir les ligues disponibles
   async getAvailableLeagues() {
     return this.makeRequest(API_ENDPOINTS.LEAGUES);
+  }
+  
+  // Page statistiques des joueurs - Statistiques par ligue
+  async getPlayerStats(leagueId: number, season: number = new Date().getFullYear(), statType: string = 'topscorers') {
+    const endpoint = API_ENDPOINTS.PLAYER_STATS
+      .replace('{statType}', statType)
+      .replace('{leagueId}', leagueId.toString())
+      .replace('{season}', season.toString());
+    return this.makeRequest(endpoint);
   }
   
   // Méthodes pour la gestion du cache et des statistiques
