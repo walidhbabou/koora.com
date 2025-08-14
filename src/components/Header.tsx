@@ -1,181 +1,124 @@
-import { Search, Home, Trophy, Newspaper, BarChart3, Video, ArrowLeftRight, Globe, ChevronDown } from "lucide-react";
+import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
 import { UserSettings } from "./UserSettings";
+import ModernLanguageSwitcher from "./ModernLanguageSwitcher";
+import DarkModeToggle from "./DarkModeToggle";
 import { useTranslation } from "../hooks/useTranslation";
-import { NAV_ITEMS, LanguageCode } from "../config/constants";
+import { NAV_ITEMS } from "../config/constants";
 import { useState } from "react";
+import "../styles/rtl.css";
 
 const Header = () => {
   const location = useLocation();
   const { t, isRTL, direction, currentLanguage, setLanguage } = useTranslation();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   
-  const languages = [
-    //{ code: 'fr' as LanguageCode, name: 'Français', flag: '🇫🇷' },
-    { code: 'ar' as LanguageCode, name: 'العربية', flag: '🇲🇦' },
-    //{ code: 'en' as LanguageCode, name: 'English', flag: '🇺🇸' }
-  ];
-
-  const currentLang = languages.find(lang => lang.code === currentLanguage) || languages[0];
-  
   const navItemsWithIcons = [
-    { ...NAV_ITEMS.find(item => item.key === 'home')!, icon: Home },
-    { ...NAV_ITEMS.find(item => item.key === 'matches')!, icon: Trophy },
-    { ...NAV_ITEMS.find(item => item.key === 'news')!, icon: Newspaper },
-    { ...NAV_ITEMS.find(item => item.key === 'standings')!, icon: BarChart3 },
-    //{ ...NAV_ITEMS.find(item => item.key === 'videos')!, icon: Video },
-    { ...NAV_ITEMS.find(item => item.key === 'transfers')!, icon: ArrowLeftRight }
-  ];
+    { ...NAV_ITEMS.find(item => item.key === 'home'), icon: Home },
+    { ...NAV_ITEMS.find(item => item.key === 'matches'), icon: Trophy },
+    { ...NAV_ITEMS.find(item => item.key === 'news'), icon: Newspaper },
+    { ...NAV_ITEMS.find(item => item.key === 'standings'), icon: BarChart3 },
+    { ...NAV_ITEMS.find(item => item.key === 'transfers'), icon: ArrowLeftRight }
+  ].filter(item => item.key); // Filter out undefined items
 
-  const ModernLanguageSwitcher = ({ mobile = false }) => (
-    <div className="relative">
-      <Button
-        variant="ghost"
-        size={mobile ? "sm" : "default"}
-        onClick={() => setIsLanguageOpen(!isLanguageOpen)}
-        className={`
-          ${mobile ? 'h-8 px-2' : 'h-10 px-3'} 
-          bg-gradient-to-r from-teal-50 to-teal-50 
-          hover:from-teal-100 hover:to-teal-100 
-          border border-teal-200 
-          transition-all duration-300 
-          hover:shadow-lg hover:scale-105
-          text-foreground hover:text-teal-600
-          backdrop-blur-sm
-        `}
-      >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{currentLang.flag}</span>
-          {!mobile && (
-            <span className="font-medium text-sm">{currentLang.code.toUpperCase()}</span>
-          )}
-          <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isLanguageOpen ? 'rotate-180' : ''}`} />
-        </div>
-      </Button>
-
-      {/* Dropdown Menu */}
-      {isLanguageOpen && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-40" 
-            onClick={() => setIsLanguageOpen(false)}
-          />
-          
-          {/* Menu */}
-          <div className={`
-            absolute ${mobile ? 'right-0' : isRTL ? 'left-0' : 'right-0'} 
-            top-full mt-2 z-50
-            bg-background/95 backdrop-blur-xl 
-            border border-border/50 
-            rounded-xl shadow-2xl 
-            overflow-hidden
-            min-w-[160px]
-            animate-in fade-in-0 zoom-in-95 duration-200
-          `}>
-            <div className="p-2">
-              {languages.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => {
-                    setLanguage(lang.code);
-                    setIsLanguageOpen(false);
-                  }}
-                  className={`
-                    w-full flex items-center gap-3 px-3 py-2.5 
-                    rounded-lg transition-all duration-200
-                    hover:bg-gradient-to-r hover:from-teal-50 hover:to-teal-100
-                    hover:shadow-md
-                    ${currentLanguage === lang.code 
-                      ? 'bg-gradient-to-r from-teal-100 to-teal-100 text-teal-600' 
-                      : 'text-foreground hover:text-teal-600'
-                    }
-                  `}
-                >
-                  <span className="text-lg">{lang.flag}</span>
-                  <div className="flex flex-col items-start flex-1 min-w-0">
-                    <span className="font-medium text-sm">{lang.name}</span>
-                    <span className="text-xs text-muted-foreground uppercase">
-                      {lang.code}
-                    </span>
-                  </div>
-                  {currentLanguage === lang.code && (
-                    <div className="w-2 h-2 bg-teal-600 rounded-full animate-pulse" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-    </div>
-  );
+  // Fonction pour rafraîchir la page lors du clic sur le logo
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.location.reload();
+  };
 
   return (
-    <>
+    <div dir={direction} className={isRTL ? 'rtl' : 'ltr'}>
       {/* Desktop Header */}
-      <header className="bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-all duration-300 hidden lg:block">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
+      <header className="modern-header bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-all duration-300 hidden lg:block shadow-sm">
+        <div className="container mx-auto px-6">
+          <div className={`flex items-center justify-between h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-3 group cursor-pointer">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-3'}`}>
+              <div 
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'} group cursor-pointer`}
+                onClick={handleLogoClick}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    window.location.reload();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Rafraîchir la page"
+              >
+                <div className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
                   <img 
                     src="/koora-logo/image.png" 
                     alt="Koora Logo" 
-                    className="w-8 h-8 object-contain"
+                    className="w-10 h-10 object-contain"
+                  />
+                  <img 
+                    src="/koora-logo/black-logo.png" 
+                    alt="Koora Logo" 
+                    className="w-28 h-10 object-contain dark:hidden"
+                  />
+                  <img 
+                    src="/koora-logo/green-logo.png" 
+                    alt="Koora Logo" 
+                    className="w-28 h-10 object-contain hidden dark:block"
                   />
                 </div>
-                <img 
-                  src="/koora-logo/black-logo.png" 
-                  alt="Koora Logo" 
-                  className="w-24 h-8 object-contain"
-                />
               </div>
             </div>
 
             {/* Navigation - Desktop */}
-            <nav className={`flex ${isRTL ? 'space-x-reverse' : ''} space-x-8`}>
+            <nav className={`header-nav flex ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-1`}>
               {navItemsWithIcons.map((item) => (
                 <Link
                   key={item.key}
                   to={item.href}
-                  className={`relative text-foreground hover:text-teal-600 transition-all duration-300 font-medium py-2 px-1 group ${
-                    location.pathname === item.href ? 'text-teal-600' : ''
-                  }`}
+                  className={`nav-link relative text-gray-700 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition-all duration-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group ${
+                    location.pathname === item.href ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20' : ''
+                  } ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                 >
-                  {t(item.key)}
-                  <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-teal-600 transform transition-transform duration-300 ${
-                    location.pathname === item.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
-                  }`}></span>
+                  <span className={`${isRTL ? 'text-right' : 'text-left'} relative z-10 text-sm font-semibold`}>
+                    {t(item.key)}
+                  </span>
+                  {location.pathname === item.href && (
+                    <span className={`absolute bottom-1 ${isRTL ? 'right-4' : 'left-4'} right-4 w-1/2 h-0.5 bg-teal-600 dark:bg-teal-400 rounded-full`}></span>
+                  )}
                 </Link>
               ))}
-              <button className="text-foreground hover:text-teal-600 transition-colors">
-                <span className="text-2xl hover:scale-110 transition-transform duration-200">•••</span>
+              <button className="text-gray-700 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition-colors p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+                <span className="text-lg hover:scale-110 transition-transform duration-200">•••</span>
               </button>
             </nav>
 
             {/* Actions */}
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-3`}>
+            <div className={`header-actions flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-4`}>
               {/* Modern Language Switcher */}
-              <ModernLanguageSwitcher />
+              <ModernLanguageSwitcher 
+                isRTL={isRTL}
+                direction={direction}
+                currentLanguage={currentLanguage}
+                isLanguageOpen={isLanguageOpen}
+                setIsLanguageOpen={setIsLanguageOpen}
+                setLanguage={setLanguage}
+              />
+              
+              {/* Dark Mode Toggle */}
+              <div className="flex items-center">
+                <DarkModeToggle variant="header" size="default" />
+              </div>
               
               {/* Search */}
               <div className="relative">
-                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4`} />
+                <Search className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
                   placeholder={t('search')}
-                  className={`${isRTL ? 'pr-10' : 'pl-10'} w-48 lg:w-64 bg-background/50 border-border/50 backdrop-blur-sm focus:bg-background focus:border-teal-500 transition-all duration-300`}
+                  className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-56 h-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg focus:bg-white dark:focus:bg-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
-              
-              {/* Login Button */}
-              {/* <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg hover:scale-105 transition-all duration-300 font-medium px-4 lg:px-6 text-white">
-                {t('login')}
-              </Button>
               
               {/* User Settings */}
               <UserSettings />
@@ -185,13 +128,24 @@ const Header = () => {
       </header>
 
       {/* Mobile Header */}
-      <header className="bg-background/95 backdrop-blur-md border-b border-border sticky top-0 z-50 transition-all duration-300 lg:hidden">
+      <header className="modern-header bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-all duration-300 lg:hidden shadow-sm">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
+          <div className={`flex items-center justify-between h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <Link to="/" className="flex items-center space-x-2 group cursor-pointer">
-                <div className="w-12 h-12 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center shadow-md border border-gray-200">
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+              <div 
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} group cursor-pointer`}
+                onClick={handleLogoClick}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    window.location.reload();
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label="Rafraîchir la page"
+              >
                   <img 
                     src="/koora-logo/image.png" 
                     alt="Koora Logo" 
@@ -200,10 +154,13 @@ const Header = () => {
                       console.log('Erreur de chargement du logo:', e);
                       // Fallback vers une icône Football si l'image ne charge pas
                       e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = '⚽';
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) {
+                        parent.innerHTML = '⚽';
+                      }
                     }}
                   />
-                </div>
+               
                 <div className="hidden sm:flex flex-col">
                   <img 
                     src="/koora-logo/black-logo.png" 
@@ -215,13 +172,24 @@ const Header = () => {
                     }}
                   />
                 </div>
-              </Link>
+              </div>
             </div>
 
             {/* Mobile Actions */}
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-2`}>
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2`}>
               {/* Modern Language Switcher - Mobile */}
-              <ModernLanguageSwitcher mobile={true} />
+              <ModernLanguageSwitcher 
+                mobile={true}
+                isRTL={isRTL}
+                direction={direction}
+                currentLanguage={currentLanguage}
+                isLanguageOpen={isLanguageOpen}
+                setIsLanguageOpen={setIsLanguageOpen}
+                setLanguage={setLanguage}
+              />
+              
+              {/* Dark Mode Toggle - Mobile */}
+              <DarkModeToggle variant="header" size="sm" />
               
               {/* Search Icon */}
               <Button variant="ghost" size="icon" className="hover:bg-teal-50 hover:text-teal-600 transition-all duration-300">
@@ -238,8 +206,8 @@ const Header = () => {
       </header>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-t border-border">
-        <div className="flex items-center justify-around px-2 py-2">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg">
+        <div className={`mobile-nav flex items-center justify-around px-2 py-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {navItemsWithIcons.slice(0, 6).map((item) => {
             const IconComponent = item.icon;
             const isActive = location.pathname === item.href;
@@ -247,18 +215,18 @@ const Header = () => {
               <Link
                 key={item.key}
                 to={item.href}
-                className={`flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 ${
+                className={`mobile-nav-item flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 rounded-lg ${
                   isActive 
-                    ? 'text-teal-600' 
-                    : 'text-muted-foreground hover:text-teal-600'
+                    ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 active' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
-                <div className={`p-1.5 rounded-lg transition-all duration-300 ${
-                  isActive ? 'bg-teal-50' : 'hover:bg-teal-50'
+                <div className={`p-2 rounded-lg transition-all duration-300 ${
+                  isActive ? 'bg-teal-100 dark:bg-teal-800/30' : 'hover:bg-teal-50 dark:hover:bg-teal-900/10'
                 }`}>
                   <IconComponent className="w-5 h-5" />
                 </div>
-                <span className="text-xs mt-1 font-medium truncate w-full text-center leading-tight">
+                <span className={`text-xs mt-1 font-medium truncate w-full text-center leading-tight ${isRTL ? 'text-right' : 'text-left'} ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
                   {t(item.key)}
                 </span>
               </Link>
@@ -269,7 +237,7 @@ const Header = () => {
 
       {/* Spacer for mobile bottom navigation */}
       <div className="lg:hidden h-16"></div>
-    </>
+    </div>
   );
 };
 

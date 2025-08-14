@@ -13,7 +13,7 @@ import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
 
 const Standings = () => {
-  const { currentLanguage, t } = useTranslation();
+  const { currentLanguage, t, isRTL, direction } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
   const [showLeagueDetail, setShowLeagueDetail] = useState(false);
@@ -129,7 +129,7 @@ const Standings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419]">
+    <div className={`min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419] ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       <Header />
       <TeamsLogos />
       <div className="container mx-auto px-4 py-6 max-w-7xl">
@@ -138,8 +138,8 @@ const Standings = () => {
         {!showLeagueDetail && (
           <>
             {/* En-tête de la page */}
-            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8">
-              <div>
+            <div className={`flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
+              <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
                 <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
                   {t('standings')}
                 </h1>
@@ -150,12 +150,12 @@ const Standings = () => {
               
               {/* Barre de recherche */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
                   placeholder={t('searchTournament')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white dark:bg-[#181a20] border-gray-200 dark:border-[#23262f] focus:border-blue-500 w-64"
+                  className={`${isRTL ? 'pr-10' : 'pl-10'} bg-white dark:bg-[#181a20] border-gray-200 dark:border-[#23262f] focus:border-blue-500 w-64`}
                 />
               </div>
             </div>
@@ -176,29 +176,29 @@ const Standings = () => {
                       onClick={() => handleLeagueClick(league.id)}
                       className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#23262f] cursor-pointer transition-colors duration-200 group"
                     >
-                      <div className="flex items-center gap-4">
+                      <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <img 
                           src={league.logo} 
                           alt={league.name}
                           className="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow-sm"
                         />
-                        <div>
+                        <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
                           <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {league.name}
                           </h3>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                          <p className={`text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
                             <span className="text-lg">{league.flag}</span>
                             {league.country}
                           </p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                           {currentLanguage === 'ar' ? 'الموسم 24/25' : 'Season 24/25'}
                         </Badge>
                         <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm group-hover:bg-blue-700 transition-colors">
-                          →
+                          {isRTL ? '←' : '→'}
                         </div>
                       </div>
                     </div>
@@ -232,16 +232,16 @@ const Standings = () => {
         {showLeagueDetail && selectedLeague && (
           <>
             {/* En-tête avec bouton retour */}
-            <div className="flex items-center gap-4 mb-8">
+            <div className={`flex items-center gap-4 mb-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Button 
                 onClick={handleBackToList}
                 variant="outline"
                 size="sm"
                 className="flex items-center gap-2"
               >
-                ← {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
+                {isRTL ? '→' : '←'} {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
               </Button>
-              <div>
+              <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
                 <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-200">
                   {currentLanguage === 'ar' ? 'ترتيب البطولة' : 'Classement du tournoi'}
                 </h1>

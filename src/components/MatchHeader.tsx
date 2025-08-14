@@ -18,7 +18,7 @@ export default function MatchHeader({
   onLeaguesChange,
   onReset
 }: MatchHeaderProps) {
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useTranslation();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -41,19 +41,19 @@ export default function MatchHeader({
   };
 
   return (
-    <div className="bg-white rounded-lg border shadow-sm mx-2 sm:mx-3 mt-2">
+    <div dir={direction} className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm mx-2 sm:mx-3 mt-2 ${isRTL ? 'rtl' : 'ltr'}`}>
       {/* Version Desktop */}
       <div className="hidden md:block">
-        <div className="px-3 lg:px-4 py-2 flex items-center justify-between">
+        <div className={`px-3 lg:px-4 py-2 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
           {/* Titre Matchs */}
-          <h1 className="text-lg lg:text-xl font-bold text-teal-600">
+          <h1 className={`text-lg lg:text-xl font-bold text-teal-600 dark:text-teal-400 ${isRTL ? 'text-right' : 'text-left'}`}>
             {currentLanguage === 'ar' ? 'المباريات' : 'Matchs'}
           </h1>
           
           {/* Section navigation de date et filtres */}
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Navigation de Date */}
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -62,12 +62,12 @@ export default function MatchHeader({
                   prevDate.setDate(prevDate.getDate() - 1);
                   onDateChange(prevDate.toISOString().split('T')[0]);
                 }}
-                className="h-7 w-7 p-0 hover:bg-gray-100 rounded-lg transition-colors"
+                className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <span className="text-gray-600 text-base">‹</span>
+                <span className="text-gray-600 dark:text-gray-300 text-base">{isRTL ? '›' : '‹'}</span>
               </Button>
               
-              <span className="text-xs font-medium text-gray-800 px-2 min-w-[120px] text-center">
+              <span className={`text-xs font-medium text-gray-800 dark:text-gray-200 px-2 min-w-[120px] text-center ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
                 {formatDate(selectedDate)}
               </span>
               
@@ -79,9 +79,9 @@ export default function MatchHeader({
                   nextDate.setDate(nextDate.getDate() + 1);
                   onDateChange(nextDate.toISOString().split('T')[0]);
                 }}
-                className="h-7 w-7 p-0 hover:bg-gray-100 rounded-lg transition-colors"
+                className="h-7 w-7 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <span className="text-gray-600 text-base">›</span>
+                <span className="text-gray-600 dark:text-gray-300 text-base">{isRTL ? '‹' : '›'}</span>
               </Button>
             </div>
             
@@ -89,7 +89,7 @@ export default function MatchHeader({
             <div className="w-px h-5 bg-gray-300"></div>
             
             {/* Actions */}
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <DatePicker
                 selectedDate={selectedDate}
                 onDateChange={onDateChange}
@@ -107,7 +107,7 @@ export default function MatchHeader({
                   variant="outline" 
                   size="sm"
                   onClick={onReset}
-                  className="h-7 px-2 text-xs text-teal-600 border-teal-200 hover:bg-teal-50"
+                  className={`h-7 px-2 text-xs text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                 >
                   {currentLanguage === 'ar' ? 'إعادة تعيين' : 'Reset'}
                 </Button>
@@ -119,10 +119,10 @@ export default function MatchHeader({
 
       {/* Version Mobile */}
       <div className="block md:hidden">
-        <div className="px-2 py-2 space-y-2">
+        <div className={`px-2 py-2 space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
           {/* Header avec titre */}
-          <div className="flex items-center justify-between">
-            <h1 className="text-base font-bold text-teal-600">
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <h1 className={`text-base font-bold text-teal-600 dark:text-teal-400 ${isRTL ? 'text-right' : 'text-left'}`}>
               {currentLanguage === 'ar' ? 'المباريات' : 'Matchs'}
             </h1>
             {onReset && (
@@ -130,7 +130,7 @@ export default function MatchHeader({
                 variant="outline" 
                 size="sm"
                 onClick={onReset}
-                className="h-6 px-2 text-xs text-teal-600 border-teal-200 hover:bg-teal-50"
+                className={`h-6 px-2 text-xs text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
               >
                 {currentLanguage === 'ar' ? 'إعادة تعيين' : 'Reset'}
               </Button>
@@ -138,8 +138,8 @@ export default function MatchHeader({
           </div>
           
           {/* Navigation de Date Mobile */}
-          <div className="bg-gray-50 rounded-lg p-2">
-            <div className="flex items-center justify-between gap-2">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
+            <div className={`flex items-center justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <Button 
                 variant="ghost" 
                 size="sm"
@@ -148,13 +148,13 @@ export default function MatchHeader({
                   prevDate.setDate(prevDate.getDate() - 1);
                   onDateChange(prevDate.toISOString().split('T')[0]);
                 }}
-                className="h-7 w-7 p-0 hover:bg-white rounded-lg transition-colors shadow-sm"
+                className="h-7 w-7 p-0 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors shadow-sm"
               >
-                <span className="text-teal-600 text-base font-semibold">‹</span>
+                <span className="text-teal-600 dark:text-teal-400 text-base font-semibold">{isRTL ? '›' : '‹'}</span>
               </Button>
               
               <div className="flex-1 text-center">
-                <span className="text-xs font-medium text-gray-800">
+                <span className={`text-xs font-medium text-gray-800 dark:text-gray-200 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
                   {formatDate(selectedDate)}
                 </span>
               </div>
@@ -167,15 +167,15 @@ export default function MatchHeader({
                   nextDate.setDate(nextDate.getDate() + 1);
                   onDateChange(nextDate.toISOString().split('T')[0]);
                 }}
-                className="h-7 w-7 p-0 hover:bg-white rounded-lg transition-colors shadow-sm"
+                className="h-7 w-7 p-0 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors shadow-sm"
               >
-                <span className="text-teal-600 text-base font-semibold">›</span>
+                <span className="text-teal-600 dark:text-teal-400 text-base font-semibold">{isRTL ? '‹' : '›'}</span>
               </Button>
             </div>
           </div>
           
           {/* Filtres Mobile */}
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className="flex-1">
               <DatePicker
                 selectedDate={selectedDate}

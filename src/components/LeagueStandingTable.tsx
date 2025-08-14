@@ -194,7 +194,7 @@ const LeagueStandingTable = ({
   loading = false,
   compact = false 
 }: LeagueStandingTableProps) => {
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useTranslation();
 
   const getPositionColor = (rank: number, status?: string) => {
     if (status?.includes('Champions League') || rank <= 4) {
@@ -242,20 +242,23 @@ const LeagueStandingTable = ({
   const displayStandings = compact ? standings.slice(0, 8) : standings;
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       {/* En-tête de la ligue */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-800 dark:to-purple-900 p-4 rounded-t-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <img src={leagueLogo} alt={leagueName} className="w-12 h-12 sm:w-10 sm:h-10 bg-white rounded-full p-1 flex-shrink-0" />
-            <div>
+            <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
               <h3 className="text-base sm:text-lg font-bold text-white">
                 {currentLanguage === 'ar' 
                   ? getArabicLeagueName(leagueName)
                   : leagueName
                 }
               </h3>
-              <p className="text-blue-100 text-xs sm:text-sm">{flag} {country}</p>
+              <p className={`text-blue-100 text-xs sm:text-sm flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span>{flag}</span>
+                <span>{country}</span>
+              </p>
             </div>
           </div>
         </div>
@@ -294,13 +297,13 @@ const LeagueStandingTable = ({
               <>
                 {/* En-tête du tableau */}
                 <div className="bg-gray-100 dark:bg-[#23262f] p-3 border-b border-gray-200 dark:border-gray-700">
-                  <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                    <div className="col-span-1 text-center">#</div>
-                    <div className="col-span-6 sm:col-span-5">{currentLanguage === 'ar' ? 'الفريق' : 'Équipe'}</div>
-                    <div className="col-span-1 text-center hidden sm:block">{currentLanguage === 'ar' ? 'ل' : 'J'}</div>
-                    <div className="col-span-2 sm:col-span-1 text-center">{currentLanguage === 'ar' ? 'نقاط' : 'Pts'}</div>
-                    <div className="col-span-1 text-center hidden md:block">{currentLanguage === 'ar' ? 'الفارق' : '+/-'}</div>
-                    <div className="col-span-3 text-center hidden lg:block">{currentLanguage === 'ar' ? 'الشكل' : 'Forme'}</div>
+                  <div className={`grid grid-cols-12 gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-12' : 'order-1'}`}>#</div>
+                    <div className={`col-span-6 sm:col-span-5 ${isRTL ? 'order-11 text-right' : 'order-2'}`}>{currentLanguage === 'ar' ? 'الفريق' : 'Équipe'}</div>
+                    <div className={`col-span-1 text-center hidden sm:block ${isRTL ? 'order-10' : 'order-3'}`}>{currentLanguage === 'ar' ? 'ل' : 'J'}</div>
+                    <div className={`col-span-2 sm:col-span-1 text-center ${isRTL ? 'order-9' : 'order-4'}`}>{currentLanguage === 'ar' ? 'نقاط' : 'Pts'}</div>
+                    <div className={`col-span-1 text-center hidden md:block ${isRTL ? 'order-8' : 'order-5'}`}>{currentLanguage === 'ar' ? 'الفارق' : '+/-'}</div>
+                    <div className={`col-span-3 text-center hidden lg:block ${isRTL ? 'order-7' : 'order-6'}`}>{currentLanguage === 'ar' ? 'الشكل' : 'Forme'}</div>
                   </div>
                 </div>
 
@@ -312,7 +315,7 @@ const LeagueStandingTable = ({
                       className="grid grid-cols-12 gap-2 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors"
                     >
                       {/* Position avec indicateur */}
-                      <div className="col-span-1 flex items-center justify-center">
+                      <div className={`col-span-1 flex items-center justify-center ${isRTL ? 'order-12' : 'order-1'}`}>
                         <div className="relative">
                           <div 
                             className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full ${getPositionColor(team.rank, team.status)} flex items-center justify-center text-white text-xs font-bold`}
@@ -326,7 +329,7 @@ const LeagueStandingTable = ({
                       </div>
 
                       {/* Équipe */}
-                      <div className="col-span-6 sm:col-span-5 flex items-center gap-2 sm:gap-3">
+                      <div className={`col-span-6 sm:col-span-5 flex items-center gap-2 sm:gap-3 ${isRTL ? 'order-11 flex-row-reverse text-right' : 'order-2'}`}>
                         <img 
                           src={team.team.logo} 
                           alt={team.team.name}
@@ -341,26 +344,26 @@ const LeagueStandingTable = ({
                       </div>
 
                       {/* Matchs joués */}
-                      <div className="col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
+                      <div className={`col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 hidden sm:block ${isRTL ? 'order-10' : 'order-3'}`}>
                         {team.all.played}
                       </div>
 
                       {/* Points */}
-                      <div className="col-span-2 sm:col-span-1 text-center">
+                      <div className={`col-span-2 sm:col-span-1 text-center ${isRTL ? 'order-9' : 'order-4'}`}>
                         <span className="font-bold text-lg sm:text-lg text-gray-800 dark:text-gray-200">
                           {team.points}
                         </span>
                       </div>
 
                       {/* Différence de buts */}
-                      <div className="col-span-1 text-center text-sm hidden md:block">
+                      <div className={`col-span-1 text-center text-sm hidden md:block ${isRTL ? 'order-8' : 'order-5'}`}>
                         <span className={`font-semibold ${getGoalDiffColorClass(team.goalsDiff)}`}>
                           {team.goalsDiff > 0 ? '+' : ''}{team.goalsDiff}
                         </span>
                       </div>
 
                       {/* Forme */}
-                      <div className="col-span-3 flex justify-center hidden lg:flex">
+                      <div className={`col-span-3 flex justify-center hidden lg:flex ${isRTL ? 'order-7 flex-row-reverse' : 'order-6'}`}>
                         {formatForm(team.form)}
                       </div>
                     </div>
@@ -369,20 +372,20 @@ const LeagueStandingTable = ({
 
                 {/* Légende */}
                 <div className="bg-gray-50 dark:bg-[#23262f] p-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex flex-wrap gap-4 text-xs">
-                    <div className="flex items-center gap-2">
+                  <div className={`flex flex-wrap gap-4 text-xs ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
+                    <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                       <span className="text-gray-600 dark:text-gray-400">
                         {currentLanguage === 'ar' ? 'دوري الأبطال' : 'Champions League'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
                       <span className="text-gray-600 dark:text-gray-400">
                         {currentLanguage === 'ar' ? 'الدوري الأوروبي' : 'Europa League'}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <span className="text-gray-600 dark:text-gray-400">
                         {currentLanguage === 'ar' ? 'الهبوط' : 'Relégation'}

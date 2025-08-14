@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
 
@@ -158,28 +157,6 @@ const LeagueSelector = ({ selectedLeagues, onLeaguesChange, className }: LeagueS
           </Command>
         </PopoverContent>
       </Popover>
-      
-      {/* Affichage des badges des ligues sélectionnées */}
-      {selectedLeagues.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {selectedLeagues.map((leagueId) => {
-            const league = leagues.find(l => l.id === leagueId);
-            if (!league) return null;
-            
-            return (
-              <Badge 
-                key={leagueId} 
-                variant="secondary" 
-                className="text-xs cursor-pointer"
-                onClick={() => handleLeagueToggle(leagueId)}
-              >
-                {league.flag} {league.name}
-                <span className="ml-1">×</span>
-              </Badge>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 };

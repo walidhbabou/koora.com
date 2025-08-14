@@ -105,69 +105,30 @@ export const SELECTED_LEAGUES = [
 // Configuration des appels API avec gestion d'erreurs et fallback mock
 export class FootballAPI {
   private static instance: FootballAPI;
-  private useMockAPI = false;
-  
   private constructor() {}
-  
+
   public static getInstance(): FootballAPI {
     if (!FootballAPI.instance) {
       FootballAPI.instance = new FootballAPI();
     }
     return FootballAPI.instance;
   }
-  
+
   // Méthode générique pour les appels API - utilise toujours l'API réelle
-  private async makeRequest(endpoint: string): Promise<unknown> {
-    // Vérifier le cache global d'abord
-    const cachedData = apiCache.get<unknown>(endpoint);
-    if (cachedData) {
-      return cachedData;
-    }
-
+  private async makeRequest(endpoint: string): Promise<any> {
     try {
-      this.requestCount++;
-      console.log(`🔄 Calling API Football: ${API_CONFIG.BASE_URL}${endpoint}`);
-
       const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
         headers: API_CONFIG.HEADERS
       });
-
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
-
       const data = await response.json();
-      console.log(`✅ API Response received:`, data);
-
-      // Mettre en cache global les données
-      apiCache.set(endpoint, data);
-
       return data;
     } catch (error) {
       console.error('❌ API Request failed:', error);
       throw error;
     }
-  }
-
-  // Méthode pour récupérer les données mock selon l'endpoint
-  private async getMockData(endpoint: string): Promise<unknown> {
-    // Import dynamique pour éviter les problèmes de dépendances circulaires
-    const { mockFootballAPI } = await import('../services/mockFootballAPI');
-    
-    if (endpoint.includes('live=all')) {
-      return mockFootballAPI.getLiveFixtures();
-    } else if (endpoint.includes('fixtures?date=')) {
-      return mockFootballAPI.getTodayFixtures();
-    } else if (endpoint.includes('standings')) {
-      return mockFootballAPI.getLeagueStandings(0);
-    } else if (endpoint.includes('transfers')) {
-      return mockFootballAPI.getRecentTransfers();
-    } else if (endpoint.includes('leagues')) {
-      return mockFootballAPI.getAvailableLeagues();
-    }
-    
-    // Fallback générique
-    return { response: [] };
   }
   
   // Page d'accueil - Récupérer les dernières actualités
@@ -238,12 +199,55 @@ export class FootballAPI {
   }
   
   // Page transferts - Transferts récents
-  async getRecentTransfers(teamId?: number) {
-    if (teamId) {
-      return this.makeRequest(API_ENDPOINTS.TRANSFERS.replace('{teamId}', teamId.toString()));
+  async getRecentTransfers(teamId?: number, season?: number) {
+    let url = '';
+    if (teamId && season) {
+      url = `/transfers?team=${teamId}&season=${season}`;
+    } else if (teamId) {
+      url = `/transfers?team=${teamId}`;
+    } else if (season) {
+      url = `/transfers?season=${season}`;
+    } else {
+      url = '/transfers';
     }
-    const today = new Date().toISOString().split('T')[0];
-    return this.makeRequest(API_ENDPOINTS.TRANSFERS_TODAY.replace('{date}', today));
+    const data = await this.makeRequest(url);
+    // Retourne uniquement la liste des transferts
+    return Array.isArray(data?.response) ? { response: data.response } : { response: [] };
+  }
+
+  // Nouveaux transferts par date
+  async getTransfersByDate(date: string) {
+    const endpoint = API_ENDPOINTS.TRANSFERS_TODAY.replace('{date}', date);
+    return this.makeRequest(endpoint);
+  }
+
+  // Transferts d'un joueur spécifique
+  async getPlayerTransfers(playerId: number) {
+    const endpoint = API_ENDPOINTS.PLAYER_TRANSFERS.replace('{playerId}', playerId.toString());
+    return this.makeRequest(endpoint);
+  }
+
+  // Transferts récents des principales équipes
+  async getMainLeaguesTransfers() {
+    const transfers = [];
+    for (const leagueId of SELECTED_LEAGUES) {
+      try {
+        const response = await this.makeRequest(`/transfers?league=${leagueId}`) as { response: Transfer[] };
+        if (response?.response) {
+          transfers.push(...response.response);
+        }
+      } catch (error) {
+        console.error(`Erreur lors de la récupération des transferts pour la ligue ${leagueId}:`, error);
+      }
+    }
+    return { response: transfers };
+  }
+
+  // Transferts récents globaux (toutes équipes)
+  async getAllRecentTransfers(season?: number) {
+    let url = season ? `/transfers?season=${season}` : '/transfers';
+    const data = await this.makeRequest(url);
+    return Array.isArray(data?.response) ? { response: data.response } : { response: [] };
   }
   
   // Obtenir les ligues disponibles
@@ -260,59 +264,6 @@ export class FootballAPI {
     return this.makeRequest(endpoint);
   }
   
-  // Méthodes pour la gestion du cache et des statistiques
-  private requestCount = 0;
-  private cache = new Map<string, { data: unknown; timestamp: number }>();
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  
-  // Vérifier si les données sont en cache et valides
-  private getCachedData(endpoint: string): unknown | null {
-    const cached = this.cache.get(endpoint);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      return cached.data;
-    }
-    return null;
-  }
-  
-  // Mettre en cache les données
-  private setCachedData(endpoint: string, data: unknown): void {
-    this.cache.set(endpoint, { data, timestamp: Date.now() });
-  }
-  
-  // Obtenir les statistiques d'utilisation
-  getUsageStats() {
-    return {
-      requestCount: this.requestCount,
-      cacheSize: this.cache.size,
-      lastRequest: new Date(),
-      usingMockAPI: this.useMockAPI
-    };
-  }
-  
-  // Vérifier si on utilise l'API mock
-  isUsingMockAPI(): boolean {
-    return this.useMockAPI;
-  }
-  
-  // Forcer l'utilisation de l'API réelle (pour les tests)
-  forceRealAPI(): void {
-    this.useMockAPI = false;
-  }
-  
-  // Forcer l'utilisation de l'API mock
-  forceMockAPI(): void {
-    this.useMockAPI = true;
-  }
-  
-  // Vider le cache
-  clearCache(): void {
-    this.cache.clear();
-  }
-  
-  // Rafraîchir des données spécifiques
-  refreshData(endpoint: string): void {
-    this.cache.delete(endpoint);
-  }
 }
 
 // Classe pour l'API Google Translate non officielle (gratuite)

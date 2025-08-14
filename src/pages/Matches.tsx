@@ -1,6 +1,7 @@
 // Composant pour afficher une ligne de match avec noms traduits
 import { useEffect, useState } from "react";
 const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/config/api").Fixture, currentLanguage: string }) => {
+  const { isRTL, direction } = useTranslation();
   const homeLogo = match.teams?.home?.logo;
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
@@ -30,21 +31,39 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   }, [homeName, awayName, currentLanguage]);
 
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] last:border-b-0 bg-white dark:bg-[#181a20] dark:border-[#23262f]">
+    <div dir={direction} className={`flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] dark:border-[#334155] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'flex-row-reverse rtl' : 'ltr'}`}>
       {/* Away team (right) */}
-      <div className="flex items-center gap-2 min-w-[120px] justify-end">
-        {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
-        <span className="font-bold text-[#1a2a3a] dark:text-[#f2f2f2] text-base">{awayNameAr}</span>
+      <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-start' : 'justify-end'}`}>
+        {isRTL ? (
+          <>
+            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+            {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+          </>
+        ) : (
+          <>
+            {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+          </>
+        )}
       </div>
       {/* Score */}
       <div className="flex flex-col items-center min-w-[70px]">
-        <span className="font-bold text-[#1a2a3a] dark:text-[#f2f2f2] text-base">{homeScore} - {awayScore}</span>
-        <span className="bg-blue-500 text-white dark:bg-blue-700 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1">{time}</span>
+        <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base">{isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}</span>
+        <span className="bg-blue-500 text-white dark:bg-blue-600 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1">{time}</span>
       </div>
       {/* Home team (left) */}
-      <div className="flex items-center gap-2 min-w-[120px] justify-start">
-        <span className="font-bold text-[#1a2a3a] dark:text-[#f2f2f2] text-base">{homeNameAr}</span>
-        {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+      <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-end' : 'justify-start'}`}>
+        {isRTL ? (
+          <>
+            {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+          </>
+        ) : (
+          <>
+            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+            {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+          </>
+        )}
       </div>
     </div>
   );
@@ -66,6 +85,7 @@ import { MAIN_LEAGUES } from "@/config/api";
 // ...existing code...
 import { footballTranslationService } from '../services/translationService';
 import MatchHeader from "@/components/MatchHeader";
+import "../styles/rtl.css";
 
 // Composant pour gérer l'affichage asynchrone avec traduction
 const AsyncMatchRow = ({ match }: { match: unknown }) => {
@@ -186,7 +206,7 @@ const AsyncMatchRow = ({ match }: { match: unknown }) => {
 };
 
 const Matches = () => {
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useTranslation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedLeagues, setSelectedLeagues] = useState<number[]>([]);
   
@@ -273,7 +293,7 @@ const Matches = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419]">
+    <div dir={direction} className={`min-h-screen bg-[#f6f7fa] dark:bg-[#020617] ${isRTL ? 'rtl' : 'ltr'}`}>
       <Header />
       <TeamsLogos />
       <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 lg:py-4 max-w-4xl">
@@ -309,17 +329,17 @@ const Matches = () => {
             if (matches.length === 0) return null;
             return (
               <div key={league.id} className="mb-8">
-                <div className="flex items-center justify-between px-4 py-2 bg-[#eef0f4] dark:bg-[#23262f] rounded-t-xl border-b border-[#e3e6ea] dark:border-[#181a20]">
-                  <div className="flex items-center gap-2">
+                <div className={`flex items-center justify-between px-4 py-2 bg-[#eef0f4] dark:bg-[#1e293b] rounded-t-xl border-b border-[#e3e6ea] dark:border-[#334155] ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     {league.logo && (
                       <img src={league.logo} alt={league.name} className="w-6 h-6" />
                     )}
-                    <span className="font-bold text-lg text-[#1a2a3a] dark:text-[#f2f2f2]">
+                    <span className={`font-bold text-lg text-[#1a2a3a] dark:text-[#f1f5f9] ${isRTL && currentLanguage === 'ar' ? 'arabic-text text-right' : 'text-left'}`}>
                       {league.name}
                     </span>
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 bg-white dark:bg-[#181a20] rounded-b-xl pb-2">
+                <div className="flex flex-col gap-2 bg-white dark:bg-[#0f172a] rounded-b-xl pb-2">
                   {matches.map((match, idx) => (
                     <TranslatedMatchRow key={idx} match={match as import("@/config/api").Fixture} currentLanguage={currentLanguage} />
                   ))}
