@@ -15,21 +15,21 @@ export const useMainTeamsTransfers = (season?: number): UseTransfersResult => {
       try {
         setLoading(true);
         setError(null);
-        const allTransfers: TransferEnriched[] = [];
+        let allTransfers: TransferEnriched[] = [];
         for (const teamId of MAIN_TEAMS_IDS) {
           const apiResult = await footballAPI.getRecentTransfers(teamId, season);
           if (Array.isArray(apiResult?.response)) {
-            for (const playerObj of apiResult.response as Array<{ player: Transfer['player']; update?: string; transfers: Transfer[] }>) {
-              if (Array.isArray(playerObj.transfers)) {
-                for (const tr of playerObj.transfers) {
-                  allTransfers.push({
-                    ...tr,
-                    player: playerObj.player,
-                    update: playerObj.update,
-                  });
-                }
-              }
-            }
+            const teamTransfers = (apiResult.response as Array<{ player: Transfer['player']; update?: string; transfers: Transfer[] }>)
+              .flatMap(playerObj =>
+                Array.isArray(playerObj.transfers)
+                  ? playerObj.transfers.map(tr => ({
+                      ...tr,
+                      player: playerObj.player,
+                      update: playerObj.update,
+                    }))
+                  : []
+              );
+            allTransfers = allTransfers.concat(teamTransfers);
           }
         }
         setData({ response: allTransfers });

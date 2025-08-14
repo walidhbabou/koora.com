@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { footballAPI } from '@/config/api';
+import { footballAPI, FootballAPI } from '@/config/api';
 import { useTranslation } from '@/hooks/useTranslation';
 
 interface MockAPIAlertProps {
@@ -11,15 +11,15 @@ interface MockAPIAlertProps {
 
 const MockAPIAlert: React.FC<MockAPIAlertProps> = ({ onRetry }) => {
   const { currentLanguage } = useTranslation();
-  const isUsingMockAPI = footballAPI.isUsingMockAPI();
+  const isUsingMockAPI = FootballAPI.isUsingMockAPI();
 
   if (!isUsingMockAPI) {
     return null;
   }
 
   const handleRetryRealAPI = () => {
-    footballAPI.forceRealAPI();
-    footballAPI.clearCache();
+  FootballAPI.forceRealAPI();
+  footballAPI.clearCache();
     if (onRetry) {
       onRetry();
     }

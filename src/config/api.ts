@@ -104,6 +104,15 @@ export const SELECTED_LEAGUES = [
 
 // Configuration des appels API avec gestion d'erreurs et fallback mock
 export class FootballAPI {
+  // Indique si le mode mock est activé
+  public static isUsingMockAPI(): boolean {
+    return API_CONFIG.DEV_MODE === true;
+  }
+
+  // Force l'utilisation de l'API réelle
+  public static forceRealAPI(): void {
+    API_CONFIG.DEV_MODE = false;
+  }
   private static instance: FootballAPI;
   private constructor() {}
 
@@ -355,6 +364,27 @@ export class GoogleTranslateAPI {
       
       return text; // Retourner le texte original en cas d'erreur
     }
+  }
+
+  // Méthode mock pour récupérer des données simulées (utilisée en DEV_MODE)
+  private async getMockData(endpoint: string): Promise<unknown> {
+    // Import dynamique pour éviter les problèmes de dépendances circulaires
+    const { mockFootballAPI } = await import('../services/mockFootballAPI');
+    
+    if (endpoint.includes('live=all')) {
+      return mockFootballAPI.getLiveFixtures();
+    } else if (endpoint.includes('fixtures?date=')) {
+      return mockFootballAPI.getTodayFixtures();
+    } else if (endpoint.includes('standings')) {
+      return mockFootballAPI.getLeagueStandings(0);
+    } else if (endpoint.includes('transfers')) {
+      return mockFootballAPI.getRecentTransfers();
+    } else if (endpoint.includes('leagues')) {
+      return mockFootballAPI.getAvailableLeagues();
+    }
+    
+    // Fallback générique
+    return { response: [] };
   }
   
   // Traduire vers l'arabe
