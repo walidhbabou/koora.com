@@ -14,9 +14,10 @@ import "../styles/rtl.css";
 
 const Transfers = () => {
   const { t, currentLanguage } = useTranslation();
-  const currentSeason = new Date().getFullYear();
+  const currentSeason = 2025; // Forcer l'affichage des transferts de 2025
   const { data, loading, error } = useMainTeamsTransfers();
   const [activeTab, setActiveTab] = useState("confirmed");
+  const [selectedSeason, setSelectedSeason] = useState(2025);
   const isRTL = currentLanguage === "ar";
 
   // Barre de recherche
@@ -99,7 +100,7 @@ const Transfers = () => {
       <div className={`flex items-center gap-2 px-6 py-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} bg-[#7b6fc7]`} style={{ borderRadius: isRTL ? '20px 0 0 20px' : '0 20px 20px 0', minWidth: 220, justifyContent: isRTL ? 'flex-start' : 'flex-end' }}>
         <div className={`flex flex-col ${isRTL ? 'text-left' : 'text-right'} text-white`}>
           <span className="font-bold text-base">{transfer.player?.name}</span>
-          <span className="text-sm opacity-80">{transfer.player?.position || (isRTL ? "لا يوجد مركز" : "No position")}</span>
+          <span className="text-sm opacity-80">{isRTL ? "لاعب" : "Player"}</span>
         </div>
         <img src={transfer.player?.photo || "/placeholder.svg"} alt={transfer.player?.name || "Player"} className="w-12 h-12 rounded-full border-2 border-white" />
         <img src={transfer.teams?.out?.logo || "/placeholder.svg"} alt={transfer.teams?.out?.name || "From Club"} className="w-8 h-8 rounded-full border-2 border-white" />
@@ -166,6 +167,22 @@ const Transfers = () => {
                   <Calendar className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                   {isRTL ? "نافذة الانتقالات" : "Transfer Window"}
                 </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className={selectedSeason === 2025 ? 'bg-blue-100 border-blue-300' : ''}
+                  onClick={() => setSelectedSeason(2025)}
+                >
+                  {isRTL ? "2025" : "2025"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className={selectedSeason === 2024 ? 'bg-blue-100 border-blue-300' : ''}
+                  onClick={() => setSelectedSeason(2024)}
+                >
+                  {isRTL ? "2024" : "2024"}
+                </Button>
               </div>
             </div>
 
@@ -174,8 +191,21 @@ const Transfers = () => {
               <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                 <TrendingUp className="w-5 h-5 text-sport-green" />
                 <h2 className="text-xl font-bold text-sport-dark">
-                  {isRTL ? "آخر الانتقالات المؤكدة" : "Latest Confirmed Transfers"}
+                  {isRTL ? `انتقالات ${selectedSeason}` : `Transfers ${selectedSeason}`}
                 </h2>
+              </div>
+              
+              {/* Season Info */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'} gap-2`}>
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <span className="text-blue-800 dark:text-blue-200 font-medium">
+                    {isRTL 
+                      ? `عرض الانتقالات لموسم ${selectedSeason} - يتم تحديث البيانات كل 24 ساعة`
+                      : `Affichage des transferts pour la saison ${selectedSeason} - Les données sont mises à jour toutes les 24h`
+                    }
+                  </span>
+                </div>
               </div>
               
               {/* Barre de recherche */}

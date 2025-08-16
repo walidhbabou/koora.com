@@ -1,14 +1,66 @@
+import React, { useEffect, useState } from "react";
+import Header from "@/components/Header";
+import TeamsLogos from "@/components/TeamsLogos";
+import DatePicker from "@/components/DatePicker";
+import LeagueSelector from "@/components/LeagueSelector";
+import MockAPIAlert from "@/components/MockAPIAlert";
+import Footer from "@/components/Footer";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Clock, RefreshCw } from "lucide-react";
+import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAPI";
+import { useTranslation } from "@/hooks/useTranslation";
+import { MAIN_LEAGUES } from "@/config/api";
+import { footballTranslationService } from '../services/translationService';
+import MatchHeader from "@/components/MatchHeader";
+import MatchDetails from "@/components/MatchDetails";
+import "../styles/rtl.css";
+
 // Composant pour afficher une ligne de match avec noms traduits
-import { useEffect, useState } from "react";
 const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/config/api").Fixture, currentLanguage: string }) => {
   const { isRTL, direction } = useTranslation();
   const homeLogo = match.teams?.home?.logo;
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  const time = match.date ? new Date(match.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+  
+  // Formatage du temps de début du match
+  const getMatchTime = () => {
+    if (!match.date) return '';
+    
+    const matchDate = new Date(match.date);
+    const now = new Date();
+    const timeDiff = matchDate.getTime() - now.getTime();
+    
+    if (timeDiff < 0) {
+      // Match terminé ou en cours
+      if (match.status === 'FT' || match.status === 'AET' || match.status === 'PEN') {
+        return 'Terminé';
+      } else if (['LIVE', '1H', '2H', 'HT', 'ET'].includes(match.status)) {
+        return 'En cours';
+      } else {
+        return 'Terminé';
+      }
+    } else {
+      // Match à venir
+      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) {
+        return `Commence dans ${hours}h ${minutes}m`;
+      } else if (minutes > 0) {
+        return `Commence dans ${minutes}m`;
+      } else {
+        return 'Commence bientôt';
+      }
+    }
+  };
+  
+  const time = getMatchTime();
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
+  const [showMatchDetails, setShowMatchDetails] = useState(false);
 
   const [homeNameAr, setHomeNameAr] = useState(homeName);
   const [awayNameAr, setAwayNameAr] = useState(awayName);
@@ -31,172 +83,104 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   }, [homeName, awayName, currentLanguage]);
 
   return (
-    <div dir={direction} className={`flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] dark:border-[#334155] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'flex-row-reverse rtl' : 'ltr'}`}>
-      {/* Away team (right) */}
-      <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-start' : 'justify-end'}`}>
-        {isRTL ? (
-          <>
-            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
-            {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
-          </>
-        ) : (
-          <>
-            {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
-            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
-          </>
-        )}
-      </div>
-      {/* Score */}
-      <div className="flex flex-col items-center min-w-[70px]">
-        <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base">{isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}</span>
-        <span className="bg-blue-500 text-white dark:bg-blue-600 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1">{time}</span>
-      </div>
-      {/* Home team (left) */}
-      <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-end' : 'justify-start'}`}>
-        {isRTL ? (
-          <>
-            {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
-            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
-          </>
-        ) : (
-          <>
-            <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
-            {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
-          </>
-        )}
-      </div>
-    </div>
-  );
-};
-import Header from "@/components/Header";
-import TeamsLogos from "@/components/TeamsLogos";
-import DatePicker from "@/components/DatePicker";
-import LeagueSelector from "@/components/LeagueSelector";
-import MatchRow from "@/components/MatchRow";
-import MockAPIAlert from "@/components/MockAPIAlert";
-import Footer from "@/components/Footer";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, RefreshCw } from "lucide-react";
-import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAPI";
-import { useTranslation } from "@/hooks/useTranslation";
-import { MAIN_LEAGUES } from "@/config/api";
-// ...existing code...
-import { footballTranslationService } from '../services/translationService';
-import MatchHeader from "@/components/MatchHeader";
-import "../styles/rtl.css";
-
-// Composant pour gérer l'affichage asynchrone avec traduction
-const AsyncMatchRow = ({ match }: { match: unknown }) => {
-  const { currentLanguage } = useTranslation();
-  const [translated, setTranslated] = useState<any>(null);
-  const [showModal, setShowModal] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    
-    const convertAPIMatchToMatchCard = async (apiMatch: unknown) => {
-      const match = apiMatch as {
-        teams?: {
-          home?: { name?: string; logo?: string };
-          away?: { name?: string; logo?: string };
-        };
-        goals?: { home?: number; away?: number };
-        fixture?: { status?: { elapsed?: number; short?: string }; date?: string };
-        league?: { name?: string };
-      };
-
-      // Traduire les noms d'équipe et compétition
-      const homeTeamTrans = await footballTranslationService.translateTeamName(match.teams?.home?.name || '');
-      const awayTeamTrans = await footballTranslationService.translateTeamName(match.teams?.away?.name || '');
-      const leagueTrans = match.league?.name
-        ? await footballTranslationService.translateTeamName(match.league.name)
-        : { arabic: '', french: '', original: '' };
-
-      // Gérer le temps d'affichage
-      let displayTime = '';
-      if (match.fixture?.status?.elapsed) {
-        displayTime = `${match.fixture.status.elapsed}'`;
-      } else if (match.fixture?.date) {
-        displayTime = new Date(match.fixture.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-      }
-
-      // Choisir la langue
-      let homeTeam = '';
-      let awayTeam = '';
-      let competition = '';
-      if (currentLanguage === 'ar') {
-        homeTeam = homeTeamTrans.arabic;
-        awayTeam = awayTeamTrans.arabic;
-        competition = leagueTrans.arabic;
-      } else if (currentLanguage === 'fr') {
-        homeTeam = homeTeamTrans.french;
-        awayTeam = awayTeamTrans.french;
-        competition = leagueTrans.french;
-      } else {
-        homeTeam = homeTeamTrans.original;
-        awayTeam = awayTeamTrans.original;
-        competition = leagueTrans.original;
-      }
-
-      return {
-        homeTeam,
-        awayTeam,
-        homeScore: match.goals?.home || 0,
-        awayScore: match.goals?.away || 0,
-        time: displayTime,
-        status: getMatchStatus(match.fixture?.status?.short),
-        competition,
-        homeLogo: match.teams?.home?.logo,
-        awayLogo: match.teams?.away?.logo
-      };
-    };
-
-    const getMatchStatus = (apiStatus?: string): 'live' | 'upcoming' | 'finished' => {
-      switch (apiStatus) {
-        case 'LIVE':
-        case '1H':
-        case '2H':
-        case 'HT':
-        case 'ET':
-          return 'live';
-        case 'FT':
-        case 'AET':
-        case 'PEN':
-          return 'finished';
-        default:
-          return 'upcoming';
-      }
-    };
-
-    (async () => {
-      const result = await convertAPIMatchToMatchCard(match);
-      if (mounted) setTranslated(result);
-    })();
-    
-    return () => { mounted = false; };
-  }, [match, currentLanguage]);
-
-  if (!translated) return <div className="py-4 text-center text-xs text-muted-foreground">Loading...</div>;
-  return (
     <>
-      <div onClick={() => setShowModal(true)} style={{cursor: 'pointer'}}>
-        <MatchRow match={translated} />
+      <div 
+        dir={direction} 
+        className={`flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] dark:border-[#334155] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'flex-row-reverse rtl' : 'ltr'} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1e293b] transition-colors`}
+        onClick={() => setShowMatchDetails(true)}
+      >
+        {/* Away team (right) */}
+        <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-start' : 'justify-end'}`}>
+          {isRTL ? (
+            <>
+              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+              {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+            </>
+          ) : (
+            <>
+              {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+            </>
+          )}
+        </div>
+        {/* Score */}
+        <div className="flex flex-col items-center min-w-[70px]">
+          <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base">{isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}</span>
+          <span className="bg-blue-500 text-white dark:bg-blue-600 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1 text-center">
+            {time}
+          </span>
+        </div>
+        {/* Home team (left) */}
+        <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-end' : 'justify-start'}`}>
+          {isRTL ? (
+            <>
+              {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+            </>
+          ) : (
+            <>
+              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+              {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+            </>
+          )}
+        </div>
       </div>
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 min-w-[300px] max-w-[90vw] shadow-lg">
-            <button className="absolute top-2 right-2 text-gray-500" onClick={() => setShowModal(false)}>
-              ×
-            </button>
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-lg font-bold mb-2">تفاصيل المباراة</span>
-              <div className="flex justify-center gap-4 text-xs text-muted-foreground">
-                <span>الهدافون</span>
-                <span>الترتيب</span>
-                <span>...</span>
-              </div>
+      
+      {/* Modal pour les détails du match */}
+      {showMatchDetails && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-[#0f172a] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {currentLanguage === 'ar' ? 'تفاصيل المباراة' : 'Détails du match'}
+              </h2>
+              <button 
+                onClick={() => setShowMatchDetails(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-4">
+              {(() => {
+                console.log('Match data being passed to MatchDetails:', match);
+                console.log('Match status:', match.status);
+                return null;
+              })()}
+              <MatchDetails 
+                match={{
+                  id: match.id,
+                  date: match.date,
+                  time: new Date(match.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                  status: match.status || 'scheduled', // Provide default status if undefined
+                  venue: undefined,
+                  referee: undefined,
+                  league: {
+                    id: match.league.id,
+                    name: match.league.name,
+                    logo: match.league.logo,
+                    country: ''
+                  },
+                  teams: {
+                    home: {
+                      id: match.teams.home.id,
+                      name: match.teams.home.name,
+                      logo: match.teams.home.logo,
+                      score: match.goals?.home || undefined
+                    },
+                    away: {
+                      id: match.teams.away.id,
+                      name: match.teams.away.name,
+                      logo: match.teams.away.logo,
+                      score: match.goals?.away || undefined
+                    }
+                  },
+                  goals: [],
+                  cards: [],
+                  substitutions: []
+                }}
+                onClose={() => setShowMatchDetails(false)}
+              />
             </div>
           </div>
         </div>
@@ -265,8 +249,8 @@ const Matches = () => {
 
   // Fonction pour vérifier si un match est en direct
   const isLiveMatch = (match: unknown): boolean => {
-    const matchData = match as { fixture?: { status?: { short?: string } } };
-    const status = matchData.fixture?.status?.short;
+    const matchData = match as { status?: string };
+    const status = matchData.status;
     return ['LIVE', '1H', '2H', 'HT', 'ET'].includes(status || '');
   };
 
@@ -352,5 +336,6 @@ const Matches = () => {
       <Footer />
     </div>
   );
-}
+};
+
 export default Matches;

@@ -1,4 +1,4 @@
-import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight } from "lucide-react";
+import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
@@ -9,11 +9,16 @@ import { useTranslation } from "../hooks/useTranslation";
 import { NAV_ITEMS } from "../config/constants";
 import { useState } from "react";
 import "../styles/rtl.css";
+import AdminButton from "./AdminButton";
+import LoginModal from "./LoginModal";
+import { useAuth } from "../contexts/AuthContext";
 
 const Header = () => {
   const location = useLocation();
   const { t, isRTL, direction, currentLanguage, setLanguage } = useTranslation();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const { isAuthenticated, isAdmin, user } = useAuth();
   
   const navItemsWithIcons = [
     { ...NAV_ITEMS.find(item => item.key === 'home'), icon: Home },
@@ -120,6 +125,40 @@ const Header = () => {
                 />
               </div>
               
+              {/* Admin Button */}
+              <AdminButton isAdmin={isAdmin} />
+              
+              {/* Login/User Button */}
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      {user?.name}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsLoginOpen(true)}
+                  >
+                    Profil
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  variant="default" 
+                  size="sm"
+                  className="bg-teal-600 hover:bg-teal-700"
+                  onClick={() => setIsLoginOpen(true)}
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Connexion
+                </Button>
+              )}
+              
               {/* User Settings */}
               <UserSettings />
             </div>
@@ -196,10 +235,18 @@ const Header = () => {
                 <Search className="w-5 h-5" />
               </Button>
               
-              {/* Login Button - Compact */}
-              {/* <Button variant="default" className="bg-teal-600 hover:bg-teal-700 hover:shadow-lg transition-all duration-300 font-medium px-3 py-1 text-sm text-white"> */}
-                {/*t('loginShort')*/}
-                {/* </Button> */}
+              {/* Admin Button - Mobile */}
+              <AdminButton isAdmin={isAdmin} className="hidden sm:flex" />
+              
+              {/* Login Button - Mobile */}
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => setIsLoginOpen(true)}
+                className="hover:bg-teal-50 hover:text-teal-600 transition-all duration-300"
+              >
+                <User className="w-5 h-5" />
+              </Button>
             </div>
           </div>
         </div>
@@ -237,6 +284,9 @@ const Header = () => {
 
       {/* Spacer for mobile bottom navigation */}
       <div className="lg:hidden h-16"></div>
+      
+      {/* Login Modal */}
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
     </div>
   );
 };

@@ -405,11 +405,13 @@ export const useFootballAPI = ({
       
       let result;
       if (endpoint === 'fixtures' && params?.date) {
-        result = await footballAPI.getFixturesByDate(params.date as string, []);
+        result = await footballAPI.getFixturesByDate(params.date as string, params.leagueIds || []);
       } else if (endpoint === 'fixtures/live') {
         result = await footballAPI.getLiveFixtures();
       } else if (endpoint === 'fixtures') {
-        result = await footballAPI.getTodayFixtures();
+        // Always provide a date parameter to avoid API errors
+        const today = new Date().toISOString().split('T')[0];
+        result = await footballAPI.getFixturesByDate(today, params?.leagueIds || []);
       } else {
         throw new Error(`Endpoint not supported: ${endpoint}`);
       }
