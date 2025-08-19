@@ -81,7 +81,7 @@ export const MAIN_LEAGUES = {
   LIGUE_1: 61,            // Ligue 1
   
   // Compétitions internationales
-  CHAMPIONS_LEAGUE: 2,    // UEFA Champions League
+  CHAMPIONS_LEAGUE: 2,    // UEFA Champions League.
   EUROPA_LEAGUE: 3,       // UEFA Europa League
   WORLD_CUP: 1,          // FIFA World Cup
   
@@ -123,16 +123,41 @@ export class FootballAPI {
     return FootballAPI.instance;
   }
 
-  // Méthode générique pour les appels API - utilise toujours l'API réelle
-  private async makeRequest(endpoint: string): Promise<any> {
+  // Méthode générique pour les appels API avec cache intelligent
+  private async makeRequest(endpoint: string, params?: Record<string, unknown>): Promise<any> {
+    // Vérifier le cache d'abord
+    const cachedData = apiCache.get(endpoint, params);
+    if (cachedData) {
+      return cachedData;
+    }
+
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}${endpoint}`, {
+      // Construire l'URL avec les paramètres
+      let url = `${API_CONFIG.BASE_URL}${endpoint}`;
+      if (params && Object.keys(params).length > 0) {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+        url += `?${searchParams.toString()}`;
+      }
+
+      console.log(`🌐 API Request: ${url}`);
+      const response = await fetch(url, {
         headers: API_CONFIG.HEADERS
       });
+      
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
+      
       const data = await response.json();
+      
+      // Mettre en cache la réponse
+      apiCache.set(endpoint, data, params);
+      
       return data;
     } catch (error) {
       console.error('❌ API Request failed:', error);
@@ -142,26 +167,30 @@ export class FootballAPI {
   
   // Page d'accueil - Récupérer les dernières actualités
   async getLatestNews(limit: number = 10) {
-    return this.makeRequest(`${API_ENDPOINTS.NEWS}?limit=${limit}`);
+    return this.makeRequest(API_ENDPOINTS.NEWS, { limit });
   }
   
   // Page matchs - Matchs en direct (filtré par ligues sélectionnées)
   async getLiveFixtures() {
-    const allFixtures = await this.makeRequest(API_ENDPOINTS.FIXTURES_LIVE) as { response: Fixture[] };
+    const allFixtures = await this.makeRequest('/fixtures', { live: 'all' }) as { response: Fixture[] };
     return this.filterBySelectedLeagues(allFixtures);
   }
   
   // Page matchs - Matchs du jour (filtré par ligues sélectionnées)
   async getTodayFixtures() {
     const today = new Date().toISOString().split('T')[0];
-    const allFixtures = await this.makeRequest(API_ENDPOINTS.FIXTURES_TODAY.replace('{date}', today)) as { response: Fixture[] };
+    const allFixtures = await this.makeRequest('/fixtures', { date: today }) as { response: Fixture[] };
     return this.filterBySelectedLeagues(allFixtures);
   }
 
   // Page matchs - Matchs par date et championnat spécifique
   async getFixturesByDate(date: string, leagueIds: number[] = []) {
-    const endpoint = API_ENDPOINTS.FIXTURES_TODAY.replace('{date}', date);
-    const allFixtures = await this.makeRequest(endpoint) as { response: Fixture[] };
+    const params: Record<string, unknown> = { date };
+    if (leagueIds.length > 0) {
+      params.league = leagueIds.join(',');
+    }
+    
+    const allFixtures = await this.makeRequest('/fixtures', params) as { response: Fixture[] };
     
     console.log(`📊 API Response for date ${date}:`, allFixtures);
     
@@ -201,39 +230,28 @@ export class FootballAPI {
   
   // Page classements - Classement d'une ligue
   async getLeagueStandings(leagueId: number, season: number = new Date().getFullYear()) {
-    const endpoint = API_ENDPOINTS.STANDINGS
-      .replace('{leagueId}', leagueId.toString())
-      .replace('{season}', season.toString());
-    return this.makeRequest(endpoint);
+    return this.makeRequest('/standings', { league: leagueId, season });
   }
   
   // Page transferts - Transferts récents
   async getRecentTransfers(teamId?: number, season?: number) {
-    let url = '';
-    if (teamId && season) {
-      url = `/transfers?team=${teamId}&season=${season}`;
-    } else if (teamId) {
-      url = `/transfers?team=${teamId}`;
-    } else if (season) {
-      url = `/transfers?season=${season}`;
-    } else {
-      url = '/transfers';
-    }
-    const data = await this.makeRequest(url);
+    const params: Record<string, unknown> = {};
+    if (teamId) params.team = teamId;
+    if (season) params.season = season;
+    
+    const data = await this.makeRequest('/transfers', params);
     // Retourne uniquement la liste des transferts
     return Array.isArray(data?.response) ? { response: data.response } : { response: [] };
   }
 
   // Nouveaux transferts par date
   async getTransfersByDate(date: string) {
-    const endpoint = API_ENDPOINTS.TRANSFERS_TODAY.replace('{date}', date);
-    return this.makeRequest(endpoint);
+    return this.makeRequest('/transfers', { date });
   }
 
   // Transferts d'un joueur spécifique
   async getPlayerTransfers(playerId: number) {
-    const endpoint = API_ENDPOINTS.PLAYER_TRANSFERS.replace('{playerId}', playerId.toString());
-    return this.makeRequest(endpoint);
+    return this.makeRequest('/transfers', { player: playerId });
   }
 
   // Transferts récents des principales équipes
@@ -241,7 +259,7 @@ export class FootballAPI {
     const transfers = [];
     for (const leagueId of SELECTED_LEAGUES) {
       try {
-        const response = await this.makeRequest(`/transfers?league=${leagueId}`) as { response: Transfer[] };
+        const response = await this.makeRequest('/transfers', { league: leagueId }) as { response: Transfer[] };
         if (response?.response) {
           transfers.push(...response.response);
         }
@@ -254,23 +272,21 @@ export class FootballAPI {
 
   // Transferts récents globaux (toutes équipes)
   async getAllRecentTransfers(season?: number) {
-    let url = season ? `/transfers?season=${season}` : '/transfers';
-    const data = await this.makeRequest(url);
+    const params: Record<string, unknown> = {};
+    if (season) params.season = season;
+    
+    const data = await this.makeRequest('/transfers', params);
     return Array.isArray(data?.response) ? { response: data.response } : { response: [] };
   }
   
   // Obtenir les ligues disponibles
   async getAvailableLeagues() {
-    return this.makeRequest(API_ENDPOINTS.LEAGUES);
+    return this.makeRequest('/leagues');
   }
   
   // Page statistiques des joueurs - Statistiques par ligue
   async getPlayerStats(leagueId: number, season: number = new Date().getFullYear(), statType: string = 'topscorers') {
-    const endpoint = API_ENDPOINTS.PLAYER_STATS
-      .replace('{statType}', statType)
-      .replace('{leagueId}', leagueId.toString())
-      .replace('{season}', season.toString());
-    return this.makeRequest(endpoint);
+    return this.makeRequest(`/players/${statType}`, { league: leagueId, season });
   }
   
 }

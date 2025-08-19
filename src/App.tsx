@@ -15,6 +15,11 @@ import LanguageTest from "./pages/LanguageTest";
 import TranslationDemo from "./pages/TranslationDemo";
 import TeamDetails from "./pages/TeamDetails";
 import AdminDashboard from "./pages/AdminDashboard";
+import EditorDashboard from "./pages/EditorDashboard";
+import AuthorDashboard from "./pages/AuthorDashboard";
+import ModeratorDashboard from "./pages/ModeratorDashboard";
+import LoginPage from "./pages/LoginPage";
+import RoleBasedRouter from "./components/RoleBasedRouter";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -42,9 +47,26 @@ const App = () => (
               <Route path="/team/:teamId" element={<TeamDetails />} />
               <Route path="/language-test" element={<LanguageTest />} />
               <Route path="/translation-demo" element={<TranslationDemo />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/dashboard" element={<RoleBasedRouter />} />
               <Route path="/admin" element={
                 <ProtectedRoute requireAdmin={true}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/editor" element={
+                <ProtectedRoute requireEditor={true}>
+                  <EditorDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/author" element={
+                <ProtectedRoute requireAuthor={true}>
+                  <AuthorDashboard />
+                </ProtectedRoute>
+              } />
+              <Route path="/moderator" element={
+                <ProtectedRoute requireModerator={true}>
+                  <ModeratorDashboard />
                 </ProtectedRoute>
               } />
               

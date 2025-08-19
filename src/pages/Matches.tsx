@@ -4,6 +4,7 @@ import TeamsLogos from "@/components/TeamsLogos";
 import DatePicker from "@/components/DatePicker";
 import LeagueSelector from "@/components/LeagueSelector";
 import MockAPIAlert from "@/components/MockAPIAlert";
+
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,18 +18,83 @@ import MatchHeader from "@/components/MatchHeader";
 import MatchDetails from "@/components/MatchDetails";
 import "../styles/rtl.css";
 
-// Composant pour afficher une ligne de match avec noms traduits
+// Composant carte de match stylée avec bouton détails
+const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/config/api").Fixture, currentLanguage: string, onDetails: (match: any) => void }) => {
+  const { isRTL, direction } = useTranslation();
+  const homeLogo = match.teams?.home?.logo;
+  const awayLogo = match.teams?.away?.logo;
+  const homeName = match.teams?.home?.name || "";
+  const awayName = match.teams?.away?.name || "";
+
+  // Formatage date/heure
+  const getFormattedMatchDateTime = () => {
+    if (!match.date) return '';
+    const matchDate = new Date(match.date);
+    return matchDate.toLocaleString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
+      day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  // Statut/heure
+  const getMatchTime = () => {
+    if (!match.date) return '';
+    const matchDate = new Date(match.date);
+    const now = new Date();
+    const timeDiff = matchDate.getTime() - now.getTime();
+    if (timeDiff < 0) {
+      if (match.status === 'FT' || match.status === 'AET' || match.status === 'PEN') return 'Terminé';
+      if (["LIVE", "1H", "2H", "HT", "ET"].includes(match.status)) return 'En cours';
+      return 'Terminé';
+    } else {
+      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+      if (hours > 0) return `Commence dans ${hours}h ${minutes}m`;
+      if (minutes > 0) return `Commence dans ${minutes}m`;
+      return 'Commence bientôt';
+    }
+  };
+
+  return (
+    <div className="w-full max-w-xl mx-auto mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center p-4 gap-4">
+        {/* Date/heure */}
+        <div className="flex flex-col items-center min-w-[90px]">
+          <span className="text-xs text-gray-500 dark:text-gray-300 mb-1">{getFormattedMatchDateTime()}</span>
+          <span className="bg-blue-500 text-white rounded-full px-3 py-0.5 text-xs text-center">{getMatchTime()}</span>
+        </div>
+        {/* Equipes */}
+        <div className={`flex-1 flex items-center justify-between gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}> 
+          <div className="flex items-center gap-2">
+            {homeLogo && <img src={homeLogo} alt={homeName} className="w-9 h-9 rounded-full border" />}
+            <span className="font-bold text-md">{homeName}</span>
+          </div>
+          <div className="text-gray-500 dark:text-gray-300 font-bold text-lg">vs</div>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-md">{awayName}</span>
+            {awayLogo && <img src={awayLogo} alt={awayName} className="w-9 h-9 rounded-full border" />}
+          </div>
+        </div>
+        {/* Bouton détails */}
+        <div>
+          <Button variant="outline" size="sm" onClick={() => onDetails(match)}>
+            {currentLanguage === 'ar' ? 'تفاصيل' : 'Détails'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Ancien composant (gardé pour référence)
 const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/config/api").Fixture, currentLanguage: string }) => {
   const { isRTL, direction } = useTranslation();
   const homeLogo = match.teams?.home?.logo;
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  
   // Formatage du temps de début du match
   const getMatchTime = () => {
     if (!match.date) return '';
-    
     const matchDate = new Date(match.date);
     const now = new Date();
     const timeDiff = matchDate.getTime() - now.getTime();
@@ -36,27 +102,29 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
     if (timeDiff < 0) {
       // Match terminé ou en cours
       if (match.status === 'FT' || match.status === 'AET' || match.status === 'PEN') {
-        return 'Terminé';
+        return currentLanguage === 'ar' ? 'انتهت' : 'Terminé';
       } else if (['LIVE', '1H', '2H', 'HT', 'ET'].includes(match.status)) {
-        return 'En cours';
+        return currentLanguage === 'ar' ? 'مباشر' : 'En cours';
       } else {
-        return 'Terminé';
+        return currentLanguage === 'ar' ? 'انتهت' : 'Terminé';
       }
     } else {
-      // Match à venir
-      const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-      const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-      
-      if (hours > 0) {
-        return `Commence dans ${hours}h ${minutes}m`;
-      } else if (minutes > 0) {
-        return `Commence dans ${minutes}m`;
-      } else {
-        return 'Commence bientôt';
-      }
+      // Match à venir : afficher uniquement l'heure
+      return matchDate.toLocaleTimeString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
   };
-  
+   const getFormattedMatchDateTime = () => {
+    if (!match.date) return '';
+    
+    const matchDate = new Date(match.date);
+    return matchDate.toLocaleString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
+      day: 'numeric',
+      month: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
   const time = getMatchTime();
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
@@ -82,111 +150,135 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
     return () => { mounted = false; };
   }, [homeName, awayName, currentLanguage]);
 
-  return (
-    <>
-      <div 
-        dir={direction} 
-        className={`flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] dark:border-[#334155] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'flex-row-reverse rtl' : 'ltr'} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1e293b] transition-colors`}
-        onClick={() => setShowMatchDetails(true)}
-      >
-        {/* Away team (right) */}
-        <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-start' : 'justify-end'}`}>
-          {isRTL ? (
-            <>
-              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
-              {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
-            </>
-          ) : (
-            <>
-              {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
-              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
-            </>
-          )}
-        </div>
-        {/* Score */}
-        <div className="flex flex-col items-center min-w-[70px]">
-          <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base">{isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}</span>
-          <span className="bg-blue-500 text-white dark:bg-blue-600 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1 text-center">
-            {time}
-          </span>
-        </div>
-        {/* Home team (left) */}
-        <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-end' : 'justify-start'}`}>
-          {isRTL ? (
-            <>
-              {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
-              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
-            </>
-          ) : (
-            <>
-              <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
-              {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
-            </>
-          )}
-        </div>
-      </div>
+return (
+  <div 
+    dir={direction} 
+    className={`flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] dark:border-[#334155] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'flex-row-reverse rtl' : 'ltr'} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1e293b] transition-colors`}
+    onClick={() => setShowMatchDetails(true)}
+  >
+    {/* Away team (right) */}
+    <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-start' : 'justify-end'}`}>
+      {isRTL ? (
+        <>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+          {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+        </>
+      ) : (
+        <>
+          {awayLogo && <img src={awayLogo} alt={awayNameAr} className="w-7 h-7" />}
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+        </>
+      )}
+    </div>
+    
+    {/* Score */}
+    <div className="flex flex-col items-center min-w-[70px]">
+      <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base">
+        {(match.goals?.home === 0 && match.goals?.away === 0)
+          ? (match.date && !isNaN(new Date(match.date).getTime())
+              ? new Date(match.date).toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', { day: 'numeric', month: 'numeric', year: 'numeric' })
+              : '')
+          : (isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`)
+        }
+      </span>
+      {/* Afficher la date en français (format classique) sous l'heure pour les matchs à venir */}
+      {(match.goals?.home === 0 && match.goals?.away === 0 && match.date && !isNaN(new Date(match.date).getTime())) && (
+        <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          {new Date(match.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+        </span>
+      )}
       
-      {/* Modal pour les détails du match */}
-      {showMatchDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-[#0f172a] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {currentLanguage === 'ar' ? 'تفاصيل المباراة' : 'Détails du match'}
-              </h2>
-              <button 
-                onClick={() => setShowMatchDetails(false)}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
-              >
-                ×
-              </button>
-            </div>
-            <div className="p-4">
-              {(() => {
-                console.log('Match data being passed to MatchDetails:', match);
-                console.log('Match status:', match.status);
-                return null;
-              })()}
-              <MatchDetails 
-                match={{
-                  id: match.id,
-                  date: match.date,
-                  time: new Date(match.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                  status: match.status || 'scheduled', // Provide default status if undefined
-                  venue: undefined,
-                  referee: undefined,
-                  league: {
-                    id: match.league.id,
-                    name: match.league.name,
-                    logo: match.league.logo,
-                    country: ''
+      {/* Afficher la date seulement si le match n'est pas terminé */}
+      {match.status !== 'FT' && match.status !== 'AET' && match.status !== 'PEN' && (
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {new Date(match.date).toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
+            day: 'numeric',
+            month: 'numeric',
+            year: 'numeric'
+          })}
+        </span>
+      )}
+      
+      <span className="bg-blue-500 text-white dark:bg-blue-600 dark:text-white rounded-full px-3 py-0.5 text-xs mt-1 text-center">
+        {time}
+      </span>
+    </div>
+    
+    {/* Home team (left) */}
+    <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-end' : 'justify-start'}`}>
+      {isRTL ? (
+        <>
+          {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+        </>
+      ) : (
+        <>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+          {homeLogo && <img src={homeLogo} alt={homeNameAr} className="w-7 h-7" />}
+        </>
+      )}
+    </div>
+    {/* Modal pour les détails du match */}
+    {showMatchDetails && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-[#0f172a] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {currentLanguage === 'ar' ? 'تفاصيل المباراة' : 'Détails du match'}
+            </h2>
+            <button 
+              onClick={() => setShowMatchDetails(false)}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
+            >
+              ×
+            </button>
+          </div>
+          <div className="p-4">
+            {(() => {
+              console.log('Match data being passed to MatchDetails:', match);
+              console.log('Match status:', match.status);
+              return null;
+            })()}
+            <MatchDetails 
+              match={{
+                id: match.id,
+                date: match.date,
+                time: new Date(match.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                status: match.status || 'scheduled', // Provide default status if undefined
+                venue: undefined,
+                referee: undefined,
+                league: {
+                  id: match.league.id,
+                  name: match.league.name,
+                  logo: match.league.logo,
+                  country: ''
+                },
+                teams: {
+                  home: {
+                    id: match.teams.home.id,
+                    name: match.teams.home.name,
+                    logo: match.teams.home.logo,
+                    score: match.goals?.home || undefined
                   },
-                  teams: {
-                    home: {
-                      id: match.teams.home.id,
-                      name: match.teams.home.name,
-                      logo: match.teams.home.logo,
-                      score: match.goals?.home || undefined
-                    },
-                    away: {
-                      id: match.teams.away.id,
-                      name: match.teams.away.name,
-                      logo: match.teams.away.logo,
-                      score: match.goals?.away || undefined
-                    }
-                  },
-                  goals: [],
-                  cards: [],
-                  substitutions: []
-                }}
-                onClose={() => setShowMatchDetails(false)}
-              />
-            </div>
+                  away: {
+                    id: match.teams.away.id,
+                    name: match.teams.away.name,
+                    logo: match.teams.away.logo,
+                    score: match.goals?.away || undefined
+                  }
+                },
+                goals: [],
+                cards: [],
+                substitutions: []
+              }}
+              onClose={() => setShowMatchDetails(false)}
+            />
           </div>
         </div>
-      )}
-    </>
-  );
+      </div>
+    )}
+  </div>
+);
 };
 
 const Matches = () => {
@@ -200,17 +292,17 @@ const Matches = () => {
   const [currentLivePage, setCurrentLivePage] = useState(1);
   const [liveItemsPerPage] = useState(6);
   
-  // Utilisation des hooks pour récupérer les données
+  // Utilisation des hooks pour récupérer les données avec cache optimisé
   const liveMatches = useLiveMatches({ 
     translateContent: false,
-    refreshInterval: 30000
+    refreshInterval: 30000 // 30 secondes pour les matchs en direct
   });
   
   const selectedMatches = useMatchesByDateAndLeague({ 
     date: selectedDate,
     leagueIds: selectedLeagues,
     translateContent: false,
-    refreshInterval: 300000
+    refreshInterval: 300000 // 5 minutes pour les matchs programmés
   });
 
   // Données statiques pour les ligues demandées
@@ -314,19 +406,55 @@ const Matches = () => {
             return (
               <div key={league.id} className="mb-8">
                 <div className={`flex items-center justify-between px-4 py-2 bg-[#eef0f4] dark:bg-[#1e293b] rounded-t-xl border-b border-[#e3e6ea] dark:border-[#334155] ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    {league.logo && (
-                      <img src={league.logo} alt={league.name} className="w-6 h-6" />
-                    )}
-                    <span className={`font-bold text-lg text-[#1a2a3a] dark:text-[#f1f5f9] ${isRTL && currentLanguage === 'ar' ? 'arabic-text text-right' : 'text-left'}`}>
-                      {league.name}
-                    </span>
-                  </div>
+                  <span className="font-bold text-lg">{league.name}</span>
                 </div>
-                <div className="flex flex-col gap-2 bg-white dark:bg-[#0f172a] rounded-b-xl pb-2">
-                  {matches.map((match, idx) => (
-                    <TranslatedMatchRow key={idx} match={match as import("@/config/api").Fixture} currentLanguage={currentLanguage} />
-                  ))}
+                {/* Affichage des matchs sous forme de cartes */}
+                <div>
+                  {matches.map((item: any) => {
+  // Correction du mapping : extraire les champs depuis item.fixture et autres objets
+  const match = {
+    id: item.fixture?.id,
+    date: item.fixture?.date,
+    status: item.fixture?.status?.short || item.status || '',
+    league: item.league,
+    teams: item.teams,
+    goals: item.goals,
+    score: item.score,
+    // Ajoute d'autres champs utiles si besoin
+  };
+
+                    // Check if match is live
+                    const isLive = ['LIVE', '1H', '2H', 'HT', 'ET'].includes(match.status || match.status?.short || '');
+                    // Check if both scores are 0
+                    const bothScoresZero = (match.goals?.home === 0 && match.goals?.away === 0);
+                    // If scheduled (not live), use TranslatedMatchRow, else use MatchCard
+                    if (!isLive) {
+                      return (
+                        <TranslatedMatchRow
+                          key={match.id}
+                          match={{
+                            ...match,
+                            // If 0-0, override goals for display
+                            goals: bothScoresZero
+                              ? { home: '', away: '', displayDate: new Date(match.date).toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', { day: 'numeric', month: 'numeric', year: 'numeric' }) }
+                              : match.goals
+                          }}
+                          currentLanguage={currentLanguage}
+                        />
+                      );
+                    }
+                    // Default: live match as card
+                    return (
+                      <MatchCard
+                        key={match.id || match.fixture?.id}
+                        match={match}
+                        currentLanguage={currentLanguage}
+                        onDetails={(selectedMatch) => {
+                          alert(`Afficher les détails du match ID: ${selectedMatch.id || selectedMatch.fixture?.id}`);
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             );

@@ -47,7 +47,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'moderator' | 'user';
+  role: 'admin' | 'editor' | 'author' | 'moderator';
   status: 'active' | 'inactive' | 'banned';
   joinDate: string;
   lastLogin: string;
@@ -104,10 +104,30 @@ const AdminDashboard: React.FC = () => {
         id: '2',
         name: 'Jane Smith',
         email: 'jane@example.com',
-        role: 'moderator',
+        role: 'editor',
         status: 'active',
         joinDate: '2023-02-01',
         lastLogin: '2024-01-14',
+        avatar: '/placeholder.svg'
+      },
+      {
+        id: '3',
+        name: 'Ahmed Hassan',
+        email: 'ahmed@example.com',
+        role: 'author',
+        status: 'active',
+        joinDate: '2023-03-15',
+        lastLogin: '2024-01-13',
+        avatar: '/placeholder.svg'
+      },
+      {
+        id: '4',
+        name: 'Sarah Wilson',
+        email: 'sarah@example.com',
+        role: 'moderator',
+        status: 'active',
+        joinDate: '2023-04-10',
+        lastLogin: '2024-01-12',
         avatar: '/placeholder.svg'
       }
     ]);
@@ -451,6 +471,8 @@ const AdminDashboard: React.FC = () => {
                       <div className="flex items-center space-x-2">
                         <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                           {user.role === 'admin' ? (currentLanguage === 'ar' ? 'مدير' : 'admin') : 
+                           user.role === 'editor' ? (currentLanguage === 'ar' ? 'محرر' : 'editor') : 
+                           user.role === 'author' ? (currentLanguage === 'ar' ? 'كاتب' : 'author') : 
                            user.role === 'moderator' ? (currentLanguage === 'ar' ? 'مشرف' : 'moderator') : 
                            currentLanguage === 'ar' ? 'مستخدم' : 'user'}
                         </Badge>
@@ -529,6 +551,22 @@ const AdminDashboard: React.FC = () => {
                       </span>
                       <span className="font-semibold text-purple-600">
                         {users.filter(u => u.role === 'admin').length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        {currentLanguage === 'ar' ? 'محررين' : 'Éditeurs'}
+                      </span>
+                      <span className="font-semibold text-green-600">
+                        {users.filter(u => u.role === 'editor').length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        {currentLanguage === 'ar' ? 'كتاب' : 'Auteurs'}
+                      </span>
+                      <span className="font-semibold text-yellow-600">
+                        {users.filter(u => u.role === 'author').length}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
