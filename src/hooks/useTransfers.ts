@@ -87,24 +87,21 @@ export const useTransfers = (options: UseTransfersOptions = {}): UseTransfersRes
       } else {
         apiResult = await footballAPI.getAllRecentTransfers(season);
       }
-      // Correction : parser la réponse API pour extraire tous les transferts
-      let allTransfers: Transfer[] = [];
-        if (data && Array.isArray(apiResult?.response)) {
-          // Pour chaque joueur, extraire tous ses transferts et enrichir avec le nom du joueur
-          const allTransfers: any[] = [];
-          apiResult.response.forEach((playerObj: any) => {
-            if (playerObj.transfers && Array.isArray(playerObj.transfers)) {
-              playerObj.transfers.forEach((transfer: any) => {
-                allTransfers.push({
-                  ...transfer,
-                  player: playerObj.player,
-                  update: playerObj.update,
-                });
+      // Parser la réponse API pour extraire tous les transferts
+      let flattened: Transfer[] = [];
+      if (Array.isArray(apiResult?.response)) {
+        (apiResult.response as any[]).forEach((playerObj: any) => {
+          if (Array.isArray(playerObj?.transfers)) {
+            playerObj.transfers.forEach((transfer: any) => {
+              flattened.push({
+                ...transfer,
+                player: playerObj.player,
               });
-            }
-          });
+            });
+          }
+        });
       }
-      setData({ response: allTransfers });
+      setData({ response: flattened });
     } catch (err) {
       console.error('Erreur lors de la récupération des transferts:', err);
       setError('Erreur lors du chargement des transferts');
@@ -131,18 +128,40 @@ export const useTransfers = (options: UseTransfersOptions = {}): UseTransfersRes
   };
 };
 
-export const useMainLeaguesTransfers = (): UseTransfersResult => {
-  const [data, setData] = useState<{ response: Transfer[] } | null>(null);
+export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => {
+  const [data, setData] = useState<{ response: TransferEnriched[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTransfers = async () => {
+  const fetchTransfers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const result = await footballAPI.getMainLeaguesTransfers();
-      setData(result as { response: Transfer[] });
+
+      // Try direct league-based transfers first (may be unsupported on some plans)
+      let result: any = await footballAPI.getMainLeaguesTransfers(season);
+      // Fallback: aggregate per-team transfers for selected leagues
+      if (!result || !Array.isArray(result.response) || result.response.length === 0) {
+        result = await footballAPI.getLeagueTeamsTransfers(season ?? new Date().getFullYear());
+      }
+      // result.response is an array of player objects with transfers arrays
+      let allTransfers: TransferEnriched[] = [];
+      if (Array.isArray((result as any)?.response)) {
+        (result as any).response.forEach((playerObj: any) => {
+          if (Array.isArray(playerObj?.transfers)) {
+            playerObj.transfers.forEach((transfer: any) => {
+              const enriched: TransferEnriched = {
+                ...transfer,
+                player: playerObj.player,
+                update: playerObj.update,
+              };
+              allTransfers.push(enriched);
+            });
+          }
+        });
+      }
+
+      setData({ response: allTransfers });
     } catch (err) {
       console.error('Erreur lors de la récupération des transferts des principales ligues:', err);
       setError('Erreur lors du chargement des transferts');
@@ -150,11 +169,11 @@ export const useMainLeaguesTransfers = (): UseTransfersResult => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [season]);
 
   useEffect(() => {
     fetchTransfers();
-  }, []);
+  }, [fetchTransfers]);
 
   return {
     data,

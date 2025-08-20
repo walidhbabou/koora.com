@@ -16,7 +16,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 15%;
 
-    --primary: 120 100% 50%;
+    --primary: 84 81% 59%; /* aligns with brand green */
     --primary-foreground: 0 0% 100%;
 
     --secondary: 200 95% 60%;
@@ -33,10 +33,11 @@
 
     --border: 240 10% 92%;
     --input: 240 10% 96%;
-    --ring: 120 100% 50%;
+    --ring: 84 81% 59%;
 
-    --sport-green: 120 100% 50%;
-    --sport-blue: 200 95% 60%;
+    /* Brand palette (accessible): lime/azure */
+    --sport-green: 84 81% 59%; /* readable lime 500 */
+    --sport-blue: 200 90% 50%; /* vivid but balanced azure */
     --sport-dark: 240 10% 15%;
     --sport-light: 240 5% 98%;
     
@@ -74,14 +75,15 @@
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Deep blue-gray dark mode similar to reference */
+    --background: 222 30% 8%;      /* page bg */
+    --foreground: 210 25% 90%;     /* text */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 24% 12%;           /* surfaces */
+    --card-foreground: 210 25% 90%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 24% 12%;
+    --popover-foreground: 210 25% 90%;
 
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -89,21 +91,22 @@
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 220 18% 16%;
+    --muted-foreground: 215 16% 70%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 220 18% 16%;
+    --accent-foreground: 210 25% 90%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 210 25% 96%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 220 16% 22%;
+    --input: 220 20% 14%;          /* inputs/pills */
+    --ring: 215 84% 56%;           /* blue accent */
     
-    --sport-green: 120 100% 50%;
-    --sport-blue: 200 95% 60%;
+    /* Use blue accent in dark mode for clarity */
+    --sport-green: 215 84% 56%;    /* becomes brand blue in dark */
+    --sport-blue: 215 84% 56%;
     --sport-dark: 210 40% 98%;
     --sport-light: 217.2 32.6% 17.5%;
     
@@ -180,6 +183,7 @@
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    line-clamp: 2;
     overflow: hidden;
   }
   
@@ -187,11 +191,23 @@
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
+    line-clamp: 3;
     overflow: hidden;
   }
 }
 
 @layer utilities {
+  /* Brand color utilities */
+  .text-sport { color: hsl(var(--sport-green)); }
+  .bg-sport { background-color: hsl(var(--sport-green)); }
+  .bg-sport-10 { background-color: hsl(var(--sport-green) / 0.10); }
+  .bg-sport-20 { background-color: hsl(var(--sport-green) / 0.20); }
+  .border-sport { border-color: hsl(var(--sport-green)); }
+
+  /* Subtle neon glow (use on logo or active elements) */
+  .neon-glow { filter: drop-shadow(0 0 6px hsl(var(--sport-green) / 0.35)); }
+  .hover\:neon-glow:hover { filter: drop-shadow(0 0 10px hsl(var(--sport-green) / 0.6)); }
+
   .bg-gradient-hero {
     background: var(--gradient-hero);
   }

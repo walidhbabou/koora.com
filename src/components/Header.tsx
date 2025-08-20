@@ -1,7 +1,7 @@
 import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { UserSettings } from "./UserSettings";
 import ModernLanguageSwitcher from "./ModernLanguageSwitcher";
 import DarkModeToggle from "./DarkModeToggle";
@@ -10,14 +10,13 @@ import { NAV_ITEMS } from "../config/constants";
 import { useState } from "react";
 import "../styles/rtl.css";
 import AdminButton from "./AdminButton";
-import LoginModal from "./LoginModal";
 import { useAuth } from "../contexts/AuthContext";
 
 const Header = () => {
   const location = useLocation();
   const { t, isRTL, direction, currentLanguage, setLanguage } = useTranslation();
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const navigate = useNavigate();
   const { isAuthenticated, isAdmin, user } = useAuth();
   
   const navItemsWithIcons = [
@@ -56,20 +55,16 @@ const Header = () => {
                 aria-label="Rafraîchir la page"
               >
                 <div className="flex items-center space-x-2 hover:opacity-80 transition-opacity duration-200">
+                
                   <img 
-                    src="/koora-logo/image.png" 
+                    src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="w-10 h-10 object-contain"
+                    className="w-28 h-10 object-contain dark:hidden neon-glow hover:neon-glow"
                   />
                   <img 
-                    src="/koora-logo/black-logo.png" 
+                    src="/kooralogo.png" 
                     alt="Koora Logo" 
-                    className="w-28 h-10 object-contain dark:hidden"
-                  />
-                  <img 
-                    src="/koora-logo/green-logo.png" 
-                    alt="Koora Logo" 
-                    className="w-28 h-10 object-contain hidden dark:block"
+                    className="w-28 h-10 object-contain hidden dark:block neon-glow hover:neon-glow"
                   />
                 </div>
               </div>
@@ -81,19 +76,19 @@ const Header = () => {
                 <Link
                   key={item.key}
                   to={item.href}
-                  className={`nav-link relative text-gray-700 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition-all duration-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group ${
-                    location.pathname === item.href ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20' : ''
+                  className={`nav-link relative text-gray-700 dark:text-gray-200 hover:text-sport dark:hover:text-sport transition-all duration-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group ${
+                    location.pathname === item.href ? 'text-sport bg-sport-10 dark:bg-sport-20' : ''
                   } ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                 >
                   <span className={`${isRTL ? 'text-right' : 'text-left'} relative z-10 text-sm font-semibold`}>
                     {t(item.key)}
                   </span>
                   {location.pathname === item.href && (
-                    <span className={`absolute bottom-1 ${isRTL ? 'right-4' : 'left-4'} right-4 w-1/2 h-0.5 bg-teal-600 dark:bg-teal-400 rounded-full`}></span>
+                    <span className={`absolute bottom-1 ${isRTL ? 'right-4' : 'left-4'} right-4 w-1/2 h-0.5 bg-sport rounded-full`}></span>
                   )}
                 </Link>
               ))}
-              <button className="text-gray-700 dark:text-gray-200 hover:text-teal-600 dark:hover:text-teal-400 transition-colors p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
+              <button className="text-gray-700 dark:text-gray-200 hover:text-sport dark:hover:text-sport transition-colors p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
                 <span className="text-lg hover:scale-110 transition-transform duration-200">•••</span>
               </button>
             </nav>
@@ -117,10 +112,10 @@ const Header = () => {
               
               {/* Search */}
               <div className="relative">
-                <Search className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
+                <Search className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
                   placeholder={t('search')}
-                  className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-56 h-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 rounded-lg focus:bg-white dark:focus:bg-gray-700 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
+                  className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-64 h-10 rounded-full bg-[hsl(var(--input))] border border-transparent text-sm placeholder:text-gray-400 focus:bg-[hsl(var(--input))] focus:border-transparent focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                   dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
@@ -132,8 +127,8 @@ const Header = () => {
               {isAuthenticated ? (
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    <div className="w-8 h-8 bg-sport-10 dark:bg-sport-20 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-sport" />
                     </div>
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       {user?.name}
@@ -142,7 +137,7 @@ const Header = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => setIsLoginOpen(true)}
+                    onClick={() => navigate('/dashboard')}
                   >
                     Profil
                   </Button>
@@ -151,8 +146,8 @@ const Header = () => {
                 <Button 
                   variant="default" 
                   size="sm"
-                  className="bg-teal-600 hover:bg-teal-700"
-                  onClick={() => setIsLoginOpen(true)}
+                  className="bg-sport hover:brightness-90"
+                  onClick={() => navigate('/login')}
                 >
                   <User className="w-4 h-4 mr-2" />
                   Connexion
@@ -188,7 +183,7 @@ const Header = () => {
                   <img 
                     src="/koora-logo/image.png" 
                     alt="Koora Logo" 
-                    className="w-10 h-10 sm:w-8 sm:h-8 object-contain"
+                    className="w-10 h-10 sm:w-8 sm:h-8 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {
                       console.log('Erreur de chargement du logo:', e);
                       // Fallback vers une icône Football si l'image ne charge pas
@@ -204,7 +199,7 @@ const Header = () => {
                   <img 
                     src="/koora-logo/black-logo.png" 
                     alt="Koora Logo" 
-                    className="w-20 h-7 object-contain"
+                    className="w-20 h-7 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {
                       console.log('Erreur de chargement du logo texte:', e);
                       e.currentTarget.style.display = 'none';
@@ -231,7 +226,7 @@ const Header = () => {
               <DarkModeToggle variant="header" size="sm" />
               
               {/* Search Icon */}
-              <Button variant="ghost" size="icon" className="hover:bg-teal-50 hover:text-teal-600 transition-all duration-300">
+              <Button variant="ghost" size="icon" className="rounded-full bg-[hsl(var(--input))] hover:bg-sport-10 hover:text-sport transition-all duration-300">
                 <Search className="w-5 h-5" />
               </Button>
               
@@ -242,8 +237,8 @@ const Header = () => {
               <Button 
                 variant="ghost" 
                 size="icon"
-                onClick={() => setIsLoginOpen(true)}
-                className="hover:bg-teal-50 hover:text-teal-600 transition-all duration-300"
+                onClick={() => navigate('/login')}
+                className="rounded-full bg-[hsl(var(--input))] hover:bg-sport-10 hover:text-sport transition-all duration-300"
               >
                 <User className="w-5 h-5" />
               </Button>
@@ -264,12 +259,12 @@ const Header = () => {
                 to={item.href}
                 className={`mobile-nav-item flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 rounded-lg ${
                   isActive 
-                    ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/20 active' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? 'text-sport bg-sport-10 dark:bg-sport-20 active' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-sport dark:hover:text-sport hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
                 <div className={`p-2 rounded-lg transition-all duration-300 ${
-                  isActive ? 'bg-teal-100 dark:bg-teal-800/30' : 'hover:bg-teal-50 dark:hover:bg-teal-900/10'
+                  isActive ? 'bg-sport-10 dark:bg-sport-20' : 'hover:bg-sport-10'
                 }`}>
                   <IconComponent className="w-5 h-5" />
                 </div>
@@ -285,8 +280,7 @@ const Header = () => {
       {/* Spacer for mobile bottom navigation */}
       <div className="lg:hidden h-16"></div>
       
-      {/* Login Modal */}
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      {/* Login Modal removed: navigation to /login now */}
     </div>
   );
 };

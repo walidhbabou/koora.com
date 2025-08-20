@@ -24,7 +24,7 @@ export const CACHE_DURATIONS = {
   LEAGUES: 24 * 60 * 60 * 1000,   // 24 heures - liste des ligues
   
   // Données très stables
-  TRANSFERS: 48 * 60 * 60 * 1000, // 48 heures - transferts
+  TRANSFERS: 5 * 24 * 60 * 60 * 1000, // 5 jours - transferts (réduit la consommation API)
   SEASONS: 7 * 24 * 60 * 60 * 1000, // 7 jours - saisons
   
   // Traductions (très stables)
@@ -39,6 +39,52 @@ export class ApiCache {
     sets: 0,
     deletes: 0
   };
+
+  // Helpers localStorage
+  private storageAvailable(): boolean {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return false;
+      const testKey = '__api_cache_test__';
+      window.localStorage.setItem(testKey, '1');
+      window.localStorage.removeItem(testKey);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private lsKey(mainKey: string): string {
+    return `api-cache:${mainKey}`;
+  }
+
+  private readFromStorage<T>(key: string): CacheEntry<T> | null {
+    if (!this.storageAvailable()) return null;
+    try {
+      const raw = window.localStorage.getItem(this.lsKey(key));
+      if (!raw) return null;
+      return JSON.parse(raw) as CacheEntry<T>;
+    } catch {
+      return null;
+    }
+  }
+
+  private writeToStorage<T>(key: string, entry: CacheEntry<T>): void {
+    if (!this.storageAvailable()) return;
+    try {
+      window.localStorage.setItem(this.lsKey(key), JSON.stringify(entry));
+    } catch {
+      // Ignore quota/storage errors
+    }
+  }
+
+  private deleteFromStorage(key: string): void {
+    if (!this.storageAvailable()) return;
+    try {
+      window.localStorage.removeItem(this.lsKey(key));
+    } catch {
+      // ignore
+    }
+  }
 
   // Générer une clé de cache intelligente
   private generateCacheKey(endpoint: string, params?: Record<string, unknown>): string {
@@ -115,7 +161,7 @@ export class ApiCache {
   // Vérifie si la donnée est en cache et valide
   get<T>(endpoint: string, params?: Record<string, unknown>): T | null {
     const key = this.generateCacheKey(endpoint, params);
-    const entry = this.cache.get(key) as CacheEntry<T> | undefined;
+    let entry = this.cache.get(key) as CacheEntry<T> | undefined;
     
     if (entry) {
       const duration = this.getCacheDuration(endpoint, params);
@@ -126,7 +172,23 @@ export class ApiCache {
       } else {
         // Cache expiré, le supprimer
         this.cache.delete(key);
+        this.deleteFromStorage(key);
         console.log(`⏰ Cache EXPIRED: ${endpoint}`);
+      }
+    }
+    // Try persistent storage
+    const stored = this.readFromStorage<T>(key);
+    if (stored) {
+      const duration = this.getCacheDuration(endpoint, params);
+      if (Date.now() - stored.timestamp < duration) {
+        this.cacheStats.hits++;
+        // hydrate memory cache for faster subsequent reads
+        this.cache.set(key, stored);
+        console.log(`📦 Persistent Cache HIT: ${endpoint} (${Math.round((Date.now() - stored.timestamp) / 1000)}s old)`);
+        return stored.data as T;
+      } else {
+        this.deleteFromStorage(key);
+        console.log(`⏰ Persistent Cache EXPIRED: ${endpoint}`);
       }
     }
     
@@ -139,13 +201,14 @@ export class ApiCache {
   set<T>(endpoint: string, data: T, params?: Record<string, unknown>): void {
     const key = this.generateCacheKey(endpoint, params);
     const duration = this.getCacheDuration(endpoint, params);
-    
-    this.cache.set(key, {
+    const entry: CacheEntry<T> = {
       data,
       timestamp: Date.now(),
       type: this.getDataType(endpoint),
       endpoint
-    });
+    };
+    this.cache.set(key, entry);
+    this.writeToStorage<T>(key, entry);
     
     this.cacheStats.sets++;
     console.log(`💾 Cache SET: ${endpoint} (expires in ${Math.round(duration / 1000)}s)`);
@@ -168,6 +231,7 @@ export class ApiCache {
   delete(endpoint: string, params?: Record<string, unknown>): void {
     const key = this.generateCacheKey(endpoint, params);
     this.cache.delete(key);
+    this.deleteFromStorage(key);
     this.cacheStats.deletes++;
     console.log(`🗑️ Cache DELETE: ${endpoint}`);
   }
@@ -199,6 +263,7 @@ export class ApiCache {
       const duration = this.getCacheDuration(entry.endpoint);
       if (now - entry.timestamp >= duration) {
         this.cache.delete(key);
+        this.deleteFromStorage(key);
         deletedCount++;
       }
     }

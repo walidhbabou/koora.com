@@ -1,33 +1,42 @@
 import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
+
 import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, TrendingUp, Calendar, Loader2 } from "lucide-react";
 import TeamsLogos from "@/components/TeamsLogos";
-import { useMainTeamsTransfers } from "@/hooks/useTransfers";
+import { useMainLeaguesTransfers } from "@/hooks/useTransfers";
+import TransfersList from "@/components/TransfersList";
 import { useTranslation } from "@/hooks/useTranslation";
 import { TransferEnriched } from "@/hooks/useTransfers";
+import TransferCard from "@/components/TransferCard";
 import { useState } from "react";
 import "../styles/rtl.css";
 
 const Transfers = () => {
   const { t, currentLanguage } = useTranslation();
   const currentSeason = 2025; // Forcer l'affichage des transferts de 2025
-  const { data, loading, error } = useMainTeamsTransfers();
   const [activeTab, setActiveTab] = useState("confirmed");
   const [selectedSeason, setSelectedSeason] = useState(2025);
+  const { data, loading, error } = useMainLeaguesTransfers(selectedSeason);
   const isRTL = currentLanguage === "ar";
 
   // Barre de recherche
   const [search, setSearch] = useState("");
   // Pagination
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
   // Tri par date décroissante
-  const sortedTransfers = (data?.response || []).slice().sort((a, b) => {
+  // Restrict to selected season spanning two calendar years (e.g., 2025/2026)
+  const seasonYears = [selectedSeason, selectedSeason + 1];
+  const byYear = (data?.response || []).filter(tr => {
+    const y = tr?.date ? new Date(tr.date).getFullYear() : null;
+    return y !== null && seasonYears.includes(y);
+  });
+
+  const sortedTransfers = byYear.slice().sort((a, b) => {
     const dateA = new Date(a.date).getTime();
     const dateB = new Date(b.date).getTime();
     return dateB - dateA;
@@ -44,8 +53,26 @@ const Transfers = () => {
   });
 
   // Pagination
-  const totalPages = Math.ceil(filteredTransfers.length / pageSize);
-  const paginatedTransfers = filteredTransfers.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(filteredTransfers.length / pageSize) || 1;
+  const safePage = Math.min(page, totalPages);
+  const paginatedTransfers = filteredTransfers.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxShown = 5;
+    if (totalPages <= maxShown) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+    const start = Math.max(2, safePage - 1);
+    const end = Math.min(totalPages - 1, safePage + 1);
+    pages.push(1);
+    if (start > 2) pages.push('…');
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push('…');
+    pages.push(totalPages);
+    return pages;
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -76,44 +103,21 @@ const Transfers = () => {
     return `${day}/${month}/${year}`;
   };
 
-  const TransferCard = ({ transfer }: { transfer: TransferEnriched }) => (
-    <div
-      className={`flex items-center mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} rounded-[20px] overflow-hidden shadow-lg bg-gradient-to-r from-[#5563c1] to-[#7b6fc7]`}
-      style={{ minHeight: 70 }}
-    >
-      {/* Left: Club logo & date */}
-      <div className={`flex items-center gap-2 px-6 py-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} bg-[#5563c1]`} style={{ borderRadius: isRTL ? '0 20px 20px 0' : '20px 0 0 20px', minWidth: 180 }}>
-        <span className="font-bold text-base text-white">{formatDate(transfer.date)}</span>
-        <img src={transfer.teams?.in?.logo || "/placeholder.svg"} alt={transfer.teams?.in?.name || "Club"} className="w-10 h-10 rounded-full border-2 border-white" />
-      </div>
-      {/* Center: Fee & arrow & type */}
-      <div className="flex-1 flex items-center justify-center">
-        <span className="font-bold text-xl text-white mr-2 ml-2">{formatTransferFee(transfer.type)}</span>
-        <div className="flex items-center">
-          <span className="w-8 h-1 bg-white mx-2 rounded-full" />
-          <span className="px-4 py-1 rounded-full bg-white text-[#5563c1] font-bold text-base shadow" style={{ minWidth: 80, textAlign: 'center' }}>{isRTL ? "انتقال" : "Transfer"}</span>
-          <span className="w-8 h-1 bg-white mx-2 rounded-full" />
-          <span className="text-white text-lg">{isRTL ? '←' : '→'}</span>
-        </div>
-      </div>
-      {/* Right: Player info & logo */}
-      <div className={`flex items-center gap-2 px-6 py-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} bg-[#7b6fc7]`} style={{ borderRadius: isRTL ? '20px 0 0 20px' : '0 20px 20px 0', minWidth: 220, justifyContent: isRTL ? 'flex-start' : 'flex-end' }}>
-        <div className={`flex flex-col ${isRTL ? 'text-left' : 'text-right'} text-white`}>
-          <span className="font-bold text-base">{transfer.player?.name}</span>
-          <span className="text-sm opacity-80">{isRTL ? "لاعب" : "Player"}</span>
-        </div>
-        <img src={transfer.player?.photo || "/placeholder.svg"} alt={transfer.player?.name || "Player"} className="w-12 h-12 rounded-full border-2 border-white" />
-        <img src={transfer.teams?.out?.logo || "/placeholder.svg"} alt={transfer.teams?.out?.name || "From Club"} className="w-8 h-8 rounded-full border-2 border-white" />
-      </div>
-    </div>
-  );
+  const onImgError: React.ReactEventHandler<HTMLImageElement> = (e) => {
+    const img = e.currentTarget as HTMLImageElement & { dataset: Record<string, string> };
+    if (img.dataset.fallbackApplied === 'true') return;
+    img.dataset.fallbackApplied = 'true';
+    img.src = '/placeholder.svg';
+  };
+
+  
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
         <Header />
         <TeamsLogos />
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-center h-64">
             <Loader2 className="w-8 h-8 animate-spin text-sport-green" />
             <span className={`${isRTL ? 'mr-2' : 'ml-2'}`}>
@@ -131,7 +135,7 @@ const Transfers = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
         <Header />
         <TeamsLogos />
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <p className="text-red-500 mb-2">{isRTL ? "خطأ في تحميل البيانات" : "Error loading data"}</p>
@@ -148,16 +152,16 @@ const Transfers = () => {
     <div className={`min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background ${isRTL ? 'rtl' : 'ltr'}`}>
       <Header />
       <TeamsLogos />
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-8">
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex gap-4">
           {/* Main Content */}
-          <div className="flex-1 space-y-8">
+          <div className="flex-1 space-y-6">
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={isRTL ? 'text-right' : 'text-left'}>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-sport-dark to-sport-green bg-clip-text text-transparent">
                   {isRTL ? "الانتقالات" : "Transfers"}
                 </h1>
-                <p className="text-muted-foreground mt-1">
+                <p className="text-muted-foreground mt-0.5">
                   {isRTL ? "آخر أخبار سوق الانتقالات والصفقات" : "Latest transfer market news and deals"}
                 </p>
               </div>
@@ -171,7 +175,7 @@ const Transfers = () => {
                   variant="outline" 
                   size="sm"
                   className={selectedSeason === 2025 ? 'bg-blue-100 border-blue-300' : ''}
-                  onClick={() => setSelectedSeason(2025)}
+                  onClick={() => { setSelectedSeason(2025); setPage(1); }}
                 >
                   {isRTL ? "2025" : "2025"}
                 </Button>
@@ -179,7 +183,7 @@ const Transfers = () => {
                   variant="outline" 
                   size="sm"
                   className={selectedSeason === 2024 ? 'bg-blue-100 border-blue-300' : ''}
-                  onClick={() => setSelectedSeason(2024)}
+                  onClick={() => { setSelectedSeason(2024); setPage(1); }}
                 >
                   {isRTL ? "2024" : "2024"}
                 </Button>
@@ -187,35 +191,25 @@ const Transfers = () => {
             </div>
 
             {/* Latest Confirmed Transfers */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                 <TrendingUp className="w-5 h-5 text-sport-green" />
                 <h2 className="text-xl font-bold text-sport-dark">
-                  {isRTL ? `انتقالات ${selectedSeason}` : `Transfers ${selectedSeason}`}
+                  {isRTL ? `انتقالات ${selectedSeason}/${selectedSeason + 1}` : `Transfers ${selectedSeason}/${selectedSeason + 1}`}
                 </h2>
               </div>
               
-              {/* Season Info */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'} gap-2`}>
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <span className="text-blue-800 dark:text-blue-200 font-medium">
-                    {isRTL 
-                      ? `عرض الانتقالات لموسم ${selectedSeason} - يتم تحديث البيانات كل 24 ساعة`
-                      : `Affichage des transferts pour la saison ${selectedSeason} - Les données sont mises à jour toutes les 24h`
-                    }
-                  </span>
-                </div>
-              </div>
+              
+              
               
               {/* Barre de recherche */}
-              <div className="mb-6 flex justify-center">
+              <div className="mb-1 flex justify-center">
                 <input
                   type="text"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setPage(1); }}
                   placeholder={isRTL ? "ابحث عن لاعب أو نادي..." : "Search player or club..."}
-                  className="px-4 py-2 rounded-lg border w-full max-w-md text-black"
+                  className={`w-full max-w-xl h-11 px-5 ${isRTL ? 'text-right' : 'text-left'} rounded-full bg-[hsl(var(--input))] border border-transparent text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]`}
                   style={{ direction: isRTL ? "rtl" : "ltr" }}
                 />
               </div>
@@ -227,31 +221,61 @@ const Transfers = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">
-                    {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available at the moment"}
-                  </p>
+                <div className="space-y-3">
+                  <div className="text-center py-6">
+                    <p className="text-muted-foreground">
+                      {isRTL ? "لا توجد انتقالات متاحة حالياً، نعرض أمثلة حديثة" : "No aggregated transfers yet. Showing recent examples"}
+                    </p>
+                  </div>
+                  {/* Fallback examples for popular teams */}
+                  <TransfersList teamId={33} seasonStart={selectedSeason} title={isRTL ? `انتقالات فرق مشهورة (${selectedSeason}/${selectedSeason+1})` : `Sample transfers (${selectedSeason}/${selectedSeason+1})`} />
+                  <TransfersList teamId={50} seasonStart={selectedSeason} />
+                  <TransfersList teamId={40} seasonStart={selectedSeason} />
                 </div>
               )}
 
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 pt-8">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page === 1}
-                    onClick={() => setPage(page - 1)}
-                  >{isRTL ? "السابق" : "Previous"}</Button>
-                  <span className="px-3 font-bold">{page} / {totalPages}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page === totalPages}
-                    onClick={() => setPage(page + 1)}
-                  >{isRTL ? "التالي" : "Next"}</Button>
+              {/* Pagination (always visible) */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{isRTL ? 'العناصر لكل صفحة' : 'Items per page'}:</span>
+                  <select
+                    className="h-9 rounded-md bg-[hsl(var(--input))] border border-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                  <span className="text-xs text-muted-foreground">{filteredTransfers.length} {isRTL ? 'إجمالي' : 'total'}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(() => {
+                      const start = filteredTransfers.length ? (safePage - 1) * pageSize + 1 : 0;
+                      const end = Math.min(safePage * pageSize, filteredTransfers.length);
+                      return isRTL ? `${start}–${end} من ${filteredTransfers.length}` : `${start}–${end} of ${filteredTransfers.length}`;
+                    })()}
+                  </span>
                 </div>
-              )}
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="outline" disabled={safePage === 1} onClick={() => setPage(1)}>{isRTL ? 'الأول' : 'First'}</Button>
+                  <Button size="sm" variant="outline" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>{isRTL ? 'السابق' : 'Prev'}</Button>
+                  {getPageNumbers().map((p, idx) => (
+                    typeof p === 'number' ? (
+                      <Button
+                        key={`p-${p}-${idx}`}
+                        size="sm"
+                        variant={p === safePage ? 'default' : 'outline'}
+                        className={p === safePage ? 'bg-sport text-white' : ''}
+                        onClick={() => setPage(p)}
+                      >{p}</Button>
+                    ) : (
+                      <span key={`dots-${idx}`} className="px-2 text-muted-foreground">{p}</span>
+                    )
+                  ))}
+                  <Button size="sm" variant="outline" disabled={safePage === totalPages} onClick={() => setPage(safePage + 1)}>{isRTL ? 'التالي' : 'Next'}</Button>
+                  <Button size="sm" variant="outline" disabled={safePage === totalPages} onClick={() => setPage(totalPages)}>{isRTL ? 'الأخير' : 'Last'}</Button>
+                </div>
+              </div>
             </div>
 
             {/* Load More */}
@@ -266,42 +290,13 @@ const Transfers = () => {
 
           {/* Right Sidebar */}
           <div className="hidden lg:block w-80 space-y-6">
-            <Sidebar />
+          
             
             {/* Transfer Deadline */}
-            <Card className={`p-6 border-l-4 border-l-red-500 ${isRTL ? 'border-l-0 border-r-4 border-r-red-500' : ''}`}>
-              <h3 className={`text-lg font-bold text-sport-dark mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {isRTL ? "عداد نافذة الانتقالات" : "Transfer Window Countdown"}
-              </h3>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-red-500 mb-2">26</div>
-                <p className="text-sm text-muted-foreground">
-                  {isRTL ? "يوم متبقي على إغلاق النافذة" : "Days until window closes"}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isRTL ? "31 أغسطس 2025" : "August 31, 2025"}
-                </p>
-              </div>
-            </Card>
+            
 
             {/* Recent Transfers Summary */}
-            <Card className="p-6">
-              <h3 className={`text-lg font-bold text-sport-dark mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {isRTL ? "ملخص الانتقالات الأخيرة" : "Recent Transfers Summary"}
-              </h3>
-              <div className="space-y-3">
-                {filteredTransfers.slice(0, 5).map((transfer, index) => (
-                  <div key={`${transfer.player?.id || 'unknown'}-${transfer.date || 'nodate'}-${index}`} className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className="text-sm">
-                      {transfer.player?.name} → {transfer.teams?.in?.name}
-                    </span>
-                    <Badge variant="secondary" className="text-xs">
-                      {formatDate(transfer.date)}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
+           
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ export const GOOGLE_TRANSLATE_CONFIG = {
   }
 };
 
-// Configuration LibreTranslate pour la traduction arabe/français (fallback)
+// Configuration LibreTranslate pour la traduction (fallback)
 export const TRANSLATE_CONFIG = {
   BASE_URL: import.meta.env.VITE_LIBRETRANSLATE_API_URL || 'https://libretranslate.com/translate',
   API_KEY: import.meta.env.VITE_LIBRETRANSLATE_API_KEY,
@@ -68,7 +68,9 @@ export const API_ENDPOINTS = {
   PLAYER_TRANSFERS: '/transfers?player={playerId}',
   
   // Statistiques des joueurs
-  PLAYER_STATS: '/players/{statType}?league={leagueId}&season={season}'
+  PLAYER_STATS: '/players/{statType}?league={leagueId}&season={season}',
+  FIXTURE_EVENTS: '/fixtures/events',
+  FIXTURE_STATISTICS: '/fixtures/statistics'
 };
 
 // Ligues principales à afficher en priorité (plan gratuit de l'API Football)
@@ -254,12 +256,15 @@ export class FootballAPI {
     return this.makeRequest('/transfers', { player: playerId });
   }
 
-  // Transferts récents des principales équipes
-  async getMainLeaguesTransfers() {
-    const transfers = [];
+  // Transferts récents des principales ligues (avec saison optionnelle)
+  async getMainLeaguesTransfers(season?: number) {
+    const transfers = [] as any[];
     for (const leagueId of SELECTED_LEAGUES) {
       try {
-        const response = await this.makeRequest('/transfers', { league: leagueId }) as { response: Transfer[] };
+        const params: Record<string, unknown> = { league: leagueId };
+        if (season) params.season = season;
+        // Note: L'endpoint /transfers ne supporte pas toujours le paramètre league. Cette méthode peut retourner vide selon l'API/plan.
+        const response = await this.makeRequest('/transfers', params) as { response: any[] };
         if (response?.response) {
           transfers.push(...response.response);
         }
@@ -268,6 +273,37 @@ export class FootballAPI {
       }
     }
     return { response: transfers };
+  }
+
+  // Récupérer les équipes par ligue et saison
+  async getTeamsByLeague(leagueId: number, season: number) {
+    return this.makeRequest('/teams', { league: leagueId, season });
+  }
+
+  // Récupérer les transferts par équipes issues des ligues sélectionnées pour une saison donnée
+  async getLeagueTeamsTransfers(season: number, maxTeamsPerLeague: number = 12) {
+    const aggregated: any[] = [];
+    for (const leagueId of SELECTED_LEAGUES) {
+      try {
+        const teamsRes = await this.getTeamsByLeague(leagueId, season);
+        const teams: Array<{ team: { id: number } }> = Array.isArray(teamsRes?.response) ? teamsRes.response : [];
+        const teamIds = teams.slice(0, maxTeamsPerLeague).map((t: any) => t?.team?.id).filter(Boolean);
+
+        for (const teamId of teamIds) {
+          try {
+            const trRes = await this.getRecentTransfers(teamId, season);
+            if (Array.isArray((trRes as any)?.response)) {
+              aggregated.push(...(trRes as any).response);
+            }
+          } catch (teamErr) {
+            console.error(`Erreur transferts pour l'équipe ${teamId} (league ${leagueId}):`, teamErr);
+          }
+        }
+      } catch (err) {
+        console.error(`Erreur équipes pour la ligue ${leagueId}:`, err);
+      }
+    }
+    return { response: aggregated };
   }
 
   // Transferts récents globaux (toutes équipes)
@@ -289,6 +325,77 @@ export class FootballAPI {
     return this.makeRequest(`/players/${statType}`, { league: leagueId, season });
   }
   
+  // Fixtures: Events timeline
+  async getFixtureEvents(fixtureId: number) {
+    return this.makeRequest('/fixtures/events', { fixture: fixtureId });
+  }
+
+  // Fixtures: Statistics for both teams
+  async getFixtureStatistics(fixtureId: number, homeTeamId: number, awayTeamId: number) {
+    // API requires team param; fetch for both teams in parallel
+    const [homeRes, awayRes] = await Promise.all([
+      this.makeRequest('/fixtures/statistics', { fixture: fixtureId, team: homeTeamId }),
+      this.makeRequest('/fixtures/statistics', { fixture: fixtureId, team: awayTeamId })
+    ]);
+    return { home: homeRes, away: awayRes };
+  }
+
+  // Fixtures: Lineups for a fixture
+  async getFixtureLineups(fixtureId: number) {
+    return this.makeRequest('/fixtures/lineups', { fixture: fixtureId });
+  }
+  
+  // Transfers: by player or team
+  async getTransfers(params: { player?: number; team?: number }) {
+    const query: Record<string, number> = {};
+    if (params.player) query.player = params.player;
+    if (params.team) query.team = params.team;
+    return this.makeRequest('/transfers', query);
+  }
+  
+}
+
+// API types for events/statistics
+export interface FixtureEventItem {
+  time: { elapsed: number; extra?: number | null };
+  team: { id: number; name: string; logo: string };
+  player: { id: number | null; name: string | null };
+  assist: { id: number | null; name: string | null } | null;
+  type: string; // e.g., 'Goal', 'Card', 'subst', etc.
+  detail: string; // e.g., 'Yellow Card', 'Red Card', 'Normal Goal', 'Penalty',
+  comments?: string | null;
+}
+
+export interface FixtureStatisticItem {
+  team: { id: number; name: string; logo: string };
+  statistics: Array<{ type: string; value: number | string | null }>;
+}
+
+// API types for lineups
+export interface FixtureLineupPlayerItem {
+  player: {
+    id: number | null;
+    name: string | null;
+    number: number | null;
+    pos: string | null; // G, D, M, F
+    grid: string | null; // e.g. "2:3"
+  };
+}
+
+export interface FixtureLineupItem {
+  team: {
+    id: number;
+    name: string;
+    logo: string;
+    colors?: {
+      player?: { primary?: string; number?: string; border?: string };
+      goalkeeper?: { primary?: string; number?: string; border?: string };
+    };
+  };
+  formation: string;
+  startXI: FixtureLineupPlayerItem[];
+  substitutes: FixtureLineupPlayerItem[];
+  coach?: { id?: number; name?: string; photo?: string } | null;
 }
 
 // Classe pour l'API Google Translate non officielle (gratuite)
@@ -808,6 +915,26 @@ export interface Transfer {
   };
   type: string;
   date: string;
+}
+
+// API types for transfers (détail brut de l'endpoint /transfers)
+export interface TransferTeamRef {
+  id: number;
+  name: string;
+  logo: string;
+}
+
+export interface TransferRecord {
+  date: string; // YYYY-MM-DD
+  type: string | null; // e.g., Loan, Free, N/A
+  teams: { in: TransferTeamRef; out: TransferTeamRef };
+}
+
+export interface TransferResponseItem {
+  player?: { id: number; name: string };
+  team?: { id: number; name: string };
+  update?: string;
+  transfers: TransferRecord[];
 }
 
 // Types pour LibreTranslate
