@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, TrendingUp, Calendar, Loader2 } from "lucide-react";
 import TeamsLogos from "@/components/TeamsLogos";
 import { useMainLeaguesTransfers } from "@/hooks/useTransfers";
-import TransfersList from "@/components/TransfersList";
+// Removed per-club fallback list to keep general transfers only
 import { useTranslation } from "@/hooks/useTranslation";
 import { TransferEnriched } from "@/hooks/useTransfers";
 import TransferCard from "@/components/TransferCard";
@@ -26,17 +26,11 @@ const Transfers = () => {
   const [search, setSearch] = useState("");
   // Pagination
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(50);
 
-  // Tri par date décroissante
-  // Restrict to selected season spanning two calendar years (e.g., 2025/2026)
-  const seasonYears = [selectedSeason, selectedSeason + 1];
-  const byYear = (data?.response || []).filter(tr => {
-    const y = tr?.date ? new Date(tr.date).getFullYear() : null;
-    return y !== null && seasonYears.includes(y);
-  });
-
-  const sortedTransfers = byYear.slice().sort((a, b) => {
+  // Tri par date décroissante (sans filtrage strict par saison pour garantir l'affichage)
+  const allTransfers = (data?.response || []);
+  const sortedTransfers = allTransfers.slice().sort((a, b) => {
     const dateA = new Date(a.date).getTime();
     const dateB = new Date(b.date).getTime();
     return dateB - dateA;
@@ -152,10 +146,9 @@ const Transfers = () => {
     <div className={`min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background ${isRTL ? 'rtl' : 'ltr'}`}>
       <Header />
       <TeamsLogos />
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex gap-4">
-          {/* Main Content */}
-          <div className="flex-1 space-y-6">
+      <div className="w-full max-w-7xl mx-auto px-4 py-3">
+        {/* Main Content full width */}
+        <div className="space-y-6">
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className={isRTL ? 'text-right' : 'text-left'}>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-sport-dark to-sport-green bg-clip-text text-transparent">
@@ -221,16 +214,8 @@ const Transfers = () => {
                   ))}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="text-center py-6">
-                    <p className="text-muted-foreground">
-                      {isRTL ? "لا توجد انتقالات متاحة حالياً، نعرض أمثلة حديثة" : "No aggregated transfers yet. Showing recent examples"}
-                    </p>
-                  </div>
-                  {/* Fallback examples for popular teams */}
-                  <TransfersList teamId={33} seasonStart={selectedSeason} title={isRTL ? `انتقالات فرق مشهورة (${selectedSeason}/${selectedSeason+1})` : `Sample transfers (${selectedSeason}/${selectedSeason+1})`} />
-                  <TransfersList teamId={50} seasonStart={selectedSeason} />
-                  <TransfersList teamId={40} seasonStart={selectedSeason} />
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}
                 </div>
               )}
 
@@ -238,15 +223,7 @@ const Transfers = () => {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">{isRTL ? 'العناصر لكل صفحة' : 'Items per page'}:</span>
-                  <select
-                    className="h-9 rounded-md bg-[hsl(var(--input))] border border-transparent px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]"
-                    value={pageSize}
-                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
-                  >
-                    <option value={10}>10</option>
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                  </select>
+                  <span className="h-9 inline-flex items-center rounded-md bg-[hsl(var(--input))] px-3 text-sm">50</span>
                   <span className="text-xs text-muted-foreground">{filteredTransfers.length} {isRTL ? 'إجمالي' : 'total'}</span>
                   <span className="text-xs text-muted-foreground">
                     {(() => {
@@ -277,29 +254,8 @@ const Transfers = () => {
                 </div>
               </div>
             </div>
-
-            {/* Load More */}
-            {filteredTransfers.length > 10 && (
-              <div className="flex justify-center pt-8">
-                <Button size="lg" variant="outline" className="border-sport-green text-sport-green hover:bg-sport-green hover:text-white">
-                  {isRTL ? "تحميل المزيد من الانتقالات" : "Load More Transfers"}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Right Sidebar */}
-          <div className="hidden lg:block w-80 space-y-6">
-          
-            
-            {/* Transfer Deadline */}
-            
-
-            {/* Recent Transfers Summary */}
-           
           </div>
         </div>
-      </div>
       
       <Footer />
     </div>

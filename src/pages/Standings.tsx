@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter } from "lucide-react";
+import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAllLeagueStandings, useMockStandings } from "@/hooks/useStandings";
 import { useTranslation } from "@/hooks/useTranslation";
 import { useState } from "react";
@@ -160,52 +160,48 @@ const Standings = () => {
               </div>
             </div>
 
-            {/* Liste des ligues */}
+            {/* Liste des ligues (style simple comme la maquette) */}
             <div className="max-w-2xl mx-auto">
-              <Card className="bg-white dark:bg-[#181a20] border-0 shadow-xl overflow-hidden">
-                <div className="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-800 dark:to-purple-900 p-4">
-                  <h2 className="text-xl font-bold text-white text-center">
-                    {currentLanguage === 'ar' ? 'البطولات' : 'Tournois'}
-                  </h2>
-                </div>
-                
-                <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {filteredLeagues.map((league) => (
-                    <div 
-                      key={league.id}
+              <h2 className={`mb-4 text-base font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {currentLanguage === 'ar' ? 'البطولات' : 'Tournois'}
+              </h2>
+
+              <ul className="space-y-3">
+                {filteredLeagues.map((league) => (
+                  <li key={league.id}>
+                    <div
                       onClick={() => handleLeagueClick(league.id)}
-                      className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-[#23262f] cursor-pointer transition-colors duration-200 group"
+                      className={`flex items-center justify-between rounded-2xl bg-white dark:bg-[#181a20] border border-gray-100 dark:border-[#23262f] px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
                     >
-                      <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                        <img 
-                          src={league.logo} 
-                          alt={league.name}
-                          className="w-12 h-12 object-contain bg-white rounded-lg p-1 shadow-sm"
-                        />
-                        <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
-                          <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {league.name}
-                          </h3>
-                          <p className={`text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                            <span className="text-lg">{league.flag}</span>
-                            {league.country}
-                          </p>
-                        </div>
+                      {/* Chevron */}
+                      <div className={`shrink-0 text-gray-400 ${isRTL ? '' : ''}`}>
+                        {isRTL ? (
+                          <ChevronRight className="w-4 h-4" />
+                        ) : (
+                          <ChevronLeft className="w-4 h-4" />
+                        )}
                       </div>
-                      
-                      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                        <Badge className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                          {currentLanguage === 'ar' ? 'الموسم 24/25' : 'Season 24/25'}
-                        </Badge>
-                        <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm group-hover:bg-blue-700 transition-colors">
-                          {isRTL ? '←' : '→'}
-                        </div>
+
+                      {/* League name */}
+                      <div className={`flex-1 px-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm sm:text-base">
+                          {league.name}
+                        </span>
+                      </div>
+
+                      {/* Logo */}
+                      <div className="shrink-0">
+                        <img
+                          src={league.logo}
+                          alt={league.name}
+                          className="w-9 h-9 sm:w-11 sm:h-11 object-contain bg-white rounded-xl p-1"
+                        />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </Card>
-              
+                  </li>
+                ))}
+              </ul>
+
               {/* Message si aucun résultat */}
               {filteredLeagues.length === 0 && (
                 <div className="text-center py-8">

@@ -297,27 +297,36 @@ const LeagueStandingTable = ({
               <>
                 {/* En-tête du tableau */}
                 <div className="bg-gray-100 dark:bg-[#23262f] p-3 border-b border-gray-200 dark:border-gray-700">
-                  <div className={`grid grid-cols-12 gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <div className={`grid grid-cols-12 gap-2 text-[11px] sm:text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className={`col-span-1 text-center ${isRTL ? 'order-12' : 'order-1'}`}>#</div>
-                    <div className={`col-span-6 sm:col-span-5 ${isRTL ? 'order-11 text-right' : 'order-2'}`}>{currentLanguage === 'ar' ? 'الفريق' : 'Équipe'}</div>
-                    <div className={`col-span-1 text-center hidden sm:block ${isRTL ? 'order-10' : 'order-3'}`}>{currentLanguage === 'ar' ? 'ل' : 'J'}</div>
-                    <div className={`col-span-2 sm:col-span-1 text-center ${isRTL ? 'order-9' : 'order-4'}`}>{currentLanguage === 'ar' ? 'نقاط' : 'Pts'}</div>
-                    <div className={`col-span-1 text-center hidden md:block ${isRTL ? 'order-8' : 'order-5'}`}>{currentLanguage === 'ar' ? 'الفارق' : '+/-'}</div>
-                    <div className={`col-span-3 text-center hidden lg:block ${isRTL ? 'order-7' : 'order-6'}`}>{currentLanguage === 'ar' ? 'الشكل' : 'Forme'}</div>
+                    <div className={`col-span-4 ${isRTL ? 'order-11 text-right' : 'order-2'}`}>{currentLanguage === 'ar' ? 'الأندية' : 'Équipe'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-10' : 'order-3'}`}>{currentLanguage === 'ar' ? 'لعب' : 'J'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-9' : 'order-4'}`}>{currentLanguage === 'ar' ? 'فاز' : 'G'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-8' : 'order-5'}`}>{currentLanguage === 'ar' ? 'تعادل' : 'N'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-7' : 'order-6'}`}>{currentLanguage === 'ar' ? 'خسر' : 'P'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-6' : 'order-7'}`}>{currentLanguage === 'ar' ? 'الأهداف' : 'Buts'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-5' : 'order-8'}`}>{currentLanguage === 'ar' ? 'الفرق' : '+/-'}</div>
+                    <div className={`col-span-1 text-center ${isRTL ? 'order-4' : 'order-9'}`}>{currentLanguage === 'ar' ? 'النقاط' : 'Pts'}</div>
                   </div>
                 </div>
 
                 {/* Tableau des classements */}
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {displayStandings.map((team, index) => (
-                    <div 
-                      key={team.team.id} 
-                      className="grid grid-cols-12 gap-2 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors"
+                  {displayStandings.map((team) => (
+                    <div
+                      key={team.team.id}
+                      className="relative grid grid-cols-12 gap-2 p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors"
                     >
+                      {/* Stripe latéral coloré */}
+                      <div
+                        className={`absolute top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-1 ${getPositionColor(team.rank, team.status)}`}
+                        aria-hidden
+                      />
+
                       {/* Position avec indicateur */}
                       <div className={`col-span-1 flex items-center justify-center ${isRTL ? 'order-12' : 'order-1'}`}>
                         <div className="relative">
-                          <div 
+                          <div
                             className={`w-7 h-7 sm:w-6 sm:h-6 rounded-full ${getPositionColor(team.rank, team.status)} flex items-center justify-center text-white text-xs font-bold`}
                           >
                             {team.rank}
@@ -329,42 +338,48 @@ const LeagueStandingTable = ({
                       </div>
 
                       {/* Équipe */}
-                      <div className={`col-span-6 sm:col-span-5 flex items-center gap-2 sm:gap-3 ${isRTL ? 'order-11 flex-row-reverse text-right' : 'order-2'}`}>
-                        <img 
-                          src={team.team.logo} 
+                      <div className={`col-span-4 flex items-center gap-2 sm:gap-3 ${isRTL ? 'order-11 flex-row-reverse text-right' : 'order-2'}`}>
+                        <img
+                          src={team.team.logo}
                           alt={team.team.name}
                           className="w-10 h-10 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                         />
                         <span className="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm sm:text-base">
-                          {currentLanguage === 'ar' 
-                            ? getArabicTeamName(team.team.name)
-                            : team.team.name
-                          }
+                          {currentLanguage === 'ar' ? getArabicTeamName(team.team.name) : team.team.name}
                         </span>
                       </div>
 
-                      {/* Matchs joués */}
-                      <div className={`col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 hidden sm:block ${isRTL ? 'order-10' : 'order-3'}`}>
+                      {/* Joués */}
+                      <div className={`col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'order-10' : 'order-3'}`}>
                         {team.all.played}
                       </div>
-
-                      {/* Points */}
-                      <div className={`col-span-2 sm:col-span-1 text-center ${isRTL ? 'order-9' : 'order-4'}`}>
-                        <span className="font-bold text-lg sm:text-lg text-gray-800 dark:text-gray-200">
-                          {team.points}
-                        </span>
+                      {/* Gagnés */}
+                      <div className={`col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'order-9' : 'order-4'}`}>
+                        {team.all.win}
                       </div>
-
-                      {/* Différence de buts */}
-                      <div className={`col-span-1 text-center text-sm hidden md:block ${isRTL ? 'order-8' : 'order-5'}`}>
+                      {/* Nuls */}
+                      <div className={`col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'order-8' : 'order-5'}`}>
+                        {team.all.draw}
+                      </div>
+                      {/* Perdus */}
+                      <div className={`col-span-1 text-center text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'order-7' : 'order-6'}`}>
+                        {team.all.lose}
+                      </div>
+                      {/* Buts */}
+                      <div className={`col-span-1 text-center text-sm text-gray-700 dark:text-gray-300 font-semibold ${isRTL ? 'order-6' : 'order-7'}`}>
+                        {team.all.goals.for}:{team.all.goals.against}
+                      </div>
+                      {/* Différence */}
+                      <div className={`col-span-1 text-center text-sm ${isRTL ? 'order-5' : 'order-8'}`}>
                         <span className={`font-semibold ${getGoalDiffColorClass(team.goalsDiff)}`}>
                           {team.goalsDiff > 0 ? '+' : ''}{team.goalsDiff}
                         </span>
                       </div>
-
-                      {/* Forme */}
-                      <div className={`col-span-3 flex justify-center hidden lg:flex ${isRTL ? 'order-7 flex-row-reverse' : 'order-6'}`}>
-                        {formatForm(team.form)}
+                      {/* Points */}
+                      <div className={`col-span-1 text-center ${isRTL ? 'order-4' : 'order-9'}`}>
+                        <span className="font-bold text-lg sm:text-lg text-gray-800 dark:text-gray-200">
+                          {team.points}
+                        </span>
                       </div>
                     </div>
                   ))}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import DatePicker from "@/components/DatePicker";
@@ -9,14 +9,15 @@ import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, RefreshCw } from "lucide-react";
+import { Clock, RefreshCw, QrCode } from "lucide-react";
 import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAPI";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
-import { footballTranslationService } from '../services/translationService';
+import { getArabicTeamName } from '@/utils/teamNameMap';
 import MatchHeader from "@/components/MatchHeader";
 import MatchDetails from "@/components/MatchDetails";
 import "../styles/rtl.css";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Composant carte de match stylée avec bouton détails
 const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/config/api").Fixture, currentLanguage: string, onDetails: (match: any) => void }) => {
@@ -26,13 +27,13 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
 
-  // Formatage date/heure
+  // Formatage date/heure (forcer FR pour la date lisible)
   const getFormattedMatchDateTime = () => {
     if (!match.date) return '';
     const matchDate = new Date(match.date);
-    return matchDate.toLocaleString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
-      day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    return new Intl.DateTimeFormat('fr-FR', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    }).format(matchDate);
   };
 
   // Statut/heure
@@ -169,15 +170,12 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   };
    const getFormattedMatchDateTime = () => {
     if (!match.date) return '';
-    
     const matchDate = new Date(match.date);
-    return matchDate.toLocaleString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
+    return new Intl.DateTimeFormat('fr-FR', {
       day: 'numeric',
-      month: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+      month: 'long',
+      year: 'numeric'
+    }).format(matchDate);
   };
   const time = getMatchTime();
   // Status helpers for rendering
@@ -198,43 +196,32 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
   const [showMatchDetails, setShowMatchDetails] = useState(false);
-
-  const [homeNameAr, setHomeNameAr] = useState(homeName);
-  const [awayNameAr, setAwayNameAr] = useState(awayName);
-  useEffect(() => {
-    let mounted = true;
-    if (currentLanguage === 'ar') {
-      import("@/services/translationService").then(({ footballTranslationService }) => {
-        footballTranslationService.translateTeamName(homeName).then(res => {
-          if (mounted) setHomeNameAr(res.arabic);
-        });
-        footballTranslationService.translateTeamName(awayName).then(res => {
-          if (mounted) setAwayNameAr(res.arabic);
-        });
-      });
-    } else {
-      setHomeNameAr(homeName);
-      setAwayNameAr(awayName);
-    }
-    return () => { mounted = false; };
-  }, [homeName, awayName, currentLanguage]);
+  // Use static mapping for Arabic UI; keep original for other languages
+  const displayHomeName = currentLanguage === 'ar' ? getArabicTeamName(homeName) : homeName;
+  const displayAwayName = currentLanguage === 'ar' ? getArabicTeamName(awayName) : awayName;
 
 return (
   <div 
     dir={direction} 
-    className={`flex items-center justify-between px-4 py-3 border-b border-[#f2f2f2] dark:border-[#334155] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'flex-row-reverse rtl' : 'ltr'} cursor-pointer hover:bg-gray-50 dark:hover:bg-[#1e293b] transition-colors`}
+    className={`flex items-center justify-between my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
     onClick={() => setShowMatchDetails(true)}
   >
-    {/* Away team (right) */}
-    <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-start' : 'justify-end'}`}>
+    {/* Small left image card */}
+    <div className={`shrink-0 me-2`}>
+      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
+        <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />
+      </div>
+    </div>
+    {/* Away team (right) - left side of row, take equal space */}
+    <div className={`flex items-center gap-2 flex-1 justify-end min-w-[120px] sm:min-w-[160px]`}>
       {isRTL ? (
         <>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
           {awayLogo ? (
             <img
               src={awayLogo}
-              alt={awayNameAr}
-              className="w-7 h-7 object-contain"
+              alt={displayAwayName}
+              className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
@@ -245,14 +232,14 @@ return (
               crossOrigin="anonymous"
             />
           ) : null}
-          <div className={`w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold ${awayLogo ? 'hidden' : ''}`}>A</div>
+          <div className={`w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold ${awayLogo ? 'hidden' : ''}`}>A</div>
         </>
       ) : (
         <>
           {awayLogo ? (
             <img
               src={awayLogo}
-              alt={awayNameAr}
+              alt={displayAwayName}
               className="w-7 h-7 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -263,39 +250,32 @@ return (
             />
           ) : null}
           <div className={`w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold ${awayLogo ? 'hidden' : ''}`}>A</div>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{awayNameAr}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
         </>
       )}
     </div>
     
-    {/* Centre: score pour live/terminé, sinon heure au style demandé */}
-    <div className="flex flex-col items-center min-w-[100px] w-[100px] text-center">
+    {/* Centre: score/time only, exactly centered */}
+    <div className="flex items-center justify-center w-[120px] min-w-[120px]">
       {(isLiveState || isFinishedState)
         ? (
-          <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base">
+          <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
             {isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}
           </span>
         ) : (
-          currentLanguage === 'ar' && upcomingArabicParts ? (
-            <span className="flex items-center justify-center gap-1">
-              <span className="font-extrabold text-[#1a2a3a] dark:text-[#f1f5f9] text-base sm:text-lg">{upcomingArabicParts.hhmm}</span>
-              <span className="text-sm text-[#1a2a3a] dark:text-[#f1f5f9]">{upcomingArabicParts.mer}</span>
-            </span>
-          ) : (
-            <span className="font-extrabold text-[#1a2a3a] dark:text-[#f1f5f9] text-base sm:text-lg">{time}</span>
-          )
+          <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-base sm:text-lg">{currentLanguage==='ar' && upcomingArabicParts ? upcomingArabicParts.hhmm : time}</span>
         )
       }
     </div>
     
-    {/* Home team (left) */}
-    <div className={`flex items-center gap-2 min-w-[120px] ${isRTL ? 'justify-end' : 'justify-start'}`}>
+    {/* Home team (left) - right side of row, take equal space */}
+    <div className={`flex items-center gap-2 flex-1 justify-start min-w-[120px] sm:min-w-[160px]`}>
       {isRTL ? (
         <>
           {homeLogo ? (
             <img
               src={homeLogo}
-              alt={homeNameAr}
+              alt={displayHomeName}
               className="w-7 h-7 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -307,16 +287,16 @@ return (
               crossOrigin="anonymous"
             />
           ) : null}
-          <div className={`w-7 h-7 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold ${homeLogo ? 'hidden' : ''}`}>H</div>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+          <div className={`w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold ${homeLogo ? 'hidden' : ''}`}>H</div>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
         </>
       ) : (
         <>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{homeNameAr}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
           {homeLogo ? (
             <img
               src={homeLogo}
-              alt={homeNameAr}
+              alt={displayHomeName}
               className="w-7 h-7 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -398,6 +378,10 @@ const Matches = () => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedLeagues, setSelectedLeagues] = useState<number[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
+  const [showFilter, setShowFilter] = useState(false);
+  const [sortBy, setSortBy] = useState<'league'|'time'>('league');
+  const [statusFilter, setStatusFilter] = useState<'all'|'upcoming'|'live'|'finished'>('all');
+  const [importanceFilter, setImportanceFilter] = useState<'all'|'important'|'most_important'>('all');
   
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -459,13 +443,30 @@ const Matches = () => {
     return ['LIVE', '1H', '2H', 'HT', 'ET'].includes(status || '');
   };
 
+  // Helpers status
+  const isLiveShort = (s?: string) => ['LIVE','1H','2H','HT','ET'].includes((s||''));
+  const isFinishedShort = (s?: string) => ['FT','AET','PEN'].includes((s||''));
+
   // Regrouper les matchs programmés par ligue
   const scheduledMatchesByLeague: { [key: number]: unknown[] } = {};
   if (selectedMatches.data?.response) {
     leagues.forEach(league => {
-      scheduledMatchesByLeague[league.id] = selectedMatches.data.response.filter(
-        (match: any) => match.league?.id === league.id && !isLiveMatch(match)
-      );
+      let list = selectedMatches.data.response.filter((match: any) => match.league?.id === league.id && !isLiveMatch(match));
+      // apply status filter
+      if (statusFilter !== 'all') {
+        list = list.filter((m: any) => {
+          const s = m.fixture?.status?.short || m.status || '';
+          if (statusFilter === 'upcoming') return !(isLiveShort(s) || isFinishedShort(s));
+          if (statusFilter === 'live') return isLiveShort(s);
+          if (statusFilter === 'finished') return isFinishedShort(s);
+          return true;
+        });
+      }
+      // sort by time if requested
+      if (sortBy === 'time') {
+        list = list.slice().sort((a: any, b: any) => new Date(a.fixture?.date).getTime() - new Date(b.fixture?.date).getTime());
+      }
+      scheduledMatchesByLeague[league.id] = list;
     });
   }
 
@@ -476,16 +477,27 @@ const Matches = () => {
     ...(selectedMatches.data?.response || []).filter((match: any) => isLiveMatch(match))
   ];
   leagues.forEach(league => {
-    liveMatchesByLeague[league.id] = allLiveMatches.filter(
-      (match: any) => match.league?.id === league.id
-    );
+    let list = allLiveMatches.filter((match: any) => match.league?.id === league.id);
+    if (statusFilter !== 'all') {
+      list = list.filter((m: any) => {
+        const s = m.fixture?.status?.short || m.status || '';
+        if (statusFilter === 'upcoming') return !(isLiveShort(s) || isFinishedShort(s));
+        if (statusFilter === 'live') return isLiveShort(s);
+        if (statusFilter === 'finished') return isFinishedShort(s);
+        return true;
+      });
+    }
+    if (sortBy === 'time') {
+      list = list.slice().sort((a: any, b: any) => new Date(a.fixture?.date).getTime() - new Date(b.fixture?.date).getTime());
+    }
+    liveMatchesByLeague[league.id] = list;
   });
 
   return (
     <div dir={direction} className={`min-h-screen bg-[#f6f7fa] dark:bg-[#020617] ${isRTL ? 'rtl' : 'ltr'}`}>
       <Header />
       <TeamsLogos />
-      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 lg:py-4 max-w-4xl">
+      <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 lg:py-4 max-w-[720px] sm:max-w-4xl">
         <div className="flex flex-col gap-6">
           <MatchHeader
             selectedDate={selectedDate}
@@ -504,6 +516,7 @@ const Matches = () => {
               setCurrentPage(1);
               setCurrentLivePage(1);
             }}
+            onOpenFilter={() => setShowFilter(true)}
           />
           <MockAPIAlert onRetry={() => {
             liveMatches.refetch();
@@ -517,11 +530,20 @@ const Matches = () => {
             ];
             if (matches.length === 0) return null;
             return (
-              <div key={league.id} className="mb-8">
-                <div className={`flex items-center justify-between px-4 py-2 bg-[#eef0f4] dark:bg-[#1e293b] rounded-t-xl border-b border-[#e3e6ea] dark:border-[#334155] ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <span className="font-bold text-lg flex items-center gap-2">
-                    <img src={league.logo} alt={league.name} className="w-6 h-6" />
-                    {league.name}
+              <div key={league.id} className="mb-6">
+                <div className={`px-3 py-1.5 bg-[#eef2f7] dark:bg-[#1f2937] rounded-full border border-[#e5e9f0] dark:border-[#334155] ${isRTL ? 'flex-row-reverse' : ''} flex items-center justify-between` }>
+                  <span className={`text-sm font-bold text-[#0f172a] dark:text-[#e2e8f0] ${isRTL ? 'order-2' : 'order-1'} flex items-center gap-2`}>
+                    {isRTL ? (
+                      <>
+                        <img src={league.logo} alt={league.name} className="w-5 h-5" />
+                        <span>{league.name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>{league.name}</span>
+                        <img src={league.logo} alt={league.name} className="w-5 h-5" />
+                      </>
+                    )}
                   </span>
                 </div>
                 {/* Affichage des matchs sous forme de cartes */}
@@ -552,7 +574,11 @@ const Matches = () => {
                             ...match,
                             // If 0-0, override goals for display
                             goals: bothScoresZero
-                              ? { home: '', away: '', displayDate: new Date(match.date).toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', { day: 'numeric', month: 'numeric', year: 'numeric' }) }
+                              ? { 
+                                  home: '', 
+                                  away: '', 
+                                  displayDate: new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(match.date)) 
+                                }
                               : match.goals
                           }}
                           currentLanguage={currentLanguage}
@@ -575,6 +601,45 @@ const Matches = () => {
           })}
         </div>
       </div>
+      {/* Filter Dialog */}
+      <Dialog open={showFilter} onOpenChange={setShowFilter}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-right">{currentLanguage === 'ar' ? 'الفلترة' : 'Filtrer'}</DialogTitle>
+          </DialogHeader>
+          <div className={`space-y-4 ${isRTL ? 'rtl text-right' : ''}`}>
+            <div>
+              <div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'الترتيب حسب' : 'Trier par'}</div>
+              <div className="flex gap-2">
+                <Button variant={sortBy==='league'?'default':'outline'} onClick={()=>setSortBy('league')} className="rounded-full px-4">{currentLanguage==='ar'?'البطولة':'Compétition'}</Button>
+                <Button variant={sortBy==='time'?'default':'outline'} onClick={()=>setSortBy('time')} className="rounded-full px-4">{currentLanguage==='ar'?'التوقيت':'Heure'}</Button>
+              </div>
+            </div>
+            <div>
+              <div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'حالة المباراة' : 'Statut'}</div>
+              <div className="flex flex-wrap gap-2">
+                {(['all','upcoming','live','finished'] as const).map(v=> (
+                  <Button key={v} variant={statusFilter===v?'default':'outline'} onClick={()=>setStatusFilter(v)} className="rounded-full px-4">
+                    {currentLanguage==='ar' ? (v==='all'?'الكل': v==='upcoming'?'قادمة': v==='live'?'جارية':'انتهت') : (v==='all'?'Tous': v==='upcoming'?'À venir': v==='live'?'En direct':'Terminé')}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'الأهمية' : 'Importance'}</div>
+              <div className="flex gap-2">
+                <Button variant={importanceFilter==='all'?'default':'outline'} onClick={()=>setImportanceFilter('all')} className="rounded-full px-4">{currentLanguage==='ar'?'الكل':'Tous'}</Button>
+                <Button variant={importanceFilter==='important'?'default':'outline'} onClick={()=>setImportanceFilter('important')} className="rounded-full px-4">{currentLanguage==='ar'?'الهامة فقط':'Importants'}</Button>
+                <Button variant={importanceFilter==='most_important'?'default':'outline'} onClick={()=>setImportanceFilter('most_important')} className="rounded-full px-4">{currentLanguage==='ar'?'الأكثر أهمية':'Très importants'}</Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={()=>setShowFilter(false)} className="rounded-full w-full bg-emerald-600 hover:bg-emerald-700">{currentLanguage==='ar'?'الفلترة':'Appliquer'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Global Match Details Modal */}
       {selectedMatch && (
         <MatchDetails

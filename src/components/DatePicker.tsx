@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { fr, ar } from "date-fns/locale";
+import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,7 +19,7 @@ const DatePicker = ({ selectedDate, onDateChange, className }: DatePickerProps) 
   const [open, setOpen] = useState(false);
   
   const date = selectedDate ? new Date(selectedDate) : undefined;
-  const locale = currentLanguage === 'ar' ? ar : fr;
+  const locale = fr; // Force l'affichage en français avec chiffres latins
   
   const handleDateSelect = (newDate: Date | undefined) => {
     if (newDate) {

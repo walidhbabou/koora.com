@@ -118,7 +118,7 @@ const TeamsLogos = () => {
   }
 
   return (
-    <div className="bg-background dark:bg-[#181a20] border-b border-border dark:border-[#23262f] py-3 sm:py-4">
+    <div className="bg-background dark:bg-[#181a20] sm:border-b sm:border-border sm:dark:border-[#23262f] pt-2 pb-0 sm:py-4 mt-0">
       <div className="container mx-auto px-2 sm:px-4">
         <div className="relative">
           {/* Navigation Buttons - Hidden on mobile */}
@@ -178,7 +178,7 @@ const TeamsLogos = () => {
           </div>
 
           {/* Mobile swipe indicators */}
-          <div className="flex justify-center mt-3 space-x-1 sm:hidden">
+          <div className="flex justify-center mt-0 space-x-1 sm:hidden">
             {Array.from({ length: Math.ceil(teams.length / visibleTeams) }).map((_, index) => (
               <button
                 key={index}

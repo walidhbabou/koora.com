@@ -96,24 +96,23 @@ const TransfersList: React.FC<TransfersListProps> = ({ playerId, teamId, title, 
         {!loading && !error && transfersSeason.length > 0 && (
           <ul className="space-y-3">
             {transfersSeason.map((t, idx) => (
-              <li key={`${t.date}-${idx}`} className="rounded-lg p-4 bg-gradient-to-r from-indigo-500/20 to-blue-500/20 border border-indigo-500/30 dark:border-indigo-400/20">
+              <li
+                key={`${t.date}-${idx}`}
+                className="rounded-2xl px-4 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md hover:shadow-lg transition-all"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={t.teams?.out?.logo || ''} alt={t.teams?.out?.name || 'team-out'} onError={onImgError} />
                       <AvatarFallback>{t.teams?.out?.name?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
-                    <span className="text-slate-800 dark:text-slate-100 text-sm">
-                      {t.teams?.out?.name}
-                    </span>
-                    <span className="mx-2 text-slate-500">→</span>
+                    <span className="text-sm opacity-95 truncate max-w-[140px]">{t.teams?.out?.name}</span>
+                    <span className="mx-2 opacity-80">{currentLanguage === 'ar' ? '←' : '→'}</span>
                     <Avatar className="w-8 h-8">
                       <AvatarImage src={t.teams?.in?.logo || ''} alt={t.teams?.in?.name || 'team-in'} onError={onImgError} />
                       <AvatarFallback>{t.teams?.in?.name?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
-                    <span className="text-slate-800 dark:text-slate-100 text-sm">
-                      {t.teams?.in?.name}
-                    </span>
+                    <span className="text-sm opacity-95 truncate max-w-[140px]">{t.teams?.in?.name}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     {/* Player */}
@@ -122,13 +121,13 @@ const TransfersList: React.FC<TransfersListProps> = ({ playerId, teamId, title, 
                         <AvatarImage src={t.player?.photo || ''} alt={t.player?.name || 'player'} onError={onImgError} />
                         <AvatarFallback>{t.player?.name?.charAt(0) || 'P'}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm text-slate-800 dark:text-slate-100 max-w-[160px] truncate">{t.player?.name || (currentLanguage === 'ar' ? 'لاعب' : 'Player')}</span>
+                      <span className="text-sm opacity-95 max-w-[160px] truncate">{t.player?.name || (currentLanguage === 'ar' ? 'لاعب' : 'Player')}</span>
                     </div>
                     {/* Meta */}
-                    <Badge variant="secondary" className="text-xs">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-white text-black">
                       {t.type || (currentLanguage === 'ar' ? 'غير محدد' : 'N/A')}
-                    </Badge>
-                    <span className="text-xs text-slate-600 dark:text-slate-400">{t.date}</span>
+                    </span>
+                    <span className="text-xs opacity-80">{t.date}</span>
                   </div>
                 </div>
               </li>

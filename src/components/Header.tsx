@@ -1,23 +1,20 @@
-import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight, User } from "lucide-react";
+import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { UserSettings } from "./UserSettings";
-import ModernLanguageSwitcher from "./ModernLanguageSwitcher";
-import DarkModeToggle from "./DarkModeToggle";
+// Language switcher and dark mode moved into UserSettings
 import { useTranslation } from "../hooks/useTranslation";
 import { NAV_ITEMS } from "../config/constants";
-import { useState } from "react";
 import "../styles/rtl.css";
 import AdminButton from "./AdminButton";
 import { useAuth } from "../contexts/AuthContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Header = () => {
   const location = useLocation();
-  const { t, isRTL, direction, currentLanguage, setLanguage } = useTranslation();
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const navigate = useNavigate();
-  const { isAuthenticated, isAdmin, user } = useAuth();
+  const { t, isRTL, direction, currentLanguage } = useTranslation();
+  const { isAdmin } = useAuth();
   
   const navItemsWithIcons = [
     { ...NAV_ITEMS.find(item => item.key === 'home'), icon: Home },
@@ -36,7 +33,7 @@ const Header = () => {
   return (
     <div dir={direction} className={isRTL ? 'rtl' : 'ltr'}>
       {/* Desktop Header */}
-      <header className="modern-header bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-all duration-300 hidden lg:block shadow-sm">
+      <header className="modern-header bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-gray-700 sticky top-0 z-50 transition-all duration-300 hidden lg:block shadow-sm">
         <div className="container mx-auto px-6">
           <div className={`flex items-center justify-between h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Logo */}
@@ -76,46 +73,56 @@ const Header = () => {
                 <Link
                   key={item.key}
                   to={item.href}
-                  className={`nav-link relative text-gray-700 dark:text-gray-200 hover:text-sport dark:hover:text-sport transition-all duration-300 font-medium py-3 px-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 group ${
-                    location.pathname === item.href ? 'text-sport bg-sport-10 dark:bg-sport-20' : ''
+                  className={`nav-link relative text-slate-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300 font-semibold py-3 px-4 rounded-xl hover:bg-slate-100/70 dark:hover:bg-gray-800 group ${
+                    location.pathname === item.href ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20' : ''
                   } ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                 >
                   <span className={`${isRTL ? 'text-right' : 'text-left'} relative z-10 text-sm font-semibold`}>
                     {t(item.key)}
                   </span>
                   {location.pathname === item.href && (
-                    <span className={`absolute bottom-1 ${isRTL ? 'right-4' : 'left-4'} right-4 w-1/2 h-0.5 bg-sport rounded-full`}></span>
+                    <span className={`absolute bottom-1 ${isRTL ? 'right-4' : 'left-4'} right-4 w-8 h-0.5 bg-emerald-500 rounded-full`}></span>
                   )}
                 </Link>
               ))}
-              <button className="text-gray-700 dark:text-gray-200 hover:text-sport dark:hover:text-sport transition-colors p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
-                <span className="text-lg hover:scale-110 transition-transform duration-200">•••</span>
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-emerald-600 dark:text-emerald-400 transition-colors p-3 rounded-lg hover:bg-slate-100/70 dark:hover:bg-gray-800">
+                    <span className="text-lg">•••</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={isRTL ? "end" : "start"}
+                  className={`rounded-xl border-slate-200 shadow-lg p-1 ${isRTL ? 'text-right' : 'text-left'}`}
+                >
+                  <Link to="/about">
+                    <DropdownMenuItem className="cursor-pointer rounded-lg py-2 px-3 text-[15px] font-semibold hover:bg-slate-100">
+                      من نحن
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link to="/contact">
+                    <DropdownMenuItem className="cursor-pointer rounded-lg py-2 px-3 text-[15px] font-semibold hover:bg-slate-100">
+                      اتصل بنا
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link to="/privacy">
+                    <DropdownMenuItem className="cursor-pointer rounded-lg py-2 px-3 text-[15px] font-semibold hover:bg-slate-100">
+                      سياسة الخصوصية
+                    </DropdownMenuItem>
+                  </Link>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </nav>
 
             {/* Actions */}
             <div className={`header-actions flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-4`}>
-              {/* Modern Language Switcher */}
-              <ModernLanguageSwitcher 
-                isRTL={isRTL}
-                direction={direction}
-                currentLanguage={currentLanguage}
-                isLanguageOpen={isLanguageOpen}
-                setIsLanguageOpen={setIsLanguageOpen}
-                setLanguage={setLanguage}
-              />
-              
-              {/* Dark Mode Toggle */}
-              <div className="flex items-center">
-                <DarkModeToggle variant="header" size="default" />
-              </div>
-              
+              {/* Langue et Mode sombre disponibles dans Paramètres */}
               {/* Search */}
               <div className="relative">
                 <Search className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
                   placeholder={t('search')}
-                  className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-64 h-10 rounded-full bg-[hsl(var(--input))] border border-transparent text-sm placeholder:text-gray-400 focus:bg-[hsl(var(--input))] focus:border-transparent focus:ring-2 focus:ring-[hsl(var(--ring))] transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
+                  className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-64 h-10 rounded-full bg-slate-100 border border-slate-200 text-sm placeholder:text-slate-400 focus:bg-white focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200 transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                   dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
@@ -123,37 +130,7 @@ const Header = () => {
               {/* Admin Button */}
               <AdminButton isAdmin={isAdmin} />
               
-              {/* Login/User Button */}
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-sport-10 dark:bg-sport-20 rounded-full flex items-center justify-center">
-                      <User className="w-4 h-4 text-sport" />
-                    </div>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {user?.name}
-                    </span>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => navigate('/dashboard')}
-                  >
-                    Profil
-                  </Button>
-                </div>
-              ) : (
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  className="bg-sport hover:brightness-90"
-                  onClick={() => navigate('/login')}
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Connexion
-                </Button>
-              )}
-              
+              {/* Boutons de compte déplacés dans Paramètres */}
               {/* User Settings */}
               <UserSettings />
             </div>
@@ -161,8 +138,8 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Mobile Header */}
-      <header className="modern-header bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 transition-all duration-300 lg:hidden shadow-sm">
+      {/* Mobile Header (no border/shadow/blur to avoid any separation over logos) */}
+      <header className="modern-header bg-slate-50 dark:bg-slate-900 sticky top-0 z-50 transition-all duration-300 lg:hidden">
         <div className="container mx-auto px-4">
           <div className={`flex items-center justify-between h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Logo */}
@@ -181,7 +158,7 @@ const Header = () => {
                 aria-label="Rafraîchir la page"
               >
                   <img 
-                    src="/koora-logo/image.png" 
+                    src="/kooralogo.png" 
                     alt="Koora Logo" 
                     className="w-10 h-10 sm:w-8 sm:h-8 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {
@@ -211,20 +188,7 @@ const Header = () => {
 
             {/* Mobile Actions */}
             <div className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2`}>
-              {/* Modern Language Switcher - Mobile */}
-              <ModernLanguageSwitcher 
-                mobile={true}
-                isRTL={isRTL}
-                direction={direction}
-                currentLanguage={currentLanguage}
-                isLanguageOpen={isLanguageOpen}
-                setIsLanguageOpen={setIsLanguageOpen}
-                setLanguage={setLanguage}
-              />
-              
-              {/* Dark Mode Toggle - Mobile */}
-              <DarkModeToggle variant="header" size="sm" />
-              
+              {/* Langue et Mode sombre disponibles dans Paramètres */}
               {/* Search Icon */}
               <Button variant="ghost" size="icon" className="rounded-full bg-[hsl(var(--input))] hover:bg-sport-10 hover:text-sport transition-all duration-300">
                 <Search className="w-5 h-5" />
@@ -233,15 +197,8 @@ const Header = () => {
               {/* Admin Button - Mobile */}
               <AdminButton isAdmin={isAdmin} className="hidden sm:flex" />
               
-              {/* Login Button - Mobile */}
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => navigate('/login')}
-                className="rounded-full bg-[hsl(var(--input))] hover:bg-sport-10 hover:text-sport transition-all duration-300"
-              >
-                <User className="w-5 h-5" />
-              </Button>
+              {/* Bouton de connexion déplacé dans Paramètres */}
+              <UserSettings />
             </div>
           </div>
         </div>
@@ -259,16 +216,16 @@ const Header = () => {
                 to={item.href}
                 className={`mobile-nav-item flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 rounded-lg ${
                   isActive 
-                    ? 'text-sport bg-sport-10 dark:bg-sport-20 active' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-sport dark:hover:text-sport hover:bg-gray-50 dark:hover:bg-gray-800'
+                    ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 active' 
+                    : 'text-gray-600 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100/70 dark:hover:bg-gray-800'
                 }`}
               >
                 <div className={`p-2 rounded-lg transition-all duration-300 ${
-                  isActive ? 'bg-sport-10 dark:bg-sport-20' : 'hover:bg-sport-10'
+                  isActive ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'hover:bg-emerald-50'
                 }`}>
                   <IconComponent className="w-5 h-5" />
                 </div>
-                <span className={`text-xs mt-1 font-medium truncate w-full text-center leading-tight ${isRTL ? 'text-right' : 'text-left'} ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+                <span className={`text-xs mt-1 font-medium truncate w-full text-center leading-tight ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
                   {t(item.key)}
                 </span>
               </Link>
@@ -277,9 +234,6 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Spacer for mobile bottom navigation */}
-      <div className="lg:hidden h-16"></div>
-      
       {/* Login Modal removed: navigation to /login now */}
     </div>
   );

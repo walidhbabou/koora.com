@@ -35,6 +35,8 @@ export const GOOGLE_TRANSLATE_CONFIG = {
 export const TRANSLATE_CONFIG = {
   BASE_URL: import.meta.env.VITE_LIBRETRANSLATE_API_URL || 'https://libretranslate.com/translate',
   API_KEY: import.meta.env.VITE_LIBRETRANSLATE_API_KEY,
+  // Allow disabling LibreTranslate completely via env flag
+  DISABLED: String(import.meta.env.VITE_DISABLE_LIBRETRANSLATE || '').toLowerCase() === 'true',
   HEADERS: {
     'Content-Type': 'application/json'
   },
@@ -42,7 +44,9 @@ export const TRANSLATE_CONFIG = {
     ARABIC: 'ar',
     FRENCH: 'fr',
     ENGLISH: 'en'
-  }
+  },
+  // Default cooldown when a 403/429 is encountered
+  DEFAULT_COOLDOWN_MS: 60 * 60 * 1000
 };
 
 // Endpoints principaux pour chaque page du site
@@ -602,6 +606,11 @@ export class GoogleTranslateAPI {
 // Configuration de LibreTranslate pour la traduction (fallback)
 export class LibreTranslateAPI {
   private static instance: LibreTranslateAPI;
+  // Circuit breaker state to avoid hammering the API when returning 403/429
+  private static circuitOpenUntil: number | null = null;
+  private static failureCount = 0;
+  private static readonly FAILURE_THRESHOLD = 3;
+  private static lastWarnAt: number = 0;
   
   private constructor() {}
   
@@ -612,9 +621,43 @@ export class LibreTranslateAPI {
     return LibreTranslateAPI.instance;
   }
   
+  // Whether LibreTranslate should be attempted
+  public static isAvailable(): boolean {
+    if (TRANSLATE_CONFIG.DISABLED) return false;
+    if (this.circuitOpenUntil && Date.now() < this.circuitOpenUntil) return false;
+    return true;
+  }
+  
+  private static openCircuit(ms: number, reason?: string) {
+    this.circuitOpenUntil = Date.now() + ms;
+    const now = Date.now();
+    // Warn at most once every 5 minutes
+    if (now - this.lastWarnAt > 5 * 60 * 1000) {
+      console.warn(`LibreTranslate disabled for ${Math.round(ms/60000)}m${reason ? ` (${reason})` : ''}`);
+      this.lastWarnAt = now;
+    }
+  }
+  
+  private static noteFailure(status?: number) {
+    this.failureCount += 1;
+    // On 403/429, open circuit immediately for a longer period
+    if (status === 403 || status === 429) {
+      this.openCircuit(TRANSLATE_CONFIG.DEFAULT_COOLDOWN_MS, `status ${status}`);
+      return;
+    }
+    if (this.failureCount >= this.FAILURE_THRESHOLD) {
+      this.openCircuit(10 * 60 * 1000, 'multiple failures');
+      this.failureCount = 0;
+    }
+  }
+  
   // Traduire un texte
   async translateText(text: string, from: string, to: string): Promise<string> {
     try {
+      // Short-circuit if disabled or currently unavailable
+      if (!LibreTranslateAPI.isAvailable()) {
+        return text;
+      }
       const requestBody: TranslationRequest & { api_key?: string } = {
         q: text,
         source: from,
@@ -634,13 +677,20 @@ export class LibreTranslateAPI {
       });
       
       if (!response.ok) {
-        throw new Error(`Translation Error: ${response.status} ${response.statusText}`);
+        // Note failure and open circuit when relevant; avoid throwing to prevent noisy console errors
+        LibreTranslateAPI.noteFailure(response.status);
+        return text;
       }
       
       const data = await response.json();
+      // Reset failure count and circuit on success
+      LibreTranslateAPI.failureCount = 0;
+      LibreTranslateAPI.circuitOpenUntil = null;
       return data.translatedText || text;
     } catch (error) {
-      console.error('Translation failed:', error);
+      // Use debug level to avoid noisy errors
+      console.debug('LibreTranslate error (suppressed):', error);
+      LibreTranslateAPI.noteFailure();
       return text; // Retourner le texte original en cas d'erreur
     }
   }
@@ -711,6 +761,10 @@ export class HybridTranslateAPI {
     
     // Fallback vers LibreTranslate
     try {
+      // Only use LibreTranslate if available (not disabled and circuit not open)
+      if (TRANSLATE_CONFIG.DISABLED || !LibreTranslateAPI.isAvailable()) {
+        return text;
+      }
       return await this.libreAPI.translateText(text, from, to);
     } catch (error) {
       console.error('All translation services failed:', error);

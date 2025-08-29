@@ -140,11 +140,12 @@ export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => 
 
       // Try direct league-based transfers first (may be unsupported on some plans)
       let result: any = await footballAPI.getMainLeaguesTransfers(season);
-      // Fallback: aggregate per-team transfers for selected leagues
+      // Fallback 1: aggregate per-team transfers for selected leagues
       if (!result || !Array.isArray(result.response) || result.response.length === 0) {
         result = await footballAPI.getLeagueTeamsTransfers(season ?? new Date().getFullYear());
       }
-      // result.response is an array of player objects with transfers arrays
+
+      // Convert response to enriched transfers
       let allTransfers: TransferEnriched[] = [];
       if (Array.isArray((result as any)?.response)) {
         (result as any).response.forEach((playerObj: any) => {
@@ -159,6 +160,25 @@ export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => 
             });
           }
         });
+      }
+
+      // Fallback 2: if still empty, get all recent transfers (no league filter)
+      if (allTransfers.length === 0) {
+        const allRes = await footballAPI.getAllRecentTransfers();
+        if (Array.isArray((allRes as any)?.response)) {
+          (allRes as any).response.forEach((playerObj: any) => {
+            if (Array.isArray(playerObj?.transfers)) {
+              playerObj.transfers.forEach((transfer: any) => {
+                const enriched: TransferEnriched = {
+                  ...transfer,
+                  player: playerObj.player,
+                  update: playerObj.update,
+                };
+                allTransfers.push(enriched);
+              });
+            }
+          });
+        }
       }
 
       setData({ response: allTransfers });

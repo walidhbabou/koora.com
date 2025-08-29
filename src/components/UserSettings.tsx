@@ -1,19 +1,14 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Settings, Globe, Check } from 'lucide-react';
+import { Settings, User as UserIcon, LogOut, ChevronLeft } from 'lucide-react';
 import { useTranslation } from '../hooks/useTranslation';
 import { useLanguage } from '../hooks/useLanguageHooks';
 import { LANGUAGES, LanguageCode } from '../config/constants';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { Switch } from '@/components/ui/switch';
 
 interface UserSettingsProps {
   className?: string;
@@ -24,6 +19,28 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
   const { currentLanguage, setLanguage } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [tempLanguage, setTempLanguage] = useState(currentLanguage);
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [isDark, setIsDark] = useState<boolean>(false);
+  const [showLangList, setShowLangList] = useState<boolean>(false);
+
+  // sync theme switch with document
+  React.useEffect(() => {
+    const stored = typeof window !== 'undefined' ? window.localStorage.getItem('theme') : null;
+    const dark = stored ? stored === 'dark' : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setIsDark(dark);
+  }, []);
+
+  const toggleDark = (val: boolean) => {
+    setIsDark(val);
+    if (val) {
+      document.documentElement.classList.add('dark');
+      window.localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      window.localStorage.setItem('theme', 'light');
+    }
+  };
 
   const handleSaveSettings = () => {
     setLanguage(tempLanguage);
@@ -36,122 +53,177 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={`hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300 ${className}`}
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`
+            h-10 w-10 rounded-full shadow-sm
+            bg-gradient-to-r from-sky-500 to-teal-400
+            hover:from-sky-600 hover:to-teal-500
+            text-white hover:text-white
+            border border-white/20
+            transition-all duration-300 hover:shadow-lg hover:scale-105
+            ${className}
+          `}
+          aria-label={isRTL ? 'إعدادات' : 'Paramètres'}
         >
           <Settings className="w-5 h-5" />
         </Button>
-      </DialogTrigger>
-      <DialogContent className={`sm:max-w-[425px] ${isRTL ? 'text-right' : 'text-left'}`}>
-        <DialogHeader className={isRTL ? 'text-right' : 'text-left'}>
-          <DialogTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <Settings className="w-5 h-5" />
-            {isRTL ? 'إعدادات المستخدم' : 'Paramètres utilisateur'}
-          </DialogTitle>
-          <DialogDescription>
-            {isRTL 
-              ? 'قم بتخصيص إعدادات حسابك وتفضيلاتك الشخصية'
-              : 'Personnalisez les paramètres de votre compte et vos préférences'
-            }
-          </DialogDescription>
-        </DialogHeader>
+      </PopoverTrigger>
+      <PopoverContent
+        align={isRTL ? 'start' : 'end'}
+        side="bottom"
+        sideOffset={8}
+        className={`
+          w-[360px] sm:w-[420px]
+          ${isRTL ? 'text-right' : 'text-left'}
+          rounded-2xl p-0 overflow-hidden
+          border border-slate-200 dark:border-slate-800
+          bg-white dark:bg-slate-900
+        `}
+      >
+        <div className="px-4 pt-4 pb-2">
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <Settings className="w-5 h-5" />
+              <h3 className="text-base font-semibold">{isRTL ? 'إعدادات المستخدم' : 'Paramètres utilisateur'}</h3>
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              {isRTL
+                ? 'قم بتخصيص إعدادات حسابك وتفضيلاتك الشخصية'
+                : 'Personnalisez les paramètres de votre compte et vos préférences'}
+            </p>
+          </div>
+        </div>
 
-        <div className="space-y-6 py-4">
-          {/* Language Selection */}
+        <div className="px-3 pb-4">
+          {/* Account Section */}
           <div className="space-y-3">
             <Label className={`text-sm font-medium flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <Globe className="w-4 h-4" />
-              {isRTL ? 'اللغة المفضلة' : 'Langue préférée'}
+              <UserIcon className="w-4 h-4" />
+              {isRTL ? 'حساب المستخدم' : 'Compte utilisateur'}
             </Label>
-            <RadioGroup
-              value={tempLanguage}
-              onValueChange={(value) => setTempLanguage(value as LanguageCode)}
-              className="grid grid-cols-1 gap-3"
-            >
-              {Object.entries(LANGUAGES).map(([code, language]) => (
-                <div key={code} className="flex items-center space-x-2">
-                  <RadioGroupItem
-                    value={code}
-                    id={code}
-                    className="peer sr-only"
-                  />
-                  <Label
-                    htmlFor={code}
-                    className={`
-                      flex items-center justify-between w-full p-3 rounded-lg border-2 border-border
-                      peer-checked:border-sport-green peer-checked:bg-sport-green/5
-                      hover:border-sport-green/50 cursor-pointer transition-all duration-200
-                      ${isRTL ? 'flex-row-reverse' : ''}
-                    `}
-                  >
-                    <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                      <div className="text-2xl">
-                        {code === 'ar' ? '🇸🇦' : '🇫🇷'}
-                      </div>
-                      <div className={isRTL ? 'text-right' : 'text-left'}>
-                        <div className="font-medium">{language.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {code === 'ar' ? 'العربية' : 'Français'}
-                        </div>
-                      </div>
-                    </div>
-                    {tempLanguage === code && (
-                      <Check className="w-5 h-5 text-sport-green" />
-                    )}
-                  </Label>
+            {isAuthenticated ? (
+              <div className={`flex items-center justify-between p-3 rounded-xl border bg-muted/30 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-9 h-9 rounded-full bg-sport-10 dark:bg-sport-20 flex items-center justify-center">
+                    <UserIcon className="w-4 h-4 text-sport" />
+                  </div>
+                  <div className={isRTL ? 'text-right' : 'text-left'}>
+                    <div className="text-sm font-semibold">{user?.name}</div>
+                    <div className="text-xs text-muted-foreground">{user?.email}</div>
+                  </div>
                 </div>
-              ))}
-            </RadioGroup>
+                <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
+                    {isRTL ? 'الملف الشخصي' : 'Profil'}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={logout} aria-label={isRTL ? 'تسجيل الخروج' : 'Déconnexion'}>
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className={`flex items-center justify-between p-3 rounded-xl border bg-muted/30 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-9 h-9 rounded-full bg-sport-10 dark:bg-sport-20 flex items-center justify-center">
+                    <UserIcon className="w-4 h-4 text-sport" />
+                  </div>
+                  <div className={isRTL ? 'text-right' : 'text-left'}>
+                    <div className="text-sm font-medium">{isRTL ? 'لم تقم بتسجيل الدخول' : "Vous n'êtes pas connecté"}</div>
+                    <div className="text-xs text-muted-foreground">{isRTL ? 'سجّل الدخول للوصول إلى ملفك' : 'Connectez-vous pour accéder à votre profil'}</div>
+                  </div>
+                </div>
+                <Button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full" size="sm" onClick={() => navigate('/login')}>
+                  {isRTL ? 'تسجيل الدخول' : 'Connexion'}
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Additional Settings Section */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-muted-foreground">
-              {isRTL ? 'إعدادات إضافية' : 'Paramètres supplémentaires'}
-            </Label>
-            <div className="text-sm text-muted-foreground p-3 rounded-lg bg-muted/30">
-              {isRTL 
-                ? 'المزيد من الإعدادات قادمة قريباً...'
-                : 'Plus de paramètres bientôt disponibles...'
-              }
+          {/* Appearance / Theme */}
+          <div className="mt-5">
+            <div className="flex items-center justify-between py-3">
+              <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'المظهر' : 'Apparence'}</div>
+              <div className="text-sm font-semibold">{isRTL ? 'الوضع الليلي' : 'Mode sombre'}</div>
             </div>
+            <div className={`flex items-center justify-between pb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <Switch checked={isDark} onCheckedChange={toggleDark} className="data-[state=checked]:bg-emerald-600" />
+            </div>
+            <hr className="border-slate-200 dark:border-slate-800" />
+          </div>
+
+          {/* Language Selection compact row */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between py-3">
+              <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'اللغة' : 'Langue'}</div>
+              <button onClick={() => setShowLangList(!showLangList)} className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-emerald-600 font-semibold">{LANGUAGES[tempLanguage].name}</span>
+                <ChevronLeft className={`w-4 h-4 text-slate-400 transition-transform ${showLangList ? 'rotate-90' : ''}`} />
+              </button>
+            </div>
+            {showLangList && (
+              <div className="pb-3">
+                <div className="grid grid-cols-1 gap-2">
+                  {Object.entries(LANGUAGES).map(([code, language]) => (
+                    <button
+                      key={code}
+                      className={`text-sm rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${isRTL ? 'text-right' : 'text-left'} ${tempLanguage === code ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20' : ''}`}
+                      onClick={() => setTempLanguage(code as LanguageCode)}
+                    >
+                      {language.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <hr className="border-slate-200 dark:border-slate-800" />
+          </div>
+
+          {/* Timezone */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between py-3">
+              <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'منطقتك الزمنية' : 'Fuseau horaire'}</div>
+              <button className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-emerald-600 font-semibold">Africa/Casablanca</span>
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <hr className="border-slate-200 dark:border-slate-800" />
+          </div>
+
+          {/* Time format */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between py-3">
+              <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'صيغة الوقت' : 'Format de l\'heure'}</div>
+              <button className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-emerald-600 font-semibold">{isRTL ? '12 ساعة' : '12h'}</span>
+                <ChevronLeft className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <hr className="border-slate-200 dark:border-slate-800" />
+          </div>
+
+          {/* Apply / Cancel */}
+          <div className={`flex gap-3 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Button
+              onClick={handleSaveSettings}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full"
+            >
+              {isRTL ? 'حفظ التغييرات' : 'Sauvegarder'}
+            </Button>
+            <Button
+              onClick={handleCancel}
+              variant="outline"
+              className="flex-1 rounded-full"
+            >
+              {isRTL ? 'إلغاء' : 'Annuler'}
+            </Button>
           </div>
         </div>
-
-        {/* Action Buttons */}
-        <div className={`flex gap-3 pt-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <Button
-            onClick={handleSaveSettings}
-            className="flex-1 bg-gradient-to-r from-sport-green to-sport-blue hover:shadow-lg transition-all duration-300"
-          >
-            {isRTL ? 'حفظ التغييرات' : 'Sauvegarder'}
-          </Button>
-          <Button
-            onClick={handleCancel}
-            variant="outline"
-            className="flex-1"
-          >
-            {isRTL ? 'إلغاء' : 'Annuler'}
-          </Button>
-        </div>
-
-        {/* Language Change Notice */}
-        {tempLanguage !== currentLanguage && (
-          <div className={`
-            text-xs text-muted-foreground p-3 rounded-lg bg-sport-green/5 border border-sport-green/20
-            ${isRTL ? 'text-right' : 'text-left'}
-          `}>
-            {isRTL 
-              ? '💡 سيتم تطبيق تغيير اللغة فوراً بعد الحفظ'
-              : '💡 Le changement de langue sera appliqué immédiatement après la sauvegarde'
-            }
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+      </PopoverContent>
+    </Popover>
   );
 };
