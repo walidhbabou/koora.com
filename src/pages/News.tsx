@@ -1,3 +1,5 @@
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
@@ -6,63 +8,53 @@ import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, TrendingUp, Clock } from "lucide-react";
+import { Search, Filter, TrendingUp, Clock, ThumbsUp, ThumbsDown, ChevronLeft, MoreHorizontal, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
+
+// CommentsSection removed from the list page; moved to reusable component for details page
 
 const News = () => {
-  const featuredNews = [
-    {
-      id: "1",
-      title: "مبابي يقترب من الانضمام لريال مدريد في صفقة تاريخية",
-      summary: "تقارير إسبانية تؤكد أن النجم الفرنسي كيليان مبابي على وشك التوقيع مع ريال مدريد في صفقة انتقال حر",
-      imageUrl: "/placeholder.svg",
-      publishedAt: "2025-08-05",
-      category: "الانتقالات"
-    },
-    {
-      id: "2",
-      title: "صلاح يحطم رقمًا قياسيًا جديدًا في البريمير ليج",
-      summary: "النجم المصري محمد صلاح يسجل هدفه رقم 200 في البريمير ليج ويدخل التاريخ",
-      imageUrl: "/placeholder.svg",
-      publishedAt: "2025-08-05",
-      category: "إنجازات"
-    }
-  ];
+  type NewsCardItem = {
+    id: string;
+    title: string;
+    summary: string;
+    imageUrl: string;
+    publishedAt: string;
+    category: string;
+  };
 
-  const latestNews = [
-    {
-      id: "3",
-      title: "برشلونة يستهدف نجم مانشستر سيتي الصيف المقبل",
-      summary: "إدارة برشلونة تضع عينيها على لاعب وسط مانشستر سيتي لتدعيم صفوف الفريق",
-      imageUrl: "/placeholder.svg",
-      publishedAt: "2025-08-05",
-      category: "الانتقالات"
-    },
-    {
-      id: "4",
-      title: "الأهلي يتوج بطلاً للدوري المصري للمرة الـ15",
-      summary: "النادي الأهلي يحسم لقب الدوري المصري بفوزه على الزمالك في الجولة الأخيرة",
-      imageUrl: "/placeholder.svg",
-      publishedAt: "2025-08-04",
-      category: "البطولات"
-    },
-    {
-      id: "5",
-      title: "هالاند يغيب عن مباراة مانشستر سيتي القادمة",
-      summary: "النجم النرويجي إيرلينغ هالاند سيغيب عن المباراة بسبب إصابة في العضلة الخلفية",
-      imageUrl: "/placeholder.svg",
-      publishedAt: "2025-08-04",
-      category: "إصابات"
-    },
-    {
-      id: "6",
-      title: "انشيلوتي: راضون عن أداء الفريق في الموسم الجديد",
-      summary: "مدرب ريال مدريد كارلو انشيلوتي يعبر عن رضاه عن مستوى اللاعبين في التحضيرات",
-      imageUrl: "/placeholder.svg",
-      publishedAt: "2025-08-04",
-      category: "تصريحات"
+  const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
+  const [loadingNews, setLoadingNews] = useState(false);
+
+  const fetchNews = async () => {
+    setLoadingNews(true);
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .select('id, title, content, created_at, image_url, status')
+        .eq('status', 'published')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+
+      const mapped: NewsCardItem[] = (data || []).map((n: any) => ({
+        id: String(n.id),
+        title: n.title ?? '-',
+        summary: (n.content ?? '').toString().replace(/\s+/g, ' ').slice(0, 160) + ((n?.content && n.content.length > 160) ? '…' : ''),
+        imageUrl: n.image_url || '/placeholder.svg',
+        publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
+        category: 'أخبار',
+      }));
+      setAllNews(mapped);
+    } catch (e) {
+      console.error('Failed to load news', e);
+      setAllNews([]);
+    } finally {
+      setLoadingNews(false);
     }
-  ];
+  };
+
+  useEffect(() => { fetchNews(); }, []);
 
   const categories = [
     { name: "جميع الأخبار", count: 245, active: true },
@@ -123,21 +115,31 @@ const News = () => {
               ))}
             </div>
 
-            {/* Featured News */}
+            {/* Featured News (hero + two cards) */}
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <TrendingUp className="w-5 h-5 text-sport-green" />
                 <h2 className="text-xl font-bold text-sport-dark">الأخبار المميزة</h2>
               </div>
               
+              {/* Hero first */}
+              {(loadingNews ? [] : allNews.slice(0,1)).map((news) => (
+                <Link to={`/news/${news.id}`} key={news.id} className="block space-y-2">
+                  <NewsCard news={news} size="large" />
+                </Link>
+              ))}
+
+              {/* Two secondary */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {featuredNews.map((news) => (
-                  <NewsCard key={news.id} news={news} size="large" />
+                {(loadingNews ? [] : allNews.slice(1, 3)).map((news) => (
+                  <Link to={`/news/${news.id}`} key={news.id} className="block space-y-2">
+                    <NewsCard news={news} size="medium" />
+                  </Link>
                 ))}
               </div>
             </div>
 
-            {/* Latest News */}
+            {/* Latest News (rest) */}
             <div className="space-y-6">
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-sport-green" />
@@ -145,8 +147,10 @@ const News = () => {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {latestNews.map((news) => (
-                  <NewsCard key={news.id} news={news} size="medium" />
+                {(loadingNews ? [] : allNews.slice(3)).map((news) => (
+                  <Link to={`/news/${news.id}`} key={news.id} className="block space-y-2">
+                    <NewsCard news={news} size="medium" />
+                  </Link>
                 ))}
               </div>
             </div>

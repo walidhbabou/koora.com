@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Matches from "./pages/Matches";
 import News from "./pages/News";
+import NewsDetails from "./pages/NewsDetails";
 import Standings from "./pages/Standings";
 import Videos from "./pages/Videos";
 import Transfers from "./pages/Transfers";
@@ -24,6 +25,7 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import DarkModeToggle from "./components/DarkModeToggle";
+import ResetPassword from "./pages/ResetPassword";
 
 
 const queryClient = new QueryClient();
@@ -41,9 +43,11 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/matches" element={<Matches />} />
               <Route path="/news" element={<News />} />
+              <Route path="/news/:id" element={<NewsDetails />} />
               <Route path="/standings" element={<Standings />} />
               <Route path="/videos" element={<Videos />} />
               <Route path="/transfers" element={<Transfers />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/team/:teamId" element={<TeamDetails />} />
               <Route path="/language-test" element={<LanguageTest />} />
               <Route path="/translation-demo" element={<TranslationDemo />} />

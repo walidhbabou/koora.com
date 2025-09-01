@@ -158,7 +158,7 @@ const Header = () => {
                 aria-label="Rafraîchir la page"
               >
                   <img 
-                    src="/kooralogo.png" 
+                    src="/black koora.png" 
                     alt="Koora Logo" 
                     className="w-10 h-10 sm:w-8 sm:h-8 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {

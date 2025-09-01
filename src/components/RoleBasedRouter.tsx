@@ -1,33 +1,39 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import AdminDashboard from '../pages/AdminDashboard';
-import EditorDashboard from '../pages/EditorDashboard';
-import AuthorDashboard from '../pages/AuthorDashboard';
-import ModeratorDashboard from '../pages/ModeratorDashboard';
 import LoginPage from '../pages/LoginPage';
+import { Navigate } from 'react-router-dom';
 
 const RoleBasedRouter: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAuthLoading, roleLoaded } = useAuth();
 
-  // Si l'utilisateur n'est pas connecté, afficher la page de connexion
-  if (!isAuthenticated || !user) {
-    return <LoginPage />;
+  // Attendre la fin de l'initialisation d'auth
+  if (isAuthLoading || !roleLoaded) {
+    return (
+      <div className="w-full py-10 text-center text-slate-500">Loading...</div>
+    );
   }
 
-  // Rediriger vers le dashboard approprié selon le rôle
+  // Si l'utilisateur n'est pas connecté, rediriger vers /login
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Rediriger vers le dashboard approprié selon le rôle (mise à jour de l'URL)
   switch (user.role) {
     case 'admin':
-      // Rediriger vers /admin pour utiliser la route protégée existante
-      window.location.href = '/admin';
-      return <AdminDashboard />;
+      return <Navigate to="/admin" replace />;
     case 'editor':
-      return <EditorDashboard />;
+      return <Navigate to="/editor" replace />;
     case 'author':
-      return <AuthorDashboard />;
+      return <Navigate to="/author" replace />;
     case 'moderator':
-      return <ModeratorDashboard />;
+      return <Navigate to="/moderator" replace />;
+    case 'user':
+      // Les utilisateurs "user" n'ont pas de dashboard : rediriger vers le site public
+      return <Navigate to="/news" replace />;
     default:
-      return <LoginPage />;
+      // Rôle inconnu mais authentifié : renvoyer vers la page d'accueil
+      return <Navigate to="/" replace />;
   }
 };
 

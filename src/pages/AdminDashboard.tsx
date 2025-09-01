@@ -28,19 +28,39 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTranslation } from '../hooks/useTranslation';
 import '../styles/admin-dashboard.css';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface News {
   id: string;
   title: string;
   content: string;
-  category: string;
-  author: string;
-  date: string;
-  status: 'published' | 'draft' | 'archived';
+  category?: string;
+  author?: string;
+  date?: string;
+  status?: 'published' | 'draft' | 'archived';
   imageUrl?: string;
   imageFile?: File;
+}
+
+interface CategoryRow {
+  id: number;
+  name: string;
+  name_ar?: string | null;
+  description?: string | null;
+  created_at?: string | null;
+}
+
+interface CommentRow {
+  id: number;
+  news_id: number | null;
+  user_id: string | null;
+  content: string | null;
+  created_at?: string | null;
 }
 
 interface User {
@@ -56,82 +76,127 @@ interface User {
 
 const AdminDashboard: React.FC = () => {
   const { t, currentLanguage, isRTL, direction } = useTranslation();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [news, setNews] = useState<News[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+
   const [isCreateNewsOpen, setIsCreateNewsOpen] = useState(false);
   const [isEditNewsOpen, setIsEditNewsOpen] = useState(false);
   const [editingNews, setEditingNews] = useState<News | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [creatingNews, setCreatingNews] = useState(false);
+  const [newNewsTitle, setNewNewsTitle] = useState('');
+  const [newNewsContent, setNewNewsContent] = useState('');
+  const [newNewsCategoryId, setNewNewsCategoryId] = useState<number | null>(null);
+  const [createNewsError, setCreateNewsError] = useState('');
+  const [createNewsInfo, setCreateNewsInfo] = useState('');
+  const [newNewsImageFile, setNewNewsImageFile] = useState<File | null>(null);
+  const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'editor' | 'author' | 'moderator'>('author');
+  const [createUserError, setCreateUserError] = useState('');
+  const [createUserInfo, setCreateUserInfo] = useState('');
 
-  // Mock data
+  // Load news from Supabase
+  const fetchNews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .select('id, title, status, created_at, image_url')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const mapped: News[] = (data || []).map((n: any) => ({
+        id: String(n.id),
+        title: n.title || '-',
+        content: '',
+        status: (n.status as any) || 'draft',
+        date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
+        imageUrl: n.image_url || undefined,
+      }));
+      setNews(mapped);
+    } catch (e) {
+      console.error('Failed to load news:', e);
+    }
+  };
+
+  // Load categories from Supabase
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, name_ar, description, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setCategories((data || []) as CategoryRow[]);
+    } catch (e) {
+      console.error('Failed to load categories:', e);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  // Load comments from Supabase
+  const fetchComments = async () => {
+    setLoadingComments(true);
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('id, news_id, user_id, content, created_at')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setComments((data || []) as CommentRow[]);
+    } catch (e) {
+      console.error('Failed to load comments:', e);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // Load users from Supabase
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, name, role, status, last_login, created_at, avatar_url')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const mapped: User[] = (data || []).map((u: any) => ({
+        id: u.id,
+        name: u.name || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0],
+        email: u.email,
+        role: u.role,
+        status: u.status,
+        joinDate: (u.created_at ? new Date(u.created_at).toISOString().slice(0,10) : '-'),
+        lastLogin: (u.last_login ? new Date(u.last_login).toISOString().slice(0,19).replace('T',' ') : '-'),
+        avatar: u.avatar_url || '/placeholder.svg',
+      }));
+      setUsers(mapped);
+    } catch (e) {
+      console.error('Failed to load users:', e);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   useEffect(() => {
-    setNews([
-      {
-        id: '1',
-        title: currentLanguage === 'ar' ? 'انتقال كبير في الدوري الإنجليزي' : 'Transfert majeur en Premier League',
-        content: currentLanguage === 'ar' ? 'تم الإعلان عن انتقال قياسي...' : 'Un transfert record a été annoncé...',
-        category: currentLanguage === 'ar' ? 'انتقالات' : 'Transfers',
-        author: 'Admin',
-        date: '2024-01-15',
-        status: 'published',
-        imageUrl: '/placeholder.svg'
-      },
-      {
-        id: '2',
-        title: currentLanguage === 'ar' ? 'ملعب جديد لمانشستر سيتي' : 'Nouveau stade pour Manchester City',
-        content: currentLanguage === 'ar' ? 'النادي يعلن عن البناء...' : 'Le club annonce la construction...',
-        category: currentLanguage === 'ar' ? 'بنية تحتية' : 'Infrastructure',
-        author: 'Admin',
-        date: '2024-01-14',
-        status: 'draft',
-        imageUrl: '/placeholder.svg'
-      }
-    ]);
-
-    setUsers([
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        role: 'admin',
-        status: 'active',
-        joinDate: '2023-01-01',
-        lastLogin: '2024-01-15',
-        avatar: '/placeholder.svg'
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        role: 'editor',
-        status: 'active',
-        joinDate: '2023-02-01',
-        lastLogin: '2024-01-14',
-        avatar: '/placeholder.svg'
-      },
-      {
-        id: '3',
-        name: 'Ahmed Hassan',
-        email: 'ahmed@example.com',
-        role: 'author',
-        status: 'active',
-        joinDate: '2023-03-15',
-        lastLogin: '2024-01-13',
-        avatar: '/placeholder.svg'
-      },
-      {
-        id: '4',
-        name: 'Sarah Wilson',
-        email: 'sarah@example.com',
-        role: 'moderator',
-        status: 'active',
-        joinDate: '2023-04-10',
-        lastLogin: '2024-01-12',
-        avatar: '/placeholder.svg'
-      }
-    ]);
-  }, [currentLanguage]);
+    fetchUsers();
+    fetchCategories();
+    fetchNews();
+    fetchComments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const stats = [
     { 
@@ -142,8 +207,8 @@ const AdminDashboard: React.FC = () => {
       color: 'text-blue-600' 
     },
     { 
-      title: currentLanguage === 'ar' ? 'الأخبار المنشورة' : 'Published News', 
-      value: news.filter(n => n.status === 'published').length, 
+      title: currentLanguage === 'ar' ? 'إجمالي الأخبار' : 'Total News', 
+      value: news.length, 
       icon: Newspaper, 
       change: '+5%', 
       color: 'text-green-600' 
@@ -154,6 +219,13 @@ const AdminDashboard: React.FC = () => {
       icon: UserCheck, 
       change: '+8%', 
       color: 'text-purple-600' 
+    },
+    {
+      title: currentLanguage === 'ar' ? 'الأقسام' : 'Categories',
+      value: categories.length,
+      icon: Calendar,
+      change: '+0%',
+      color: 'text-emerald-600'
     },
     { 
       title: currentLanguage === 'ar' ? 'إجمالي المشاهدات' : 'Total Views', 
@@ -221,7 +293,17 @@ const AdminDashboard: React.FC = () => {
                 <Settings className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                 {currentLanguage === 'ar' ? 'الإعدادات' : 'Paramètres'}
               </Button>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await logout();
+                  } finally {
+                    navigate('/');
+                  }
+                }}
+              >
                 <LogOut className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                 {currentLanguage === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}
               </Button>
@@ -264,15 +346,21 @@ const AdminDashboard: React.FC = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+          <TabsList className="grid w-full grid-cols-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
             <TabsTrigger value="overview" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
               {currentLanguage === 'ar' ? 'نظرة عامة' : 'Vue d\'ensemble'}
             </TabsTrigger>
             <TabsTrigger value="news" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
               {currentLanguage === 'ar' ? 'إدارة الأخبار' : 'Gestion News'}
             </TabsTrigger>
+            <TabsTrigger value="categories" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+              {currentLanguage === 'ar' ? 'الأقسام' : 'Catégories'}
+            </TabsTrigger>
             <TabsTrigger value="users" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
               {currentLanguage === 'ar' ? 'المستخدمين' : 'Utilisateurs'}
+            </TabsTrigger>
+            <TabsTrigger value="comments" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+              {currentLanguage === 'ar' ? 'التعليقات' : 'Commentaires'}
             </TabsTrigger>
             <TabsTrigger value="analytics" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
               {currentLanguage === 'ar' ? 'التحليلات' : 'Analytics'}
@@ -298,13 +386,17 @@ const AdminDashboard: React.FC = () => {
                         </div>
                         <div className="flex-1">
                           <h4 className="font-medium text-slate-900 dark:text-white">{item.title}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{item.category}</p>
+                          {item.date && (
+                            <p className="text-sm text-slate-600 dark:text-slate-400">{item.date}</p>
+                          )}
                         </div>
-                        <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
-                          {item.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
-                           item.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
-                           currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
-                        </Badge>
+                        {item.status && (
+                          <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
+                            {item.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
+                             item.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
+                             currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
+                          </Badge>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -372,7 +464,110 @@ const AdminDashboard: React.FC = () => {
                       {currentLanguage === 'ar' ? 'املأ المعلومات لإنشاء خبر جديد' : 'Remplissez les informations pour créer une nouvelle news'}
                     </DialogDescription>
                   </DialogHeader>
-                  <CreateNewsForm onSubmit={handleCreateNews} />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
+                      </label>
+                      <Input value={newNewsTitle} onChange={(e) => setNewNewsTitle(e.target.value)} placeholder={currentLanguage === 'ar' ? 'عنوان الخبر' : 'Titre de la news'} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
+                      </label>
+                      <Textarea value={newNewsContent} onChange={(e) => setNewNewsContent(e.target.value)} placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'} rows={6} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'القسم' : 'Catégorie'}
+                      </label>
+                      <Select value={newNewsCategoryId !== null ? String(newNewsCategoryId) : undefined} onValueChange={(v) => setNewNewsCategoryId(Number(v))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر القسم' : 'Choisir une catégorie'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((c) => (
+                            <SelectItem key={c.id} value={String(c.id)}>{c.name}{c.name_ar ? ` • ${c.name_ar}` : ''}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'صورة' : 'Image'}
+                      </label>
+                      <Input type="file" accept="image/*" onChange={(e) => setNewNewsImageFile(e.target.files?.[0] ?? null)} />
+                      {newNewsImageFile && (
+                        <p className="text-xs text-slate-500 mt-1">{currentLanguage === 'ar' ? 'سيتم تحميل:' : 'À téléverser:'} {newNewsImageFile.name}</p>
+                      )}
+                    </div>
+
+                    {createNewsError && <p className="text-sm text-red-600">{createNewsError}</p>}
+                    {createNewsInfo && <p className="text-sm text-emerald-600">{createNewsInfo}</p>}
+
+                    <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
+                      <Button variant="outline" onClick={() => setIsCreateNewsOpen(false)}>
+                        {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
+                      </Button>
+                      <Button
+                        className="bg-teal-600 hover:bg-teal-700"
+                        disabled={creatingNews}
+                        onClick={async () => {
+                          setCreateNewsError('');
+                          setCreateNewsInfo('');
+                          if (!newNewsTitle || !newNewsContent) {
+                            setCreateNewsError(currentLanguage === 'ar' ? 'أدخل العنوان والمحتوى' : 'Entrez le titre et le contenu');
+                            return;
+                          }
+                          setCreatingNews(true);
+                          try {
+                            if (!user?.id) {
+                              setCreateNewsError(currentLanguage === 'ar' ? 'جلسة غير صالحة: المعرّف غير موجود' : 'Session invalide: user id manquant');
+                              return;
+                            }
+                            let imageUrl: string | undefined = undefined;
+                            // Upload image if provided
+                            if (newNewsImageFile) {
+                              const ext = newNewsImageFile.name.split('.').pop();
+                              const filePath = `${user?.id ?? 'anon'}/${Date.now()}.${ext}`;
+                              const { error: upErr } = await supabase
+                                .storage
+                                .from('news-images')
+                                .upload(filePath, newNewsImageFile, { upsert: false });
+                              if (upErr) throw upErr;
+                              const { data: pub } = supabase.storage.from('news-images').getPublicUrl(filePath);
+                              imageUrl = pub?.publicUrl;
+                            }
+
+                            // Use SECURITY DEFINER RPC to bypass RLS with internal role checks
+                            const { error } = await supabase.rpc('create_news', {
+                              p_user_id: user.id,
+                              p_title: newNewsTitle,
+                              p_content: newNewsContent,
+                              p_status: 'draft',
+                              p_image_url: imageUrl ?? null,
+                              p_category_id: newNewsCategoryId ?? null,
+                            });
+                            if (error) throw error;
+                            setCreateNewsInfo(currentLanguage === 'ar' ? 'تم إنشاء الخبر' : 'News créée');
+                            await fetchNews();
+                            setIsCreateNewsOpen(false);
+                            setNewNewsTitle('');
+                            setNewNewsContent('');
+                            setNewNewsCategoryId(null);
+                            setNewNewsImageFile(null);
+                          } catch (e: any) {
+                            setCreateNewsError(e.message || (currentLanguage === 'ar' ? 'فشل إنشاء الخبر' : 'Échec de création de la news'));
+                          } finally {
+                            setCreatingNews(false);
+                          }
+                        }}
+                      >
+                        {creatingNews ? (currentLanguage === 'ar' ? 'جاري الإنشاء...' : 'Création...') : (currentLanguage === 'ar' ? 'إنشاء' : 'Créer')}
+                      </Button>
+                    </div>
+                  </div>
                 </DialogContent>
               </Dialog>
             </div>
@@ -385,42 +580,114 @@ const AdminDashboard: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {news.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                          <Newspaper className="w-8 h-8 text-slate-600 dark:text-slate-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-slate-900 dark:text-white">{item.title}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{item.category} • {item.author}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-500">{item.date}</p>
-                        </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[80px]">{currentLanguage === 'ar' ? 'صورة' : 'Image'}</TableHead>
+                      <TableHead>{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</TableHead>
+                      <TableHead className="w-[140px]">{currentLanguage === 'ar' ? 'الحالة' : 'Statut'}</TableHead>
+                      <TableHead className="w-[140px]">{currentLanguage === 'ar' ? 'التاريخ' : 'Date'}</TableHead>
+                      <TableHead className="w-[120px] text-right">{currentLanguage === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {news
+                      .filter(n => !searchTerm || n.title.toLowerCase().includes(searchTerm.toLowerCase()))
+                      .map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.title} className="w-12 h-12 object-cover rounded" />
+                          ) : (
+                            <div className="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded flex items-center justify-center">
+                              <Image className="w-5 h-5 text-slate-500" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{item.title}</TableCell>
+                        <TableCell>
+                          {item.status && (
+                            <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
+                              {item.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
+                               item.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
+                               currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{item.date ?? '-'}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setEditingNews(item); setIsEditNewsOpen(true); }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteNews(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Categories Tab */}
+          <TabsContent value="categories" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{currentLanguage === 'ar' ? 'الأقسام' : 'Catégories'}</CardTitle>
+                <CardDescription>
+                  {currentLanguage === 'ar' ? 'قائمة الأقسام من قاعدة البيانات' : 'Liste des catégories depuis la base de données'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingCategories && (
+                  <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...'}</div>
+                )}
+                <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                  {categories.map((c) => (
+                    <div key={c.id} className="py-3 flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-slate-900 dark:text-white">{c.name} {c.name_ar ? `• ${c.name_ar}` : ''}</div>
+                        {c.description && (
+                          <div className="text-sm text-slate-600 dark:text-slate-400">{c.description}</div>
+                        )}
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
-                          {item.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
-                           item.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
-                           currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingNews(item);
-                            setIsEditNewsOpen(true);
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteNews(item.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                      <div className="text-xs text-slate-500">{c.created_at ? new Date(c.created_at).toISOString().slice(0,10) : '-'}</div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Comments Tab */}
+          <TabsContent value="comments" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{currentLanguage === 'ar' ? 'التعليقات' : 'Commentaires'}</CardTitle>
+                <CardDescription>
+                  {currentLanguage === 'ar' ? 'قائمة التعليقات من قاعدة البيانات' : 'Liste des commentaires depuis la base de données'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingComments && (
+                  <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...'}</div>
+                )}
+                <div className="space-y-3">
+                  {comments.map((cm) => (
+                    <div key={cm.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg">
+                      <div className="text-sm text-slate-700 dark:text-slate-300">{cm.content || '-'}</div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {currentLanguage === 'ar' ? 'خبر' : 'News'}: {cm.news_id ?? '-'} • {currentLanguage === 'ar' ? 'مستخدم' : 'Utilisateur'}: {cm.user_id ?? '-'} • {cm.created_at ? new Date(cm.created_at).toISOString().slice(0,16).replace('T',' ') : '-'}
                       </div>
                     </div>
                   ))}
@@ -431,6 +698,7 @@ const AdminDashboard: React.FC = () => {
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
+            {/* Top actions row */}
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
               <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
                 <Input
@@ -438,12 +706,117 @@ const AdminDashboard: React.FC = () => {
                   className="w-64"
                 />
                 <Button variant="outline" size="sm">
-                  <Filter className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                  <Filter className={`${isRTL ? 'ml-2' : 'mr-2'} w-4 h-4`} />
                   {currentLanguage === 'ar' ? 'تصفية' : 'Filtrer'}
                 </Button>
               </div>
+              {/* Create User Dialog Trigger */}
+              <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-teal-600 hover:bg-teal-700">
+                    <Plus className={`${isRTL ? 'ml-2' : 'mr-2'} w-4 h-4`} />
+                    {currentLanguage === 'ar' ? 'إنشاء مستخدم' : 'Créer un utilisateur'}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>{currentLanguage === 'ar' ? 'إنشاء مستخدم جديد' : 'Créer un nouvel utilisateur'}</DialogTitle>
+                    <DialogDescription>
+                      {currentLanguage === 'ar' ? 'يدعم الإنشاء بواسطة المدير فقط' : 'Disponible pour les administrateurs uniquement'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'الاسم' : 'Nom'}
+                      </label>
+                      <Input value={newUserName} onChange={(e) => setNewUserName(e.target.value)} placeholder={currentLanguage === 'ar' ? 'اسم المستخدم' : "Nom de l'utilisateur"} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                      </label>
+                      <Input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="email@example.com" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'كلمة المرور المؤقتة' : 'Mot de passe temporaire'}
+                      </label>
+                      <Input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder={currentLanguage === 'ar' ? 'كلمة مرور مؤقتة' : 'Mot de passe temporaire'} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                        {currentLanguage === 'ar' ? 'الدور' : 'Rôle'}
+                      </label>
+                      <Select value={newUserRole} onValueChange={(v) => setNewUserRole(v as any)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="editor">Editor</SelectItem>
+                          <SelectItem value="author">Author</SelectItem>
+                          <SelectItem value="moderator">Moderator</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {createUserError && (
+                      <p className="text-sm text-red-600">{createUserError}</p>
+                    )}
+                    {createUserInfo && (
+                      <p className="text-sm text-emerald-600">{createUserInfo}</p>
+                    )}
+
+                    <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
+                      <Button variant="outline" onClick={() => setIsCreateUserOpen(false)}>
+                        {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
+                      </Button>
+                      <Button
+                        className="bg-teal-600 hover:bg-teal-700"
+                        disabled={creatingUser}
+                        onClick={async () => {
+                          setCreateUserError('');
+                          setCreateUserInfo('');
+                          if (!newUserEmail || !newUserPassword) {
+                            setCreateUserError(currentLanguage === 'ar' ? 'أدخل البريد وكلمة المرور' : 'Entrez email et mot de passe');
+                            return;
+                          }
+                          setCreatingUser(true);
+                          try {
+                            const { error } = await supabase.rpc('register_user', {
+                              p_email: newUserEmail,
+                              p_password: newUserPassword,
+                              p_first_name: newUserName,
+                              p_last_name: '',
+                              p_role: newUserRole,
+                            });
+                            if (error) {
+                              setCreateUserError(error.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
+                              return;
+                            }
+                            setCreateUserInfo(currentLanguage === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'Utilisateur créé avec succès');
+                            await fetchUsers();
+                            setNewUserEmail('');
+                            setNewUserPassword('');
+                            setNewUserName('');
+                            setNewUserRole('author');
+                          } catch (err: any) {
+                            setCreateUserError(err.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
+                          } finally {
+                            setCreatingUser(false);
+                          }
+                        }}
+                      >
+                        {creatingUser ? (currentLanguage === 'ar' ? 'جاري الإنشاء...' : 'Création...') : (currentLanguage === 'ar' ? 'إنشاء' : 'Créer')}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
+            {/* Users list */}
             <Card>
               <CardHeader>
                 <CardTitle>{currentLanguage === 'ar' ? 'إدارة المستخدمين' : 'Gestion des Utilisateurs'}</CardTitle>
@@ -452,46 +825,95 @@ const AdminDashboard: React.FC = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {users.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200">
-                      <div className="flex items-center space-x-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h4 className="font-medium text-slate-900 dark:text-white">{user.name}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-500">
-                            {currentLanguage === 'ar' ? 'مسجل في' : 'Inscrit le'} {user.joinDate}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role === 'admin' ? (currentLanguage === 'ar' ? 'مدير' : 'admin') : 
-                           user.role === 'editor' ? (currentLanguage === 'ar' ? 'محرر' : 'editor') : 
-                           user.role === 'author' ? (currentLanguage === 'ar' ? 'كاتب' : 'author') : 
-                           user.role === 'moderator' ? (currentLanguage === 'ar' ? 'مشرف' : 'moderator') : 
-                           currentLanguage === 'ar' ? 'مستخدم' : 'user'}
-                        </Badge>
-                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                          {user.status === 'active' ? (currentLanguage === 'ar' ? 'نشط' : 'active') : 
-                           user.status === 'inactive' ? (currentLanguage === 'ar' ? 'غير نشط' : 'inactive') : 
-                           currentLanguage === 'ar' ? 'محظور' : 'banned'}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteUser(user.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {loadingUsers && (
+                  <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جاري تحميل المستخدمين...' : 'Chargement des utilisateurs...'}</div>
+                )}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{currentLanguage === 'ar' ? 'الاسم' : 'Nom'}</TableHead>
+                      <TableHead>{currentLanguage === 'ar' ? 'البريد' : 'Email'}</TableHead>
+                      <TableHead className="w-[120px]">{currentLanguage === 'ar' ? 'الدور' : 'Rôle'}</TableHead>
+                      <TableHead className="w-[120px]">{currentLanguage === 'ar' ? 'الحالة' : 'Statut'}</TableHead>
+                      <TableHead className="w-[140px]">{currentLanguage === 'ar' ? 'مسجل في' : 'Inscrit le'}</TableHead>
+                      <TableHead className="w-[160px] text-right">{currentLanguage === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium flex items-center gap-2">
+                          <Avatar className="w-7 h-7">
+                            <AvatarImage src={u.avatar} />
+                            <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          {u.name}
+                        </TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={u.role}
+                            onValueChange={async (newRole) => {
+                              try {
+                                const { error } = await supabase.from('users').update({ role: newRole }).eq('id', u.id);
+                                if (error) throw error;
+                                await fetchUsers();
+                              } catch (e:any) { console.error(e); }
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">admin</SelectItem>
+                              <SelectItem value="editor">editor</SelectItem>
+                              <SelectItem value="author">author</SelectItem>
+                              <SelectItem value="moderator">moderator</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={u.status}
+                            onValueChange={async (newStatus) => {
+                              try {
+                                const { error } = await supabase.from('users').update({ status: newStatus }).eq('id', u.id);
+                                if (error) throw error;
+                                await fetchUsers();
+                              } catch (e:any) { console.error(e); }
+                            }}
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">active</SelectItem>
+                              <SelectItem value="inactive">inactive</SelectItem>
+                              <SelectItem value="banned">banned</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{u.joinDate}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              if (!window.confirm(currentLanguage === 'ar' ? 'حذف هذا المستخدم؟' : 'Supprimer cet utilisateur ?')) return;
+                              try {
+                                const { error } = await supabase.from('users').delete().eq('id', u.id);
+                                if (error) throw error;
+                                setUsers((prev) => prev.filter((x) => x.id !== u.id));
+                              } catch (e:any) { console.error(e); }
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
@@ -606,12 +1028,18 @@ const AdminDashboard: React.FC = () => {
 // Form Components
 const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({ onSubmit }) => {
   const { currentLanguage } = useTranslation();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string;
+    content: string;
+    category: string;
+    status: News['status'];
+    imageFile: File | undefined;
+  }>({
     title: '',
     content: '',
     category: 'General',
     status: 'draft',
-    imageFile: undefined as File | undefined
+    imageFile: undefined,
   });
   const [imagePreview, setImagePreview] = useState<string>('');
 

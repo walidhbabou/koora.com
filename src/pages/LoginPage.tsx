@@ -3,111 +3,175 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+// Inline alerts replaced by toasts
+import { Eye, EyeOff, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../hooks/useTranslation';
+import { supabase } from '@/lib/supabase';
 
 import { useNavigate } from 'react-router-dom';
+import { toast } from '@/hooks/use-toast';
 
 const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { loginWithEmail, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
   const { currentLanguage, isRTL, direction } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Utilisateurs de démonstration
-  const demoUsers = [
-    { email: 'admin@koora.com', password: 'admin123', role: 'admin', name: 'John Doe' },
-    { email: 'editor@koora.com', password: 'editor123', role: 'editor', name: 'Jane Smith' },
-    { email: 'author@koora.com', password: 'author123', role: 'author', name: 'Ahmed Hassan' },
-    { email: 'moderator@koora.com', password: 'moderator123', role: 'moderator', name: 'Sarah Wilson' }
-  ];
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setInfo('');
     setIsLoading(true);
 
     try {
-      // Simuler une authentification
-      const user = demoUsers.find(u => u.email === email && u.password === password);
-      
-      if (user) {
-        await login({
-          id: Math.random().toString(),
-          name: user.name,
-          email: user.email,
-          role: user.role as any,
-          status: 'active',
-          joinDate: '2023-01-01',
-          lastLogin: new Date().toISOString().split('T')[0],
-          avatar: '/placeholder.svg'
-        });
-        // Redirection selon le rôle
-        switch (user.role) {
-          case 'admin':
-            navigate('/admin', { replace: true });
-            break;
-          case 'editor':
-            navigate('/editor', { replace: true });
-            break;
-          case 'author':
-            navigate('/author', { replace: true });
-            break;
-          case 'moderator':
-            navigate('/moderator', { replace: true });
-            break;
-          default:
-            navigate('/dashboard', { replace: true });
+      if (isSignUp) {
+        const res = await signUp(email, password, name || undefined);
+        if (!res.ok) {
+          const msg = res.message || (currentLanguage === 'ar' ? 'فشل التسجيل' : "Échec de l'inscription");
+          setError(msg);
+          toast({ variant: 'destructive', description: msg });
+          return;
+        }
+        if (res.needsEmailConfirm) {
+          const msg = currentLanguage === 'ar' ? 'تحقق من بريدك لتأكيد الحساب' : 'Vérifiez votre email pour confirmer votre compte';
+          setInfo(msg);
+          toast({ description: msg });
+        } else {
+          const msg = currentLanguage === 'ar' ? 'تم إنشاء الحساب وتسجيل الدخول' : 'Compte créé et connecté';
+          setInfo(msg);
+          toast({ description: msg });
         }
       } else {
-        setError(currentLanguage === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Identifiants incorrects');
+        // Authentification via Supabase
+        const res = await loginWithEmail(email, password);
+        if (!res.ok) {
+          const fallback = currentLanguage === 'ar' ? 'تعذر تسجيل الدخول' : 'Connexion impossible';
+          const msg = res.message || fallback;
+          setError(msg);
+          toast({ variant: 'destructive', description: msg });
+          return;
+        }
+
+        // Récupérer le rôle depuis la table profiles et rediriger directement (tolérant aux erreurs)
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          const uid = authData.user?.id;
+          if (!uid) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', uid)
+            .single();
+          const role = (profile?.role as 'admin'|'editor'|'author'|'moderator'|'user'|undefined);
+          if (!role) {
+            // If no profile (RLS/404), let RoleBasedRouter decide
+            navigate('/dashboard', { replace: true });
+          } else if (role === 'admin') {
+            navigate('/admin', { replace: true });
+          } else if (role === 'editor') {
+            navigate('/editor', { replace: true });
+          } else if (role === 'author') {
+            navigate('/author', { replace: true });
+          } else if (role === 'moderator') {
+            navigate('/moderator', { replace: true });
+          } else if (role === 'user') {
+            navigate('/news', { replace: true });
+          } else {
+            navigate('/', { replace: true });
+          }
+        } catch (e) {
+          // En cas d'échec (RLS/500), on va au dashboard générique
+          navigate('/dashboard', { replace: true });
+        }
       }
     } catch (err) {
-      setError(currentLanguage === 'ar' ? 'خطأ في تسجيل الدخول' : 'Erreur de connexion');
+      const msg = currentLanguage === 'ar' ? 'حدث خطأ' : 'Une erreur est survenue';
+      setError(msg);
+      toast({ variant: 'destructive', description: msg });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDemoLogin = (user: typeof demoUsers[0]) => {
-    setEmail(user.email);
-    setPassword(user.password);
+  // Aucun compte de démonstration: suppression du pré-remplissage
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setInfo('');
+    if (!email) {
+      const msg = currentLanguage === 'ar' ? 'أدخل بريدك الإلكتروني' : 'Entrez votre email';
+      setError(msg);
+      toast({ variant: 'destructive', description: msg });
+      return;
+    }
+    setIsLoading(true);
+    const ok = await resetPassword(email);
+    setIsLoading(false);
+    if (ok) {
+      const msg = currentLanguage === 'ar' ? 'تم إرسال رسالة إعادة التعيين' : 'Email de réinitialisation envoyé';
+      setInfo(msg);
+      toast({ description: msg });
+    } else {
+      const msg = currentLanguage === 'ar' ? 'تعذر إرسال البريد' : "Impossible d'envoyer l'email";
+      setError(msg);
+      toast({ variant: 'destructive', description: msg });
+    }
   };
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-teal-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
-      <div className="w-full max-w-md space-y-6">
-        {/* Logo et titre */}
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-teal-600 rounded-full flex items-center justify-center mb-4">
-            <LogIn className="w-8 h-8 text-white" />
+    <div className={`min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-0 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
+      <div className="w-full max-w-xl">
+        {/* Brand header */}
+        <div className="relative bg-gradient-to-br from-sport-green to-emerald-600 text-white px-6 py-8">
+          <div className="flex items-center justify-center gap-3">
+            <img src="/black koora.png" alt="Koora" className="w-12 h-12 rounded-md bg-white/95 p-1" />
+            <div>
+              <h1 className="text-2xl font-extrabold tracking-wide">Koora</h1>
+              <p className="text-xs/5 opacity-95">
+                {currentLanguage === 'ar' ? 'سجّل الدخول لمتابعة آخر أخبار كرة القدم' : 'Connectez-vous pour suivre toute l’actualité du football'}
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            {currentLanguage === 'ar' ? 'تسجيل الدخول' : 'Connexion'}
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-2">
-            {currentLanguage === 'ar' ? 'ادخل إلى لوحة التحكم' : 'Accédez à votre dashboard'}
-          </p>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.2),transparent_40%),radial-gradient(circle_at_80%_0,rgba(255,255,255,0.15),transparent_30%)]" />
         </div>
 
         {/* Formulaire de connexion */}
-        <Card>
+        <Card className="mx-4 -mt-6 shadow-2xl">
           <CardHeader>
             <CardTitle className="text-center">
               {currentLanguage === 'ar' ? 'تسجيل الدخول' : 'Se connecter'}
             </CardTitle>
             <CardDescription className="text-center">
-              {currentLanguage === 'ar' ? 'أدخل بياناتك للوصول إلى حسابك' : 'Entrez vos identifiants pour accéder à votre compte'}
+              {currentLanguage === 'ar' ? 'أدخل بياناتك للوصول إلى موقع كرة القدم' : 'Entrez vos identifiants pour accéder au site de football'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    {currentLanguage === 'ar' ? 'الاسم' : 'Nom'}
+                  </Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={currentLanguage === 'ar' ? 'أدخل اسمك' : 'Entrez votre nom'}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="email">
                   {currentLanguage === 'ar' ? 'البريد الإلكتروني' : 'Email'}
@@ -151,56 +215,56 @@ const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              {/* Toasts will display feedback; no inline alerts */}
 
               <Button
                 type="submit"
-                className="w-full bg-teal-600 hover:bg-teal-700"
+                className="w-full bg-sport-green hover:bg-emerald-700"
                 disabled={isLoading}
               >
-                {isLoading ? (
-                  currentLanguage === 'ar' ? 'جاري تسجيل الدخول...' : 'Connexion en cours...'
-                ) : (
-                  currentLanguage === 'ar' ? 'تسجيل الدخول' : 'Se connecter'
-                )}
+                {isLoading
+                  ? (isSignUp
+                      ? (currentLanguage === 'ar' ? 'جاري إنشاء الحساب...' : 'Création du compte...')
+                      : (currentLanguage === 'ar' ? 'جاري تسجيل الدخول...' : 'Connexion en cours...'))
+                  : (isSignUp
+                      ? (currentLanguage === 'ar' ? 'إنشاء حساب' : 'Créer un compte')
+                      : (currentLanguage === 'ar' ? 'تسجيل الدخول' : 'Se connecter'))}
               </Button>
+
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className={`mt-2 text-sm flex items-center gap-2 ${isRTL ? 'justify-start' : 'justify-end'} text-emerald-600`}
+                >
+                  <Mail className="w-4 h-4" />
+                  {currentLanguage === 'ar' ? 'هل نسيت كلمة المرور؟' : 'Mot de passe oublié ?'}
+                </button>
+              )}
             </form>
           </CardContent>
         </Card>
 
-        {/* Comptes de démonstration */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">
-              {currentLanguage === 'ar' ? 'حسابات تجريبية' : 'Comptes de démonstration'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {demoUsers.map((user) => (
-                <Button
-                  key={user.role}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin(user)}
-                  className="text-xs"
-                >
-                  {user.role === 'admin' ? (currentLanguage === 'ar' ? 'مدير' : 'Admin') :
-                   user.role === 'editor' ? (currentLanguage === 'ar' ? 'محرر' : 'Editor') :
-                   user.role === 'author' ? (currentLanguage === 'ar' ? 'كاتب' : 'Author') :
-                   currentLanguage === 'ar' ? 'مشرف' : 'Moderator'}
-                </Button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 mt-2 text-center">
-              {currentLanguage === 'ar' ? 'انقر لملء البيانات تلقائياً' : 'Cliquez pour remplir automatiquement'}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Section démo supprimée */}
+
+        {/* Toggle Sign In / Sign Up */}
+        <div className="text-center text-sm text-slate-600 dark:text-slate-400">
+          {isSignUp ? (
+            <>
+              {currentLanguage === 'ar' ? 'لديك حساب بالفعل؟' : 'Vous avez déjà un compte ?'}{' '}
+              <button className="text-emerald-600 font-semibold" onClick={() => setIsSignUp(false)}>
+                {currentLanguage === 'ar' ? 'تسجيل الدخول' : 'Se connecter'}
+              </button>
+            </>
+          ) : (
+            <>
+              {currentLanguage === 'ar' ? 'مستخدم جديد؟' : 'Nouveau sur Koora ?'}{' '}
+              <button className="text-emerald-600 font-semibold" onClick={() => setIsSignUp(true)}>
+                {currentLanguage === 'ar' ? 'إنشاء حساب' : 'Créer un compte'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
