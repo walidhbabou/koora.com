@@ -75,9 +75,21 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
         p_content: newComment.trim()
       });
       if (rpcErr) throw rpcErr;
+      // Optimistic UI: show the comment immediately in the list
+      const nowIso = new Date().toISOString();
+      const optimistic: CommentRow = {
+        id: (rpcData?.id ? String(rpcData.id) : `temp-${Date.now()}`),
+        user_id: user.id,
+        content: newComment.trim(),
+        status: 'pending',
+        created_at: nowIso,
+      };
+      setComments((prev) => [optimistic, ...prev]);
       setNewComment("");
-      toast({ title: 'Commentaire envoyé', description: 'En attente de modération' });
-      await fetchComments();
+      // Optional light feedback without moderation mention
+      toast({ description: 'تم إرسال تعليقك', });
+      // Background refresh to sync real status/id (non-blocking)
+      fetchComments();
     } catch (e: any) {
       const msg = e?.message || '';
       const hint = msg.includes('function add_comment') ? 'Créez la fonction RPC add_comment côté Supabase.' : '';
@@ -133,7 +145,7 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
                       <span className="text-slate-400">•</span>
                       <span className="text-slate-500">{timeAgo(c.created_at)}</span>
                     </div>
-                    {c.status !== 'approved' && (
+                    {c.status !== 'approved' && c.user_id !== user?.id && (
                       <span className={`px-2 py-0.5 rounded-full text-[10px] ${c.status==='pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
                         {c.status === 'pending' ? 'قيد المراجعة' : 'مرفوض'}
                       </span>

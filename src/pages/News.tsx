@@ -8,9 +8,10 @@ import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, TrendingUp, Clock, ThumbsUp, ThumbsDown, ChevronLeft, MoreHorizontal, MessageSquare } from "lucide-react";
+import { Search, Filter, TrendingUp, Clock, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, MoreHorizontal, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { useTranslation } from "@/hooks/useTranslation";
 
 // CommentsSection removed from the list page; moved to reusable component for details page
 
@@ -26,6 +27,7 @@ const News = () => {
 
   const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
+  const { isRTL } = useTranslation();
 
   const fetchNews = async () => {
     setLoadingNews(true);
@@ -73,12 +75,52 @@ const News = () => {
     "دوري الأبطال"
   ];
 
+  // Leagues list (left sidebar) with logos like the screenshot
+  const leagues = [
+    { name: 'دوري أبطال أوروبا', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/UEFA_Champions_League_logo_2.svg/64px-UEFA_Champions_League_logo_2.svg.png' },
+    { name: 'الدوري الإنجليزي الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/64px-Premier_League_Logo.svg.png' },
+    { name: 'الدوري الإسباني الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/92/LaLiga_Santander.svg/64px-LaLiga_Santander.svg.png' },
+    { name: 'الدوري الإيطالي الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282019%29.svg/64px-Serie_A_logo_%282019%29.svg.png' },
+    { name: 'الدوري الألماني الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Bundesliga_logo_%282017%29.svg/64px-Bundesliga_logo_%282017%29.svg.png' },
+    { name: 'الدوري الفرنسي الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/Ligue1.svg/64px-Ligue1.svg.png' },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
       <TeamsLogos />
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
+          {/* Left Sidebar (Leagues) */}
+          <div className="hidden lg:block w-80 space-y-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-bold text-sport-dark mb-4">البطولات</h3>
+              <ul className="space-y-3">
+                {leagues.map((l, i) => (
+                  <li key={i}>
+                    <div className={`flex items-center justify-between rounded-2xl bg-white dark:bg-[#181a20] border border-gray-100 dark:border-[#23262f] px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      {/* Chevron */}
+                      <div className={`shrink-0 text-gray-400`}>
+                        {isRTL ? (
+                          <ChevronRight className="w-4 h-4" />
+                        ) : (
+                          <ChevronLeft className="w-4 h-4" />
+                        )}
+                      </div>
+                      {/* Name */}
+                      <div className={`flex-1 ${isRTL ? 'text-right pr-3' : 'text-left pl-3'}`}>
+                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{l.name}</div>
+                      </div>
+                      {/* Logo */}
+                      <div className="shrink-0">
+                        <img src={l.logo} alt={l.name} className="w-9 h-9 rounded-md object-contain bg-white" />
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
           {/* Main Content */}
           <div className="flex-1 space-y-8">
             <div className="flex items-center justify-between">
@@ -139,17 +181,34 @@ const News = () => {
               </div>
             </div>
 
-            {/* Latest News (rest) */}
-            <div className="space-y-6">
+            {/* Latest News (compact vertical list) */}
+            <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <Clock className="w-5 h-5 text-sport-green" />
                 <h2 className="text-xl font-bold text-sport-dark">آخر الأخبار</h2>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+              <div className="space-y-3">
                 {(loadingNews ? [] : allNews.slice(3)).map((news) => (
-                  <Link to={`/news/${news.id}`} key={news.id} className="block space-y-2">
-                    <NewsCard news={news} size="medium" />
+                  <Link to={`/news/${news.id}`} key={news.id} className="block">
+                    <Card className={`p-2 sm:p-3 rounded-xl hover:shadow-[var(--shadow-hover)] transition-all bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40`}> 
+                      <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <img
+                          src={news.imageUrl}
+                          alt={news.title}
+                          className="w-20 h-14 sm:w-24 sm:h-16 object-cover rounded-md flex-shrink-0"
+                        />
+                        <div className={`min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <h3 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">
+                            {news.title}
+                          </h3>
+                          <div className={`mt-1 text-[11px] sm:text-xs text-slate-500 flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-start' : ''}`}>
+                            <Clock className="w-3 h-3 opacity-70" />
+                            <span>{news.publishedAt}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
                   </Link>
                 ))}
               </div>
