@@ -13,7 +13,12 @@ import {
   Upload,
   Image,
   Clock,
-  CheckCircle
+  CheckCircle,
+  User,
+  Mail,
+  Globe,
+  Settings,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -343,7 +348,7 @@ const EditorDashboard: React.FC = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
+          <TabsList className="grid w-full grid-cols-4 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'نظرة عامة' : 'Vue d\'ensemble'}
             </TabsTrigger>
@@ -352,6 +357,9 @@ const EditorDashboard: React.FC = () => {
             </TabsTrigger>
             <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'التحليلات' : 'Analytics'}
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+              {currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}
             </TabsTrigger>
           </TabsList>
 
@@ -654,6 +662,90 @@ const EditorDashboard: React.FC = () => {
                       </span>
                       <span className="font-semibold text-green-600">+15%</span>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Personal Information */}
+              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-blue-900/20 border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    <span>{currentLanguage === 'ar' ? 'المعلومات الشخصية' : 'Informations Personnelles'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        {user?.name?.charAt(0) || 'E'}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{user?.name || 'Éditeur'}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{user?.email}</p>
+                        <Badge variant="outline" className="mt-1">{user?.role || 'editor'}</Badge>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <Mail className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">{user?.email || 'Non renseigné'}</span>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <Calendar className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          {currentLanguage === 'ar' ? 'عضو منذ' : 'Membre depuis'} {new Date().getFullYear()}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <Edit className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          {currentLanguage === 'ar' ? 'مقالات معدلة' : 'Articles édités'}: {articles.length}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Editor Settings */}
+              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-indigo-50 dark:from-slate-800 dark:to-indigo-900/20 border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="w-5 h-5 text-indigo-600" />
+                    <span>{currentLanguage === 'ar' ? 'إعدادات المحرر' : 'Paramètres Éditeur'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                      <h4 className="font-medium text-slate-900 dark:text-white mb-2">
+                        {currentLanguage === 'ar' ? 'إحصائيات المحرر' : 'Statistiques Éditeur'}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">{articles.filter(a => a.status === 'published').length}</div>
+                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'منشور' : 'Publiés'}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-600">{articles.filter(a => a.status === 'submitted').length}</div>
+                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'قيد المراجعة' : 'En attente'}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <Settings className="w-4 h-4 mr-2" />
+                      {currentLanguage === 'ar' ? 'تعديل الملف الشخصي' : 'Modifier le Profil'}
+                    </Button>
+                    <Button variant="outline" className="w-full">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      {currentLanguage === 'ar' ? 'إعدادات المراجعة' : 'Paramètres de Révision'}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

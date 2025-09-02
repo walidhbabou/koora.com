@@ -12,6 +12,7 @@ import { Search, Filter, TrendingUp, Clock, ThumbsUp, ThumbsDown, ChevronLeft, C
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useTranslation } from "@/hooks/useTranslation";
+import { MAIN_LEAGUES } from "@/config/api";
 
 // CommentsSection removed from the list page; moved to reusable component for details page
 
@@ -27,16 +28,22 @@ const News = () => {
 
   const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
-  const { isRTL } = useTranslation();
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [hasMore, setHasMore] = useState(true);
+  const { isRTL, currentLanguage } = useTranslation();
 
-  const fetchNews = async () => {
+  const fetchNews = async (nextPage: number, append: boolean = false) => {
     setLoadingNews(true);
     try {
+      const from = (nextPage - 1) * pageSize;
+      const to = nextPage * pageSize - 1;
       const { data, error } = await supabase
         .from('news')
         .select('id, title, content, created_at, image_url, status')
         .eq('status', 'published')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
 
       const mapped: NewsCardItem[] = (data || []).map((n: any) => ({
@@ -47,16 +54,27 @@ const News = () => {
         publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
         category: 'أخبار',
       }));
-      setAllNews(mapped);
+
+      setAllNews(prev => append ? [...prev, ...mapped] : mapped);
+      setHasMore(mapped.length === pageSize);
+      if (!append) setPage(nextPage);
     } catch (e) {
       console.error('Failed to load news', e);
-      setAllNews([]);
+      if (!append) setAllNews([]);
+      setHasMore(false);
     } finally {
       setLoadingNews(false);
     }
   };
 
-  useEffect(() => { fetchNews(); }, []);
+  useEffect(() => { fetchNews(1, false); }, []);
+
+  const handleLoadMore = async () => {
+    if (loadingNews || !hasMore) return;
+    const next = page + 1;
+    await fetchNews(next, true);
+    setPage(next);
+  };
 
   const categories = [
     { name: "جميع الأخبار", count: 245, active: true },
@@ -67,22 +85,41 @@ const News = () => {
     { name: "إنجازات", count: 29, active: false }
   ];
 
-  const trendingTopics = [
-    "مبابي ريال مدريد",
-    "صلاح ليفربول", 
-    "برشلونة انتقالات",
-    "الكلاسيكو",
-    "دوري الأبطال"
-  ];
+  // Trending topics derived from latest news titles
+  const trendingTopics = allNews.slice(0, 5).map(n => n.title);
 
-  // Leagues list (left sidebar) with logos like the screenshot
+  // Leagues list (left sidebar) localized, consistent with Standings.tsx
   const leagues = [
-    { name: 'دوري أبطال أوروبا', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/UEFA_Champions_League_logo_2.svg/64px-UEFA_Champions_League_logo_2.svg.png' },
-    { name: 'الدوري الإنجليزي الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f2/Premier_League_Logo.svg/64px-Premier_League_Logo.svg.png' },
-    { name: 'الدوري الإسباني الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/92/LaLiga_Santander.svg/64px-LaLiga_Santander.svg.png' },
-    { name: 'الدوري الإيطالي الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/e1/Serie_A_logo_%282019%29.svg/64px-Serie_A_logo_%282019%29.svg.png' },
-    { name: 'الدوري الألماني الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Bundesliga_logo_%282017%29.svg/64px-Bundesliga_logo_%282017%29.svg.png' },
-    { name: 'الدوري الفرنسي الممتاز', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f7/Ligue1.svg/64px-Ligue1.svg.png' },
+    {
+      id: MAIN_LEAGUES.CHAMPIONS_LEAGUE,
+      name: currentLanguage === 'ar' ? 'دوري أبطال أوروبا' : 'Champions League',
+      logo: 'https://media.api-sports.io/football/leagues/2.png',
+    },
+    {
+      id: MAIN_LEAGUES.PREMIER_LEAGUE,
+      name: currentLanguage === 'ar' ? 'الدوري الإنجليزي الممتاز' : 'Premier League',
+      logo: 'https://media.api-sports.io/football/leagues/39.png',
+    },
+    {
+      id: MAIN_LEAGUES.LA_LIGA,
+      name: currentLanguage === 'ar' ? 'الدوري الإسباني الممتاز' : 'La Liga',
+      logo: 'https://media.api-sports.io/football/leagues/140.png',
+    },
+    {
+      id: MAIN_LEAGUES.SERIE_A,
+      name: currentLanguage === 'ar' ? 'الدوري الإيطالي الممتاز' : 'Serie A',
+      logo: 'https://media.api-sports.io/football/leagues/135.png',
+    },
+    {
+      id: MAIN_LEAGUES.BUNDESLIGA,
+      name: currentLanguage === 'ar' ? 'الدوري الألماني الممتاز' : 'Bundesliga',
+      logo: 'https://media.api-sports.io/football/leagues/78.png',
+    },
+    {
+      id: MAIN_LEAGUES.LIGUE_1,
+      name: currentLanguage === 'ar' ? 'الدوري الفرنسي الممتاز' : 'Ligue 1',
+      logo: 'https://media.api-sports.io/football/leagues/61.png',
+    },
   ];
 
   return (
@@ -123,22 +160,7 @@ const News = () => {
           </div>
           {/* Main Content */}
           <div className="flex-1 space-y-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-sport-dark to-sport-green bg-clip-text text-transparent">
-                  الأخبار
-                </h1>
-                <p className="text-muted-foreground mt-1">آخر أخبار كرة القدم من حول العالم</p>
-              </div>
-              
-              <div className="flex gap-3">
-
-                <Button variant="outline" size="sm">
-                  <Filter className="w-4 h-4 mr-2" />
-                  تصفية
-                </Button>
-              </div>
-            </div>
+           
 
             {/* Categories */}
             <div className="flex flex-wrap gap-2">
@@ -191,7 +213,7 @@ const News = () => {
               <div className="space-y-3">
                 {(loadingNews ? [] : allNews.slice(3)).map((news) => (
                   <Link to={`/news/${news.id}`} key={news.id} className="block">
-                    <Card className={`p-2 sm:p-3 rounded-xl hover:shadow-[var(--shadow-hover)] transition-all bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40`}> 
+                    <Card className={`p-2 sm:p-3 rounded-xl hover:shadow-[var(--shadow-hover)] transition-all bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40`}>
                       <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <img
                           src={news.imageUrl}
@@ -216,8 +238,14 @@ const News = () => {
 
             {/* Load More */}
             <div className="flex justify-center pt-8">
-              <Button size="lg" variant="outline" className="border-sport-green text-sport-green hover:bg-sport-green hover:text-white">
-                تحميل المزيد من الأخبار
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-sport-green text-sport-green hover:bg-sport-green hover:text-white disabled:opacity-60"
+                onClick={handleLoadMore}
+                disabled={loadingNews || !hasMore}
+              >
+                {loadingNews ? '...جاري التحميل' : hasMore ? 'تحميل المزيد من الأخبار' : 'لا مزيد من الأخبار'}
               </Button>
             </div>
           </div>

@@ -9,6 +9,8 @@ import { ThumbsUp, ThumbsDown, ChevronLeft, MoreHorizontal, MessageSquare } from
 interface CommentRow {
   id: string;
   user_id: string;
+  user_name?: string | null;
+  avatar_url?: string | null;
   content: string;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
@@ -47,6 +49,8 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
       setComments((data || []).map((c: any) => ({
         id: String(c.id),
         user_id: c.user_id,
+        user_name: c.user_name,
+        avatar_url: c.avatar_url,
         content: c.content,
         status: c.status,
         created_at: c.created_at
@@ -80,6 +84,8 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
       const optimistic: CommentRow = {
         id: (rpcData?.id ? String(rpcData.id) : `temp-${Date.now()}`),
         user_id: user.id,
+        user_name: user.name || null,
+        avatar_url: null,
         content: newComment.trim(),
         status: 'pending',
         created_at: nowIso,
@@ -98,6 +104,30 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
       setPosting(false);
     }
   };
+
+  // Realtime: refresh when a new comment is inserted for this news
+  useEffect(() => {
+    if (!newsId) return;
+    const channel = supabase
+      .channel(`comments-news-${newsId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'comments', filter: `news_id=eq.${newsId}` },
+        (payload: any) => {
+          const row = payload?.new;
+          if (!row) return;
+          if (row.status === 'approved' || row.user_id === user?.id) {
+            // Refetch to enrich with user_name/avatar_url provided by RPC
+            fetchComments();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [newsId, user?.id]);
 
   return (
     <div className="mt-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-0 overflow-hidden">
@@ -135,13 +165,16 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
           {comments.map((c) => (
             <div key={c.id} className="">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-sport-green/15 text-sport-green flex items-center justify-center font-bold">
-                  {(c.user_id || '?').charAt(0).toUpperCase()}
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-sport-green/15 flex items-center justify-center">
+                  {c.avatar_url
+                    ? <img src={c.avatar_url} alt={c.user_name ?? ''} className="w-full h-full object-cover" />
+                    : <span className="text-sport-green font-bold">{(c.user_name ?? c.user_id).charAt(0).toUpperCase()}</span>
+                  }
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="font-semibold">{c.user_id?.slice(0,8)}…</span>
+                      <span className="font-semibold">{c.user_name ?? `${c.user_id.slice(0,8)}…`}</span>
                       <span className="text-slate-400">•</span>
                       <span className="text-slate-500">{timeAgo(c.created_at)}</span>
                     </div>

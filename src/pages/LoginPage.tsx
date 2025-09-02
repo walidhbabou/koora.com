@@ -7,18 +7,21 @@ import { Label } from '@/components/ui/label';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../hooks/useTranslation';
-import { supabase } from '@/lib/supabase';
+// No supabase direct calls here; we use custom table-based auth via AuthContext
 
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 
 const LoginPage: React.FC = () => {
-  const { loginWithEmail, signUp, resetPassword } = useAuth();
+  const { loginWithEmail, signUp, resetPassword, user, register } = useAuth();
   const navigate = useNavigate();
   const { currentLanguage, isRTL, direction } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
@@ -33,9 +36,40 @@ const LoginPage: React.FC = () => {
 
     try {
       if (isSignUp) {
-        const res = await signUp(email, password, name || undefined);
-        if (!res.ok) {
-          const msg = res.message || (currentLanguage === 'ar' ? 'فشل التسجيل' : "Échec de l'inscription");
+        // Basic validations
+        if (!email.trim()) {
+          const m = currentLanguage === 'ar' ? 'البريد الإلكتروني مطلوب' : "L'email est requis";
+          setError(m); toast({ variant: 'destructive', description: m }); setIsLoading(false); return;
+        }
+        if (!password) {
+          const m = currentLanguage === 'ar' ? 'كلمة المرور مطلوبة' : 'Mot de passe requis';
+          setError(m); toast({ variant: 'destructive', description: m }); setIsLoading(false); return;
+        }
+        if (password.length < 6) {
+          const m = currentLanguage === 'ar' ? 'الحد الأدنى لطول كلمة المرور هو 6' : 'Mot de passe min 6 caractères';
+          setError(m); toast({ variant: 'destructive', description: m }); setIsLoading(false); return;
+        }
+        if (confirmPassword !== password) {
+          const m = currentLanguage === 'ar' ? 'تأكيد كلمة المرور غير مطابق' : 'La confirmation du mot de passe ne correspond pas';
+          setError(m); toast({ variant: 'destructive', description: m }); setIsLoading(false); return;
+        }
+
+        // Prefer sending first/last directly to backend RPC via register()
+        const res = await register(
+          email.trim(),
+          password,
+          firstName?.trim() || undefined,
+          lastName?.trim() || undefined,
+          'user'
+        );
+        if (res && 'error' in res && res.error) {
+          let msg = res.error || (currentLanguage === 'ar' ? 'فشل التسجيل' : "Échec de l'inscription");
+          const m = (msg || '').toLowerCase();
+          if (m.includes('gen_salt') || m.includes('crypt')) {
+            msg = currentLanguage === 'ar'
+              ? 'يجب تفعيل pgcrypto في قاعدة البيانات: نفّذ create extension if not exists pgcrypto; ثم أعد المحاولة'
+              : "Activez l'extension pgcrypto dans Supabase: exécutez create extension if not exists pgcrypto; puis réessayez";
+          }
           setError(msg);
           toast({ variant: 'destructive', description: msg });
           return;
@@ -50,7 +84,7 @@ const LoginPage: React.FC = () => {
           toast({ description: msg });
         }
       } else {
-        // Authentification via Supabase
+        // Authentification via nos RPCs dans AuthContext
         const res = await loginWithEmail(email, password);
         if (!res.ok) {
           const fallback = currentLanguage === 'ar' ? 'تعذر تسجيل الدخول' : 'Connexion impossible';
@@ -60,40 +94,17 @@ const LoginPage: React.FC = () => {
           return;
         }
 
-        // Récupérer le rôle depuis la table profiles et rediriger directement (tolérant aux erreurs)
-        try {
-          const { data: authData } = await supabase.auth.getUser();
-          const uid = authData.user?.id;
-          if (!uid) {
-            navigate('/dashboard', { replace: true });
-            return;
-          }
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', uid)
-            .single();
-          const role = (profile?.role as 'admin'|'editor'|'author'|'moderator'|'user'|undefined);
-          if (!role) {
-            // If no profile (RLS/404), let RoleBasedRouter decide
-            navigate('/dashboard', { replace: true });
-          } else if (role === 'admin') {
-            navigate('/admin', { replace: true });
-          } else if (role === 'editor') {
-            navigate('/editor', { replace: true });
-          } else if (role === 'author') {
-            navigate('/author', { replace: true });
-          } else if (role === 'moderator') {
-            navigate('/moderator', { replace: true });
-          } else if (role === 'user') {
-            navigate('/news', { replace: true });
-          } else {
-            navigate('/', { replace: true });
-          }
-        } catch (e) {
-          // En cas d'échec (RLS/500), on va au dashboard générique
-          navigate('/dashboard', { replace: true });
-        }
+        // Redirection selon le rôle déjà chargé dans le contexte/localStorage
+        const u = user || (() => {
+          try { return JSON.parse(localStorage.getItem('koora_user') || 'null'); } catch { return null; }
+        })();
+        const role = u?.role as 'admin'|'editor'|'author'|'moderator'|'user'|undefined;
+        if (role === 'admin') navigate('/admin', { replace: true });
+        else if (role === 'editor') navigate('/editor', { replace: true });
+        else if (role === 'author') navigate('/author', { replace: true });
+        else if (role === 'moderator') navigate('/moderator', { replace: true });
+        else if (role === 'user') navigate('/news', { replace: true });
+        else navigate('/dashboard', { replace: true });
       }
     } catch (err) {
       const msg = currentLanguage === 'ar' ? 'حدث خطأ' : 'Une erreur est survenue';
@@ -159,17 +170,43 @@ const LoginPage: React.FC = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignUp && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">
-                    {currentLanguage === 'ar' ? 'الاسم' : 'Nom'}
-                  </Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder={currentLanguage === 'ar' ? 'أدخل اسمك' : 'Entrez votre nom'}
-                  />
-                </div>
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">
+                        {currentLanguage === 'ar' ? 'الاسم الشخصي' : 'Prénom'}
+                      </Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder={currentLanguage === 'ar' ? 'أدخل اسمك الشخصي' : 'Entrez votre prénom'}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">
+                        {currentLanguage === 'ar' ? 'اللقب' : 'Nom de famille'}
+                      </Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder={currentLanguage === 'ar' ? 'أدخل لقبك' : 'Entrez votre nom de famille'}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">
+                      {currentLanguage === 'ar' ? 'الاسم الكامل (اختياري)' : 'Nom complet (optionnel)'}
+                    </Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder={currentLanguage === 'ar' ? 'إن لم تُدخل الاسم واللقب' : "Si vous n'indiquez pas prénom/nom"}
+                    />
+                  </div>
+                </>
               )}
 
               <div className="space-y-2">
@@ -214,6 +251,22 @@ const LoginPage: React.FC = () => {
                   </Button>
                 </div>
               </div>
+
+              {isSignUp && (
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">
+                    {currentLanguage === 'ar' ? 'تأكيد كلمة المرور' : 'Confirmer le mot de passe'}
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder={currentLanguage === 'ar' ? 'أعد إدخال كلمة المرور' : 'Retapez votre mot de passe'}
+                    required
+                  />
+                </div>
+              )}
 
               {/* Toasts will display feedback; no inline alerts */}
 

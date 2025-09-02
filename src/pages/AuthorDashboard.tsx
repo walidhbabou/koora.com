@@ -12,7 +12,13 @@ import {
   CheckCircle,
   Send,
   BookOpen,
-  Image as ImageIcon
+  Image as ImageIcon,
+  User,
+  Mail,
+  MapPin,
+  Phone,
+  Globe,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -462,7 +468,7 @@ const AuthorDashboard: React.FC = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
+          <TabsList className="grid w-full grid-cols-4 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'نظرة عامة' : 'Vue d\'ensemble'}
             </TabsTrigger>
@@ -472,12 +478,16 @@ const AuthorDashboard: React.FC = () => {
             <TabsTrigger value="writing" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'الكتابة' : 'Écriture'}
             </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+              {currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-lg transition-all duration-300">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Quick Stats */}
+              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Send className="w-5 h-5 text-blue-600" />
@@ -485,21 +495,26 @@ const AuthorDashboard: React.FC = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {articles.filter(a => a.status === 'submitted').map((article) => (
-                      <div key={article.id} className="flex items-center space-x-3 p-4 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-slate-700 dark:hover:to-blue-900/20 transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-lg">
-                          <FileText className="w-6 h-6 text-white" />
+                  <div className="space-y-3">
+                    {articles.filter(a => a.status === 'submitted').slice(0, 3).map((article) => (
+                      <div key={article.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-white hover:to-purple-50 dark:hover:from-slate-700 dark:hover:to-purple-900/20 transition-all duration-300 hover:shadow-md hover:scale-[1.02] bg-white/60 dark:bg-slate-800/60">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md">
+                          <FileText className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white">{article.title}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{article.category}</p>
+                          <h4 className="font-medium text-slate-900 dark:text-white text-sm">{article.title}</h4>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{article.category}</p>
                         </div>
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs">
                           {currentLanguage === 'ar' ? 'مرسل' : 'Soumis'}
                         </Badge>
                       </div>
                     ))}
+                    {articles.filter(a => a.status === 'submitted').length === 0 && (
+                      <div className="text-sm text-slate-500 text-center py-4">
+                        {currentLanguage === 'ar' ? 'لا توجد مقالات قيد المراجعة' : 'Aucun article en attente'}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -846,6 +861,90 @@ const AuthorDashboard: React.FC = () => {
                         <li>• {currentLanguage === 'ar' ? 'تحليلات تكتيكية' : 'Analyses tactiques'}</li>
                       </ul>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Personal Information */}
+              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-purple-50 dark:from-slate-800 dark:to-purple-900/20 border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <User className="w-5 h-5 text-purple-600" />
+                    <span>{currentLanguage === 'ar' ? 'المعلومات الشخصية' : 'Informations Personnelles'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+                        {user?.name?.charAt(0) || 'A'}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{user?.name || 'Auteur'}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">{user?.email}</p>
+                        <Badge variant="outline" className="mt-1">{user?.role || 'author'}</Badge>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <Mail className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">{user?.email || 'Non renseigné'}</span>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <Calendar className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          {currentLanguage === 'ar' ? 'عضو منذ' : 'Membre depuis'} {new Date().getFullYear()}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
+                        <Globe className="w-4 h-4 text-slate-500" />
+                        <span className="text-sm text-slate-700 dark:text-slate-300">
+                          {currentLanguage === 'ar' ? 'اللغة' : 'Langue'}: {currentLanguage === 'ar' ? 'العربية' : 'Français'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Account Settings */}
+              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-indigo-50 dark:from-slate-800 dark:to-indigo-900/20 border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Settings className="w-5 h-5 text-indigo-600" />
+                    <span>{currentLanguage === 'ar' ? 'إعدادات الحساب' : 'Paramètres du Compte'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
+                      <h4 className="font-medium text-slate-900 dark:text-white mb-2">
+                        {currentLanguage === 'ar' ? 'إحصائيات الكاتب' : 'Statistiques Auteur'}
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">{articles.length}</div>
+                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'مقالات' : 'Articles'}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{articles.filter(a => a.status === 'published').length}</div>
+                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'منشور' : 'Publiés'}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" className="w-full">
+                      <Settings className="w-4 h-4 mr-2" />
+                      {currentLanguage === 'ar' ? 'تعديل الملف الشخصي' : 'Modifier le Profil'}
+                    </Button>
+                    <Button variant="outline" className="w-full">
+                      <Mail className="w-4 h-4 mr-2" />
+                      {currentLanguage === 'ar' ? 'تغيير كلمة المرور' : 'Changer le Mot de Passe'}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

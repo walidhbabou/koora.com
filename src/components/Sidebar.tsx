@@ -118,27 +118,7 @@ const Sidebar = () => {
         </div>
       </Card>
 
-      {/* Scottish Premiership */}
-      <Card className="p-4">
-        <div className="flex items-center space-x-2 mb-4">
-          <div className="w-6 h-6 bg-gradient-to-br from-blue-600 to-purple-600 rounded-sm flex items-center justify-center">
-            <span className="text-white text-xs font-bold">SP</span>
-          </div>
-          <h3 className="font-semibold text-foreground">الدوري الاسكتلندي الممتاز</h3>
-        </div>
-        
-        <div className="flex space-x-4 text-sm">
-          <button className="text-sport-blue font-medium border-b-2 border-sport-blue pb-1">
-            الأهداف
-          </button>
-          <button className="text-muted-foreground hover:text-sport-blue">
-            الترتيب
-          </button>
-          <button className="text-muted-foreground hover:text-sport-blue">
-            الأخبار
-          </button>
-        </div>
-      </Card>
+  
     </div>
   );
 };

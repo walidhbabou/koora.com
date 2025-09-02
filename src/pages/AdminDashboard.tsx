@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { 
+  BarChart3, 
   Users, 
-  Newspaper, 
+  FileText, 
+  MessageSquare, 
   Plus, 
+  Eye, 
   Edit, 
   Trash2, 
-  Eye, 
-  BarChart3, 
   Calendar,
   TrendingUp,
-  UserCheck,
-  Shield,
-  Settings,
-  LogOut,
   Search,
   Filter,
   MoreVertical,
   Upload,
-  Image
+  Image,
+  User,
+  Mail,
+  Globe,
+  Settings,
+  Crown,
+  Database
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +89,10 @@ const AdminDashboard: React.FC = () => {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [comments, setComments] = useState<CommentRow[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [selectedNews, setSelectedNews] = useState<News | null>(null);
+  const [loadingSelectedNews, setLoadingSelectedNews] = useState(false);
+  const [selectedNewsComments, setSelectedNewsComments] = useState<CommentRow[]>([]);
+  const [loadingSelectedComments, setLoadingSelectedComments] = useState(false);
 
   const [isCreateNewsOpen, setIsCreateNewsOpen] = useState(false);
   const [isEditNewsOpen, setIsEditNewsOpen] = useState(false);
@@ -126,6 +133,71 @@ const AdminDashboard: React.FC = () => {
       setNews(mapped);
     } catch (e) {
       console.error('Failed to load news:', e);
+    }
+  };
+
+  // Load a single news with full content
+  const fetchNewsById = async (newsId: string) => {
+    setLoadingSelectedNews(true);
+    try {
+      const { data, error } = await supabase
+        .from('news')
+        .select('id, title, content, status, created_at, image_url')
+        .eq('id', Number(newsId))
+        .single();
+      if (error) throw error;
+      const n = data as any;
+      const mapped: News = {
+        id: String(n.id),
+        title: n.title || '-',
+        content: n.content || '',
+        status: (n.status as any) || 'draft',
+        date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
+        imageUrl: n.image_url || undefined,
+      };
+      setSelectedNews(mapped);
+    } catch (e) {
+      console.error('Failed to load news by id:', e);
+      setSelectedNews(null);
+    } finally {
+      setLoadingSelectedNews(false);
+    }
+  };
+
+  // Load comments for a specific news
+  const fetchCommentsForNews = async (newsId: string) => {
+    setLoadingSelectedComments(true);
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('id, news_id, user_id, content, created_at')
+        .eq('news_id', Number(newsId))
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setSelectedNewsComments((data || []) as CommentRow[]);
+    } catch (e) {
+      console.error('Failed to load comments for news:', e);
+      setSelectedNewsComments([]);
+    } finally {
+      setLoadingSelectedComments(false);
+    }
+  };
+
+  const openNewsDetails = async (item: News) => {
+    await fetchNewsById(item.id);
+    await fetchCommentsForNews(item.id);
+  };
+
+  const handleDeleteComment = async (commentId: number) => {
+    const prev = selectedNewsComments;
+    setSelectedNewsComments(prev.filter(c => c.id !== commentId));
+    try {
+      const { error } = await supabase.rpc('delete_comment', { p_comment_id: commentId });
+      if (error) throw error;
+    } catch (e: any) {
+      console.error('Failed to delete comment:', e);
+      // revert
+      setSelectedNewsComments(prev);
     }
   };
 
@@ -209,14 +281,14 @@ const AdminDashboard: React.FC = () => {
     { 
       title: currentLanguage === 'ar' ? 'إجمالي الأخبار' : 'Total News', 
       value: news.length, 
-      icon: Newspaper, 
+      icon: FileText, 
       change: '+5%', 
       color: 'text-green-600' 
     },
     { 
       title: currentLanguage === 'ar' ? 'المستخدمين النشطين' : 'Active Users', 
       value: users.filter(u => u.status === 'active').length, 
-      icon: UserCheck, 
+      icon: User, 
       change: '+8%', 
       color: 'text-purple-600' 
     },
@@ -270,44 +342,31 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       {/* Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+      <div className="bg-white/80 backdrop-blur-lg dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50 shadow-lg">
         <div className="container mx-auto px-6 py-4">
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
               <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
-                <div className="p-2 bg-teal-100 dark:bg-teal-900 rounded-lg">
-                  <Shield className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300">
+                  <Crown className="w-6 h-6 text-white" />
                 </div>
                 <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {currentLanguage === 'ar' ? 'لوحة تحكم المدير' : 'Admin Dashboard'}
+                    {currentLanguage === 'ar' ? 'لوحة تحكم المدير' : 'Dashboard Admin'}
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {currentLanguage === 'ar' ? 'إدارة المحتوى والمستخدمين' : 'Gestion du contenu et des utilisateurs'}
+                    {currentLanguage === 'ar' ? `مرحباً ${user?.name}` : `Bienvenue ${user?.name}`}
                   </p>
                 </div>
               </div>
             </div>
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
-              <Button variant="outline" size="sm">
-                <Settings className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                {currentLanguage === 'ar' ? 'الإعدادات' : 'Paramètres'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    await logout();
-                  } finally {
-                    navigate('/');
-                  }
-                }}
-              >
-                <LogOut className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                {currentLanguage === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              onClick={async () => { try { await logout(); } finally { navigate('/'); } }}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+            >
+              {currentLanguage === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}
+            </Button>
           </div>
         </div>
       </div>
@@ -346,34 +405,37 @@ const AdminDashboard: React.FC = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+          <TabsList className="grid w-full grid-cols-7 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'نظرة عامة' : 'Vue d\'ensemble'}
             </TabsTrigger>
-            <TabsTrigger value="news" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
-              {currentLanguage === 'ar' ? 'إدارة الأخبار' : 'Gestion News'}
+            <TabsTrigger value="news" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+              {currentLanguage === 'ar' ? 'إدارة الأخبار' : 'Gestion des News'}
             </TabsTrigger>
-            <TabsTrigger value="categories" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+            <TabsTrigger value="categories" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'الأقسام' : 'Catégories'}
             </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+            <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'المستخدمين' : 'Utilisateurs'}
             </TabsTrigger>
-            <TabsTrigger value="comments" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+            <TabsTrigger value="comments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'التعليقات' : 'Commentaires'}
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-teal-100 data-[state=active]:text-teal-900 dark:data-[state=active]:bg-teal-900 dark:data-[state=active]:text-teal-100">
+            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'التحليلات' : 'Analytics'}
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+              {currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}
             </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-lg transition-all duration-300">
+              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-blue-900/20 border-0 shadow-lg">
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
-                    <Newspaper className="w-5 h-5 text-teal-600" />
+                    <FileText className="w-5 h-5 text-teal-600" />
                     <span>{currentLanguage === 'ar' ? 'أحدث الأخبار' : 'News Récentes'}</span>
                   </CardTitle>
                 </CardHeader>
@@ -382,7 +444,7 @@ const AdminDashboard: React.FC = () => {
                     {news.slice(0, 3).map((item) => (
                       <div key={item.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                         <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                          <Newspaper className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+                          <FileText className="w-6 h-6 text-teal-600" />
                         </div>
                         <div className="flex-1">
                           <h4 className="font-medium text-slate-900 dark:text-white">{item.title}</h4>
@@ -630,6 +692,13 @@ const AdminDashboard: React.FC = () => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openNewsDetails(item)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -637,6 +706,70 @@ const AdminDashboard: React.FC = () => {
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Selected News Details with Comments */}
+            {selectedNews && (
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle>{currentLanguage === 'ar' ? 'تفاصيل الخبر' : 'Détails de la News'}</CardTitle>
+                  <CardDescription>
+                    {currentLanguage === 'ar' ? 'عرض الخبر والتعليقات' : 'Afficher la news et ses commentaires'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* News content */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-4">
+                      {selectedNews.imageUrl && (
+                        <img src={selectedNews.imageUrl} alt={selectedNews.title} className="w-24 h-24 object-cover rounded" />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold">{selectedNews.title}</h3>
+                          {selectedNews.status && (
+                            <Badge variant={selectedNews.status === 'published' ? 'default' : 'secondary'}>
+                              {selectedNews.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
+                               selectedNews.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
+                               currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-500">{selectedNews.date ?? '-'}</div>
+                      </div>
+                    </div>
+                    <div className="prose dark:prose-invert max-w-none text-sm text-slate-800 dark:text-slate-200">
+                      {loadingSelectedNews ? (currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...') : (selectedNews.content || '-')}
+                    </div>
+                  </div>
+
+                  {/* Comments list */}
+                  <div className="mt-6">
+                    <h4 className="font-medium mb-2">{currentLanguage === 'ar' ? 'التعليقات' : 'Commentaires'}</h4>
+                    {loadingSelectedComments && (
+                      <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...'}</div>
+                    )}
+                    {!loadingSelectedComments && selectedNewsComments.length === 0 && (
+                      <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا توجد تعليقات' : 'Aucun commentaire'}</div>
+                    )}
+                    <div className="space-y-2">
+                      {selectedNewsComments.map((cm) => (
+                        <div key={cm.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-start justify-between">
+                          <div className="pr-4">
+                            <div className="text-sm text-slate-800 dark:text-slate-200">{cm.content || '-'}</div>
+                            <div className="text-xs text-slate-500 mt-1">{cm.created_at ? new Date(cm.created_at).toISOString().slice(0,16).replace('T',' ') : '-'}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteComment(cm.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Categories Tab */}
@@ -1219,6 +1352,95 @@ const EditNewsForm: React.FC<{ news: News; onSubmit: (data: Partial<News>) => vo
               <SelectItem value="Infrastructure">{currentLanguage === 'ar' ? 'بنية تحتية' : 'Infrastructure'}</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            {currentLanguage === 'ar' ? 'الحالة' : 'Statut'}
+          </label>
+          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="draft">{currentLanguage === 'ar' ? 'مسودة' : 'Brouillon'}</SelectItem>
+              <SelectItem value="published">{currentLanguage === 'ar' ? 'منشور' : 'Publié'}</SelectItem>
+              <SelectItem value="archived">{currentLanguage === 'ar' ? 'مؤرشف' : 'Archivé'}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="flex justify-end space-x-2 pt-4">
+        <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
+          {currentLanguage === 'ar' ? 'تحديث' : 'Mettre à jour'}
+        </Button>
+      </div>
+    </form>
+  );
+};
+
+const NewsForm: React.FC<{
+  formData: { title: string; content: string; category: string; status: string; imageUrl?: string };
+  setFormData: (data: any) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isEditing: boolean;
+  currentLanguage: string;
+  isRTL: boolean;
+}> = ({ formData, setFormData, onSubmit, isEditing, currentLanguage, isRTL }) => {
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
+          </label>
+          <Input
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            placeholder={currentLanguage === 'ar' ? 'أدخل العنوان' : 'Entrez le titre'}
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}
+          </label>
+          <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر الفئة' : 'Choisir une catégorie'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Football">{currentLanguage === 'ar' ? 'كرة القدم' : 'Football'}</SelectItem>
+              <SelectItem value="Basketball">{currentLanguage === 'ar' ? 'كرة السلة' : 'Basketball'}</SelectItem>
+              <SelectItem value="Tennis">{currentLanguage === 'ar' ? 'تنس' : 'Tennis'}</SelectItem>
+              <SelectItem value="Transfers">{currentLanguage === 'ar' ? 'انتقالات' : 'Transferts'}</SelectItem>
+              <SelectItem value="Matches">{currentLanguage === 'ar' ? 'مباريات' : 'Matchs'}</SelectItem>
+              <SelectItem value="Infrastructure">{currentLanguage === 'ar' ? 'بنية تحتية' : 'Infrastructure'}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
+        </label>
+        <textarea
+          className="w-full h-40 p-3 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
+          value={formData.content}
+          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          placeholder={currentLanguage === 'ar' ? 'أدخل المحتوى' : 'Entrez le contenu'}
+          required
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            {currentLanguage === 'ar' ? 'رابط الصورة' : 'URL de l\'image'}
+          </label>
+          <Input
+            value={formData.imageUrl || ''}
+            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+            placeholder={currentLanguage === 'ar' ? 'رابط الصورة (اختياري)' : 'URL de l\'image (optionnel)'}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
