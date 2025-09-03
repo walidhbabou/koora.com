@@ -6,7 +6,10 @@ import axios from 'axios';
 export const API_CONFIG = {
   BASE_URL: 'https://v3.football.api-sports.io',
   HEADERS: {
-    'X-RapidAPI-Key': import.meta.env.VITE_FOOTBALL_API_KEY || 'a3ef2267edc37dfe807c7c980dbac0c6',
+    // API-FOOTBALL v3 accepts 'x-apisports-key' for direct host, and 'x-rapidapi-key' if used via RapidAPI.
+    // Provide both to maximize compatibility.
+    'x-apisports-key': import.meta.env.VITE_FOOTBALL_API_KEY,
+    'X-RapidAPI-Key': import.meta.env.VITE_FOOTBALL_API_KEY,
     'X-RapidAPI-Host': 'v3.football.api-sports.io',
     'Content-Type': 'application/json'
   },
@@ -95,8 +98,8 @@ export const MAIN_LEAGUES = {
   EREDIVISIE: 88,         // Eredivisie (Pays-Bas)
   PRIMERA_DIVISION: 87,   // Primeira Liga (Portugal)
   
-  // Note: La Botola du Maroc pourrait ne pas être disponible dans le plan gratuit
-  // BOTOLA_MAROC: 200,   // Commenté temporairement
+  // Botola Pro (Maroc)
+  BOTOLA_MAROC: 200,      // Morocco Botola Pro
 };
 
 // Ligues à afficher (filtrage spécifique) - Utiliser seulement les ligues gratuites
@@ -106,6 +109,7 @@ export const SELECTED_LEAGUES = [
   MAIN_LEAGUES.BUNDESLIGA,    // Bundesliga
   MAIN_LEAGUES.LA_LIGA,       // La Liga
   MAIN_LEAGUES.SERIE_A,       // Serie A
+  MAIN_LEAGUES.BOTOLA_MAROC,  // Botola Pro (Morocco)
 ];
 
 // Configuration des appels API avec gestion d'erreurs et fallback mock
@@ -284,6 +288,41 @@ export class FootballAPI {
     return this.makeRequest('/teams', { league: leagueId, season });
   }
 
+  // Obtenir les informations d'une équipe par ID
+  async getTeamInfo(teamId: number) {
+    return this.makeRequest('/teams', { id: teamId });
+  }
+
+  // Obtenir les statistiques d'une équipe pour une ligue et saison données
+  async getTeamStatistics(leagueId: number, season: number, teamId: number) {
+    return this.makeRequest('/teams/statistics', { league: leagueId, season, team: teamId });
+  }
+
+  // Tenter d'obtenir les statistiques d'une équipe en essayant les ligues sélectionnées
+  async getTeamStatisticsAuto(teamId: number, season: number = new Date().getFullYear()) {
+    for (const leagueId of SELECTED_LEAGUES) {
+      try {
+        const res = await this.getTeamStatistics(leagueId, season, teamId);
+        if (res && res.response) {
+          return res;
+        }
+      } catch (err) {
+        console.debug(`Stats manquantes pour team ${teamId} dans ligue ${leagueId} saison ${season}`);
+      }
+    }
+    return null;
+  }
+
+  // Matchs récents d'une équipe
+  async getTeamLastFixtures(teamId: number, count: number = 5) {
+    return this.makeRequest('/fixtures', { team: teamId, last: count });
+  }
+
+  // Prochains matchs d'une équipe
+  async getTeamNextFixtures(teamId: number, count: number = 5) {
+    return this.makeRequest('/fixtures', { team: teamId, next: count });
+  }
+
   // Récupérer les transferts par équipes issues des ligues sélectionnées pour une saison donnée
   async getLeagueTeamsTransfers(season: number, maxTeamsPerLeague: number = 12) {
     const aggregated: any[] = [];
@@ -305,6 +344,35 @@ export class FootballAPI {
         }
       } catch (err) {
         console.error(`Erreur équipes pour la ligue ${leagueId}:`, err);
+      }
+    }
+    return { response: aggregated };
+  }
+
+  // Récupérer les transferts par équipes pour les ligues sélectionnées SANS filtrer par saison
+  // Sert de filet de sécurité quand l'API renvoie peu/aucune donnée pour une saison précise
+  async getLeagueTeamsTransfersAnySeason(maxTeamsPerLeague: number = 12) {
+    const aggregated: any[] = [];
+    const probeSeason = new Date().getFullYear(); // saison utilisée seulement pour lister les équipes
+    for (const leagueId of SELECTED_LEAGUES) {
+      try {
+        const teamsRes = await this.getTeamsByLeague(leagueId, probeSeason);
+        const teams: Array<{ team: { id: number } }> = Array.isArray(teamsRes?.response) ? teamsRes.response : [];
+        const teamIds = teams.slice(0, maxTeamsPerLeague).map((t: any) => t?.team?.id).filter(Boolean);
+
+        for (const teamId of teamIds) {
+          try {
+            // ne pas passer 'season' pour élargir le spectre
+            const trRes = await this.getRecentTransfers(teamId, undefined);
+            if (Array.isArray((trRes as any)?.response)) {
+              aggregated.push(...(trRes as any).response);
+            }
+          } catch (teamErr) {
+            console.error(`Erreur transferts (toutes saisons) pour l'équipe ${teamId} (league ${leagueId}):`, teamErr);
+          }
+        }
+      } catch (err) {
+        console.error(`Erreur équipes pour la ligue ${leagueId} (any season):`, err);
       }
     }
     return { response: aggregated };

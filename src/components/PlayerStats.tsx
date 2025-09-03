@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Target, Users, Clock, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { usePlayerStats } from "@/hooks/usePlayerStats";
+import { maybeTransliterateName } from "@/utils/transliterate";
 
 interface PlayerStatsProps {
   leagueName: string;
@@ -10,33 +11,6 @@ interface PlayerStatsProps {
   loading?: boolean;
 }
 
-// Helper function to get Arabic player names (for famous players)
-function getArabicPlayerName(playerName: string): string {
-  const playerTranslations: { [key: string]: string } = {
-    'Lionel Messi': 'ليونيل ميسي',
-    'Cristiano Ronaldo': 'كريستيانو رونالدو',
-    'Neymar Jr': 'نيمار الابن',
-    'Kylian Mbappe': 'كيليان مبابي',
-    'Erling Haaland': 'إيرلينغ هالاند',
-    'Mohamed Salah': 'محمد صلاح',
-    'Sadio Mane': 'ساديو ماني',
-    'Karim Benzema': 'كريم بنزيمة',
-    'Robert Lewandowski': 'روبرت ليفاندوفسكي',
-    'Luka Modric': 'لوكا مودريتش',
-    'Kevin De Bruyne': 'كيفين دي بروين',
-    'Virgil van Dijk': 'فيرجيل فان دايك',
-    'Sergio Ramos': 'سيرجيو راموس',
-    'Paul Pogba': 'بول بوغبا',
-    'Antoine Griezmann': 'أنطوان غريزمان',
-    'Harry Kane': 'هاري كين',
-    'Son Heung-min': 'سون هيونغ مين',
-    'Bruno Fernandes': 'برونو فيرنانديش',
-    'Mason Mount': 'ماسون ماونت',
-    'Phil Foden': 'فيل فودين'
-  };
-  
-  return playerTranslations[playerName] || playerName;
-}
 
 // Helper function to get Arabic team names
 function getArabicTeamNameForPlayer(teamName: string): string {
@@ -175,10 +149,7 @@ const PlayerStats = ({ leagueName, leagueId, loading = false }: PlayerStatsProps
             {/* Informations du joueur */}
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">
-                {currentLanguage === 'ar' 
-                  ? getArabicPlayerName(player.name)
-                  : player.name
-                }
+                {maybeTransliterateName(player.name, currentLanguage)}
               </p>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <img 

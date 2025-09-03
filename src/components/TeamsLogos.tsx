@@ -15,73 +15,85 @@ const TeamsLogos = () => {
       id: 33, 
       name: currentLanguage === 'ar' ? "مانشستر يونايتد" : "Manchester United", 
       logo: "https://media.api-sports.io/football/teams/33.png",
-      league: "Premier League"
+      league: "Premier League",
+      leagueId: 39
     },
     { 
       id: 40, 
       name: currentLanguage === 'ar' ? "ليفربول" : "Liverpool", 
       logo: "https://media.api-sports.io/football/teams/40.png",
-      league: "Premier League"
+      league: "Premier League",
+      leagueId: 39
     },
     { 
       id: 42, 
       name: currentLanguage === 'ar' ? "أرسنال" : "Arsenal", 
       logo: "https://media.api-sports.io/football/teams/42.png",
-      league: "Premier League"
+      league: "Premier League",
+      leagueId: 39
     },
     { 
       id: 50, 
       name: currentLanguage === 'ar' ? "مانشستر سيتي" : "Manchester City", 
       logo: "https://media.api-sports.io/football/teams/50.png",
-      league: "Premier League"
+      league: "Premier League",
+      leagueId: 39
     },
     { 
       id: 49, 
       name: currentLanguage === 'ar' ? "تشيلسي" : "Chelsea", 
       logo: "https://media.api-sports.io/football/teams/49.png",
-      league: "Premier League"
+      league: "Premier League",
+      leagueId: 39
     },
     { 
       id: 541, 
       name: currentLanguage === 'ar' ? "ريال مدريد" : "Real Madrid", 
       logo: "https://media.api-sports.io/football/teams/541.png",
-      league: "La Liga"
+      league: "La Liga",
+      leagueId: 140
     },
     { 
       id: 529, 
       name: currentLanguage === 'ar' ? "برشلونة" : "Barcelona", 
       logo: "https://media.api-sports.io/football/teams/529.png",
-      league: "La Liga"
+      league: "La Liga",
+      leagueId: 140
     },
     { 
       id: 157, 
       name: currentLanguage === 'ar' ? "بايرن ميونخ" : "Bayern Munich", 
       logo: "https://media.api-sports.io/football/teams/157.png",
-      league: "Bundesliga"
+      league: "Bundesliga",
+      leagueId: 78
     },
     { 
       id: 496, 
       name: currentLanguage === 'ar' ? "يوفنتوس" : "Juventus", 
       logo: "https://media.api-sports.io/football/teams/496.png",
-      league: "Serie A"
+      league: "Serie A",
+      leagueId: 135
     },
     { 
       id: 489, 
       name: currentLanguage === 'ar' ? "إنتر ميلان" : "Inter Milan", 
       logo: "https://media.api-sports.io/football/teams/489.png",
-      league: "Serie A"
+      league: "Serie A",
+      leagueId: 135
     },
     { 
       id: 511, 
       name: currentLanguage === 'ar' ? "إيه سي ميلان" : "AC Milan", 
       logo: "https://media.api-sports.io/football/teams/511.png",
-      league: "Serie A"
+      league: "Serie A",
+      leagueId: 135
     },
     { 
       id: 85, 
       name: currentLanguage === 'ar' ? "باريس سان جيرمان" : "Paris Saint-Germain", 
       logo: "https://media.api-sports.io/football/teams/85.png",
-      league: "Ligue 1"
+      league: "Ligue 1",
+      leagueId: 61
     }
   ];
 
@@ -154,7 +166,7 @@ const TeamsLogos = () => {
                   <div key={team.id} className="flex-shrink-0 w-20">
                     <div
                       className="group cursor-pointer w-20 h-20 bg-white dark:bg-[#181a20] rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 flex items-center justify-center border border-gray-100 dark:border-[#23262f]"
-                      onClick={() => navigate(`/team/${team.id}`)}
+                      onClick={() => navigate(`/team/${team.id}`, { state: { leagueId: (team as any).leagueId } })}
                     >
                       <img
                         src={team.logo}
@@ -186,7 +198,7 @@ const TeamsLogos = () => {
                   >
                     <div 
                       className="group cursor-pointer"
-                      onClick={() => navigate(`/team/${team.id}`)}
+                      onClick={() => navigate(`/team/${team.id}`, { state: { leagueId: (team as any).leagueId } })}
                     >
                       <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-white dark:bg-[#181a20] rounded-lg sm:rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:scale-105 flex items-center justify-center border border-gray-100 dark:border-[#23262f]">
                         <img

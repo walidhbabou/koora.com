@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslation } from '../hooks/useTranslation';
+import { maybeTransliterateName } from '@/utils/transliterate';
 
 interface PlayerDetailsProps {
   player: {
@@ -144,7 +145,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player, onClose }) => {
                     <AvatarFallback className="text-4xl">{player.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
-                    {player.name}
+                    {maybeTransliterateName(player.name, currentLanguage)}
                   </h3>
                   <div className="flex items-center justify-center lg:justify-start space-x-2 mb-3">
                     <Badge className={getPositionColor(player.position)}>

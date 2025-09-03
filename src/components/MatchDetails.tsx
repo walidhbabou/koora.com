@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   ExternalLink,
   Play,
-  Pause,
   Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslation } from '../hooks/useTranslation';
+import { maybeTransliterateName } from '@/utils/transliterate';
 import { footballAPI, FixtureEventItem, FixtureStatisticItem, FixtureLineupItem } from '@/config/api';
+import { getArabicTeamName } from '@/utils/teamNameMap';
 
 interface MatchDetailsProps {
   match: {
@@ -72,7 +73,7 @@ interface MatchDetailsProps {
 }
 
 const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
-  const { t, currentLanguage, isRTL, direction } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useTranslation();
   const [activeTab, setActiveTab] = useState('overview');
   
   // Events state
@@ -111,6 +112,10 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
     fetchEvents();
     return () => { isMounted = false; };
   }, [activeTab, match?.id, currentLanguage]);
+
+  // Team display names (Arabic mapping if needed)
+  const homeTeamName = currentLanguage === 'ar' ? getArabicTeamName(match.teams.home.name) : match.teams.home.name;
+  const awayTeamName = currentLanguage === 'ar' ? getArabicTeamName(match.teams.away.name) : match.teams.away.name;
 
   // Fetch stats when Stats tab becomes active
   useEffect(() => {
@@ -311,78 +316,64 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
         <div className="p-6">
           <Card className="mb-6">
             <CardContent className="p-6">
-              <div className="grid grid-cols-3 gap-6 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center">
                 {/* Home Team */}
-                <div className={`text-center ${isRTL ? 'order-3' : 'order-1'}`}>
-                  <Avatar className="w-20 h-20 mx-auto mb-3">
-                    <AvatarImage src={match.teams.home.logo} />
-                    <AvatarFallback>{match.teams.home.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                    {match.teams.home.name}
-                  </h3>
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-                    {match.teams.home.score || 0}
+                <div className={`text-center sm:text-right sm:pr-4 ${isRTL ? 'order-5 sm:order-1' : 'order-1'}`}>
+                  <div className="flex items-center sm:justify-end justify-center gap-3">
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                      <img src={match.teams.home.logo} alt={homeTeamName} className="w-20 h-20 object-contain" />
+                    </div>
+                    <div className="hidden sm:block text-left">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{homeTeamName}</h3>
+                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{match.teams.home.score || 0}</div>
+                    </div>
+                  </div>
+                  <div className="block sm:hidden mt-2">
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{homeTeamName}</div>
+                    <div className="text-xl font-bold text-slate-900 dark:text-white">{match.teams.home.score || 0}</div>
                   </div>
                 </div>
 
-                {/* Match Info */}
-                <div className={`text-center ${isRTL ? 'order-2' : 'order-2'}`}>
-                  <div className="text-sm text-slate-600 dark:text-slate-400 mb-2">
-                    {currentLanguage === 'ar' ? 'VS' : 'VS'}
-                  </div>
-                  
-                  {/* Match Time */}
-                  <div className="flex items-center justify-center space-x-2 mb-3">
-                    <Clock className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
-                      {formatMatchTime(match.date, match.time)}
-                    </span>
-                  </div>
-
-                  {/* Match Date */}
-                  <div className="flex items-center justify-center space-x-2 mb-3">
-                    <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">
-                      {new Date(match.date).toLocaleDateString(
-                        currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR',
-                        { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        }
+                {/* spacer for small screens */}
+                <div className="sm:col-span-3 col-span-1 text-center">
+                  <div className="uppercase text-xs text-slate-500 dark:text-slate-400 mb-1">VS</div>
+                  <div className="flex items-center justify-center gap-4">
+                    <div className="text-center">
+                      <div className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white">{match.teams.home.score ?? 0} - {match.teams.away.score ?? 0}</div>
+                      <div className="mt-2 flex items-center justify-center gap-3 text-sm text-slate-600 dark:text-slate-400">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{formatMatchTime(match.date, match.time)}</span>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          <span>{new Date(match.date).toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                        </div>
+                      </div>
+                      {match.venue && (
+                        <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{match.venue}</span>
+                        </div>
                       )}
-                    </span>
-                  </div>
-
-                  {/* Match Time */}
-                  <div className="text-lg font-semibold text-slate-900 dark:text-white">
-                    {match.time}
-                  </div>
-
-                  {/* Venue */}
-                  {match.venue && (
-                    <div className="flex items-center justify-center space-x-2 mt-2">
-                      <MapPin className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {match.venue}
-                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Away Team */}
-                <div className={`text-center ${isRTL ? 'order-1' : 'order-3'}`}>
-                  <Avatar className="w-20 h-20 mx-auto mb-3">
-                    <AvatarImage src={match.teams.away.logo} />
-                    <AvatarFallback>{match.teams.away.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                    {match.teams.away.name}
-                  </h3>
-                  <div className="text-3xl font-bold text-slate-900 dark:text-white mt-2">
-                    {match.teams.away.score || 0}
+                <div className={`text-center sm:text-left sm:pl-4 ${isRTL ? 'order-1 sm:order-5' : 'order-5'}`}>
+                  <div className="flex items-center sm:justify-start justify-center gap-3">
+                    <div className="hidden sm:block text-right">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{awayTeamName}</h3>
+                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{match.teams.away.score || 0}</div>
+                    </div>
+                    <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                      <img src={match.teams.away.logo} alt={awayTeamName} className="w-20 h-20 object-contain" />
+                    </div>
+                  </div>
+                  <div className="block sm:hidden mt-2">
+                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{awayTeamName}</div>
+                    <div className="text-xl font-bold text-slate-900 dark:text-white">{match.teams.away.score || 0}</div>
                   </div>
                 </div>
               </div>
@@ -390,16 +381,16 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
           </Card>
 
           {/* Tabs */}
-          <div className="border-b border-slate-200 dark:border-slate-700 mb-6">
-            <div className={`flex ${isRTL ? 'flex-row-reverse' : ''} space-x-8`}>
+          <div className="mb-6">
+            <div className={`flex items-center justify-center ${isRTL ? 'flex-row-reverse' : ''} gap-3`}>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
+                  className={`flex items-center gap-2 py-2 px-3 rounded-full text-sm font-medium transition-all ${
                     activeTab === tab.id
-                      ? 'border-teal-500 text-teal-600 dark:text-teal-400'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300'
+                      ? 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
                   <tab.icon className="w-4 h-4" />
@@ -436,7 +427,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                           <h4 className="font-medium text-slate-900 dark:text-white mb-2">
                             {currentLanguage === 'ar' ? 'الحكم' : 'Arbitre'}
                           </h4>
-                          <span className="text-slate-600 dark:text-slate-400">{match.referee}</span>
+                          <span className="text-slate-600 dark:text-slate-400">{maybeTransliterateName(match.referee, currentLanguage)}</span>
                         </div>
                       )}
                     </div>
@@ -477,22 +468,22 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                         {events.map((ev, idx) => {
                           const minute = ev?.time?.elapsed ?? 0;
                           const isHome = ev?.team?.id === match.teams.home.id;
-                          const badgeColor = ev.type === 'Card' ? (ev.detail?.includes('Red') ? 'text-red-600 border-red-600' : 'text-yellow-600 border-yellow-600') : 'text-green-600 border-green-600';
+                          const isCard = ev.type === 'Card';
+                          const isGoal = ev.type === 'Goal' || ev.detail?.toLowerCase().includes('goal');
+                          const badgeClass = isCard ? (ev.detail?.toLowerCase().includes('red') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-800') : (isGoal ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700');
                           const detailLabel = ev.detail || ev.type;
                           return (
-                            <div key={idx} className={`flex items-center justify-between p-2 rounded-lg ${ev.type === 'Card' ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
-                              <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-2`}>
-                                <span className={`text-sm font-medium ${ev.type === 'Card' ? 'text-yellow-600' : 'text-green-600'}`}>
-                                  {minute}'
-                                </span>
-                                <span className="text-slate-900 dark:text-white">
-                                  {ev.player?.name || ''}
-                                  {ev.assist?.name ? (isRTL ? ` (مساعدة: ${ev.assist.name})` : ` (Passe: ${ev.assist.name})`) : ''}
-                                </span>
+                            <div key={idx} className={`flex items-start justify-between p-3 rounded-lg ${isCard ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-white dark:bg-slate-800'}`}>
+                              <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                <div className={`w-10 text-center text-sm font-semibold ${isCard ? 'text-yellow-700' : 'text-slate-700 dark:text-slate-300'}`}>{isRTL ? '' : `${minute}'`}{isRTL ? `${minute}'` : ''}</div>
+                                <div>
+                                  <div className="text-sm font-medium text-slate-900 dark:text-white">{ev.player?.name ? maybeTransliterateName(ev.player.name, currentLanguage) : ''}</div>
+                                  {ev.assist?.name && <div className="text-xs text-slate-500 dark:text-slate-400">{currentLanguage === 'ar' ? `مساعدة: ${maybeTransliterateName(ev.assist.name, currentLanguage)}` : `Assist: ${maybeTransliterateName(ev.assist.name, currentLanguage)}`}</div>}
+                                </div>
                               </div>
-                              <Badge variant="outline" className={badgeColor}>
-                                {detailLabel}
-                              </Badge>
+                              <div className="shrink-0">
+                                <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${badgeClass}`}>{detailLabel}</div>
+                              </div>
                             </div>
                           );
                         })}
@@ -539,7 +530,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                                   <AvatarImage src={lu.team.logo} />
                                   <AvatarFallback>{lu.team.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <div className="font-semibold text-slate-900 dark:text-white">{lu.team.name}</div>
+                                <div className="font-semibold text-slate-900 dark:text-white">{currentLanguage === 'ar' ? getArabicTeamName(lu.team.name) : lu.team.name}</div>
                               </div>
                               <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                                 {(currentLanguage === 'ar' ? 'الخطة: ' : 'Formation: ') + (lu.formation || '-')}
@@ -551,7 +542,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                                 <ul className="space-y-1">
                                   {lu.startXI?.map((p, idx) => (
                                     <li key={idx} className="flex items-center justify-between text-sm">
-                                      <span className="text-slate-900 dark:text-white">{p.player.number ? `#${p.player.number} ` : ''}{p.player.name}</span>
+                                      <span className="text-slate-900 dark:text-white">{p.player.number ? `#${p.player.number} ` : ''}{maybeTransliterateName(p.player.name, currentLanguage)}</span>
                                       <span className="text-slate-500 dark:text-slate-400">{p.player.pos}</span>
                                     </li>
                                   ))}
@@ -564,7 +555,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                                 <ul className="space-y-1 max-h-48 overflow-auto pr-1">
                                   {lu.substitutes?.map((p, idx) => (
                                     <li key={idx} className="flex items-center justify-between text-sm">
-                                      <span className="text-slate-900 dark:text-white">{p.player.number ? `#${p.player.number} ` : ''}{p.player.name}</span>
+                                      <span className="text-slate-900 dark:text-white">{p.player.number ? `#${p.player.number} ` : ''}{maybeTransliterateName(p.player.name, currentLanguage)}</span>
                                       <span className="text-slate-500 dark:text-slate-400">{p.player.pos}</span>
                                     </li>
                                   ))}
@@ -600,7 +591,15 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                         {currentLanguage === 'ar' ? 'مقارنة الفريقين' : 'Comparaison des équipes'}
                       </CardTitle>
                       <CardDescription>
-                        {statsHome?.team?.name || match.teams.home.name} vs {statsAway?.team?.name || match.teams.away.name}
+                        {currentLanguage === 'ar' 
+                          ? getArabicTeamName(statsHome?.team?.name || match.teams.home.name)
+                          : (statsHome?.team?.name || match.teams.home.name)
+                        } 
+                        vs 
+                        {currentLanguage === 'ar' 
+                          ? getArabicTeamName(statsAway?.team?.name || match.teams.away.name)
+                          : (statsAway?.team?.name || match.teams.away.name)
+                        }
                       </CardDescription>
                     </CardHeader>
                     <CardContent>

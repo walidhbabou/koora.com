@@ -65,9 +65,14 @@ export default function MatchHeader({
               >
                 <span className="text-gray-700 dark:text-gray-200 text-base">{isRTL ? '›' : '‹'}</span>
               </Button>
-              <span className={`text-sm font-semibold text-gray-900 dark:text-gray-100 min-w-[150px] text-center`}>
-                {formatDate(selectedDate)}
-              </span>
+              {/* Desktop DatePicker Trigger */}
+              <div className="min-w-[150px]">
+                <DatePicker
+                  selectedDate={selectedDate}
+                  onDateChange={onDateChange}
+                  className="h-7 text-sm px-2 py-0"
+                />
+              </div>
               <Button 
                 variant="ghost" 
                 size="sm"

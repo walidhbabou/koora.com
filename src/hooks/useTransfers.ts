@@ -143,57 +143,74 @@ export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => 
       setLoading(true);
       setError(null);
 
-      // Try direct league-based transfers first (may be unsupported on some plans)
-      let result: any = await footballAPI.getMainLeaguesTransfers(season);
-      // Fallback 1: aggregate per-team transfers for selected leagues
-      if (!result || !Array.isArray(result.response) || result.response.length === 0) {
-        result = await footballAPI.getLeagueTeamsTransfers(season ?? new Date().getFullYear());
-      }
-
-      // Convert response to enriched transfers
-      let allTransfers: TransferEnriched[] = [];
-      if (Array.isArray((result as any)?.response)) {
-        (result as any).response.forEach((playerObj: any) => {
-          if (Array.isArray(playerObj?.transfers)) {
-            playerObj.transfers.forEach((transfer: any) => {
-              const normalizedDate = transfer?.date || transfer?.update || playerObj.update || null;
-              const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
-              const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
-              const enriched: TransferEnriched = {
-                ...transfer,
-                player: playerObj.player,
-                update: playerObj.update,
-                normalizedDate,
-                year,
-              };
-              allTransfers.push(enriched);
-            });
-          }
-        });
-      }
-
-      // Fallback 2: if still empty, get all recent transfers (no league filter)
-      if (allTransfers.length === 0) {
-        const allRes = await footballAPI.getAllRecentTransfers();
-        if (Array.isArray((allRes as any)?.response)) {
-          (allRes as any).response.forEach((playerObj: any) => {
+      // Helper to flatten API response (player-grouped) into enriched transfers
+      const flattenResponse = (resp: any): TransferEnriched[] => {
+        const out: TransferEnriched[] = [];
+        if (Array.isArray(resp?.response)) {
+          resp.response.forEach((playerObj: any) => {
             if (Array.isArray(playerObj?.transfers)) {
               playerObj.transfers.forEach((transfer: any) => {
                 const normalizedDate = transfer?.date || transfer?.update || playerObj.update || null;
                 const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
                 const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
-                const enriched: TransferEnriched = {
+                out.push({
                   ...transfer,
                   player: playerObj.player,
                   update: playerObj.update,
                   normalizedDate,
                   year,
-                };
-                allTransfers.push(enriched);
+                });
               });
             }
           });
         }
+        return out;
+      };
+
+      const currentYear = new Date().getFullYear();
+      const seasonCandidates = Array.from(new Set([
+        season,
+        season ? season - 1 : undefined,
+        season ? season - 2 : undefined,
+        currentYear,
+        currentYear - 1,
+        undefined,
+      ])).filter((s) => s === undefined || (typeof s === 'number' && s > 2000));
+
+      let allTransfers: TransferEnriched[] = [];
+
+      // Try multiple approaches over season candidates until we get data
+      for (const s of seasonCandidates) {
+        // 1) Direct league-based (may be unsupported depending on plan)
+        try {
+          const resLeague = await footballAPI.getMainLeaguesTransfers(s as number | undefined);
+          allTransfers = flattenResponse(resLeague);
+        } catch {}
+        if (allTransfers.length > 0) break;
+
+        // 2) Aggregate per-team for selected leagues
+        try {
+          const resTeams = await footballAPI.getLeagueTeamsTransfers(
+            (s as number | undefined) ?? currentYear
+          );
+          allTransfers = flattenResponse(resTeams);
+        } catch {}
+        if (allTransfers.length > 0) break;
+
+        // 3) Global recent transfers with season
+        try {
+          const resAll = await footballAPI.getAllRecentTransfers(s as number | undefined);
+          allTransfers = flattenResponse(resAll);
+        } catch {}
+        if (allTransfers.length > 0) break;
+      }
+
+      // 4) Last-resort: per-team aggregation without season (broadest)
+      if (allTransfers.length === 0) {
+        try {
+          const resAny = await footballAPI.getLeagueTeamsTransfersAnySeason();
+          allTransfers = flattenResponse(resAny);
+        } catch {}
       }
 
       setData({ response: allTransfers });

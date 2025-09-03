@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAllLeagueStandings, useMockStandings } from "@/hooks/useStandings";
 import { useTranslation } from "@/hooks/useTranslation";
+import { maybeTransliterateName } from "@/utils/transliterate";
 import { useTopScorers, useTopAssists } from "@/hooks/useFootballAPI";
 import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
+import { getArabicTeamName } from "@/utils/teamNameMap";
 
 const Standings = () => {
   const { currentLanguage, t, isRTL, direction } = useTranslation();
@@ -92,7 +94,14 @@ const Standings = () => {
       logo: 'https://media.api-sports.io/football/leagues/61.png',
       country: currentLanguage === 'ar' ? 'فرنسا' : 'France',
       flag: '🇫🇷'
-    }
+    },
+    {
+      id: MAIN_LEAGUES.BOTOLA_MAROC,
+      name: currentLanguage === 'ar' ? 'البطولة المغربية - البطولة برو' : 'Botola Pro',
+      logo: 'https://media.api-sports.io/football/leagues/200.png',
+      country: currentLanguage === 'ar' ? 'المغرب' : 'Morocco',
+      flag: '🇲🇦'
+    },
   ];
 
   // Filtrer les ligues selon la recherche
@@ -395,7 +404,7 @@ const Standings = () => {
                                 />
                                 <div className="flex-1">
                                   <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                    {item.player?.name}
+                                    {maybeTransliterateName(item.player?.name, currentLanguage)}
                                   </div>
                                   <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                     <img 
@@ -403,7 +412,9 @@ const Standings = () => {
                                       alt={item.statistics?.[0]?.team?.name}
                                       className="w-4 h-4"
                                     />
-                                    {item.statistics?.[0]?.team?.name}
+                                    {currentLanguage === 'ar' 
+                                      ? getArabicTeamName(item.statistics?.[0]?.team?.name)
+                                      : item.statistics?.[0]?.team?.name}
                                   </div>
                                 </div>
                               </div>
@@ -450,7 +461,7 @@ const Standings = () => {
                                 />
                                 <div className="flex-1">
                                   <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                    {item.player?.nameTranslated?.arabic || item.player?.name}
+                                    {maybeTransliterateName(item.player?.name, currentLanguage)}
                                   </div>
                                   <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                     <img 
@@ -458,7 +469,9 @@ const Standings = () => {
                                       alt={item.statistics?.[0]?.team?.name}
                                       className="w-4 h-4"
                                     />
-                                    {item.statistics?.[0]?.team?.nameTranslated?.arabic || item.statistics?.[0]?.team?.name}
+                                    {currentLanguage === 'ar' 
+                                      ? getArabicTeamName(item.statistics?.[0]?.team?.name)
+                                      : item.statistics?.[0]?.team?.name}
                                   </div>
                                 </div>
                               </div>

@@ -9,30 +9,54 @@ import TeamsLogos from "@/components/TeamsLogos";
 // Removed per-club fallback list to keep general transfers only
 import { useTranslation } from "@/hooks/useTranslation";
 import { TransferEnriched, useMainLeaguesTransfers } from "@/hooks/useTransfers";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { footballAPI, MAIN_LEAGUES, SELECTED_LEAGUES } from "@/config/api";
 import TransferCard from "@/components/TransferCard";
 import { useState, useEffect } from "react";
-import DOMPurify from 'dompurify';
 import "../styles/rtl.css";
 
 const Transfers = () => {
   const { t, currentLanguage } = useTranslation();
-  const currentSeason = 2025; // Forcer l'affichage des transferts de 2025
-  const [activeTab, setActiveTab] = useState("confirmed");
-  const [selectedSeason, setSelectedSeason] = useState(2025);
+  const [selectedSeason, setSelectedSeason] = useState(new Date().getFullYear());
   // Use hook to get transfers data
   const { data, loading, error } = useMainLeaguesTransfers(selectedSeason);
   const isRTL = currentLanguage === "ar";
+  const isMobile = useIsMobile();
 
   // directRaw and fallback fetching removed
 
   // Barre de recherche
   const [search, setSearch] = useState("");
-  // Pagination
+  // Sélection de ligue
+  const [selectedLeagueId, setSelectedLeagueId] = useState<number | null>(null);
+  const [leagueTeamsMap, setLeagueTeamsMap] = useState<Record<number, Set<number>>>({});
+  useEffect(() => {
+    // Charger les équipes pour chaque ligue sélectionnée (cache via apiCache interne)
+    const loadTeams = async () => {
+      const probeSeason = selectedSeason || new Date().getFullYear();
+      const map: Record<number, Set<number>> = {};
+      for (const lid of SELECTED_LEAGUES) {
+        try {
+          const res = await footballAPI.getTeamsByLeague(lid, probeSeason);
+          const ids = new Set<number>((res?.response || []).map((r: any) => r?.team?.id).filter((x: any) => typeof x === 'number'));
+          if (ids.size > 0) map[lid] = ids;
+        } catch {
+          // ignore
+        }
+      }
+      setLeagueTeamsMap(map);
+    };
+    loadTeams();
+  }, [selectedSeason]);
+  // Pagination (responsive)
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState<number>(50);
+  useEffect(() => {
+    setPageSize(isMobile ? 20 : 50);
+  }, [isMobile]);
 
   // Tri par date décroissante (sans filtrage strict par saison pour garantir l'affichage)
-  // Normaliser: si API retourne grouped objects (player + transfers[]), aplatir en éléments individuels
+  // Les hooks `useMainLeaguesTransfers` renvoient déjà une liste aplatie de transferts enrichis
   interface LocalTransfer {
     date?: string | null;
     update?: string | null;
@@ -42,57 +66,11 @@ const Transfers = () => {
   }
 
   type TransferLike = LocalTransfer;
-  const normalizeResponse = (): TransferLike[] => {
-  // No API calls here; normalized response is empty by default. Provide data from props or a parent hook instead.
-  const resp: TransferLike[] = [];
-  const flattened: TransferLike[] = [];
-    resp.forEach((item: TransferLike) => {
-      // If object already looks like a single transfer (has date + teams), use directly
-      if (item && (item.date || item.teams) ) {
-        const normalizedDate = item.date || item.update || null;
-        const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
-        flattened.push({ ...item, normalizedDate, year: yearMatch ? parseInt(yearMatch[1], 10) : null });
-        return;
-      }
-      // If grouped by player with transfers array
-      if (item && Array.isArray(item.transfers) && item.transfers.length > 0) {
-        item.transfers.forEach((tr: LocalTransfer) => {
-          const normalizedDate = tr?.date || tr?.update || item.update || null;
-          const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
-          flattened.push({ ...tr, player: item.player, update: item.update, normalizedDate, year: yearMatch ? parseInt(yearMatch[1], 10) : null });
-        });
-        return;
-      }
-      // Last fallback: push the item as-is
-      flattened.push(item);
-    });
-    return flattened;
-  };
 
-  const allTransfers = normalizeResponse();
-  // DEV: log first few normalized items (empty unless parent provides data)
-  if (import.meta.env.DEV) {
-    console.log('[debug] normalized transfers (first 10):', allTransfers.slice(0, 10));
-  }
+  // Utiliser directement la réponse du hook (clubs des 5 ligues sélectionnées)
+  const allTransfers: TransferLike[] = Array.isArray(data?.response) ? (data!.response as unknown as TransferLike[]) : [];
 
-  // Client-side fallback: try to load a scraped HTML snippet saved at /scraped-transfers.json and sanitize it
-  const [scrapedHtml, setScrapedHtml] = useState<string | null>(null);
-  useEffect(() => {
-    if (allTransfers.length > 0) return;
-    (async () => {
-      try {
-        const r = await fetch('/scraped-transfers.json');
-        if (!r.ok) return;
-        const j = await r.json();
-        if (j && j.html) {
-          const clean = DOMPurify.sanitize(String(j.html), { USE_PROFILES: { html: true } });
-          setScrapedHtml(clean);
-        }
-      } catch (e) {
-        // ignore
-      }
-    })();
-  }, [allTransfers.length]);
+  // Supprimer les fallbacks HTML externes pour garder l'API officielle uniquement
 
   // If no transfers exist for the currently selected season but we have data,
   // automatically switch to the most recent year present so the UI isn't empty.
@@ -139,28 +117,31 @@ const Transfers = () => {
   };
 
 
-  // Filtrer par saison (selectedSeason) en utilisant getTransferYear
+  // Filtrer par saison (selectedSeason) en utilisant getTransferYear –
+  // l'utilisateur veut uniquement les transferts de cette année
   const transfersForSeason = sortedTransfers.filter(tr => getTransferYear(tr) === selectedSeason);
 
-  // Appliquer le filtre de recherche (nom joueur ou club entrant)
-  const applySearch = (list: LocalTransfer[]) => list.filter((tr) => {
-    const trRec = tr as Record<string, unknown>;
-    const player = trRec['player'] as Record<string, unknown> | undefined;
-    const teams = trRec['teams'] as Record<string, unknown> | undefined;
-    const teamIn = teams?.['in'] as Record<string, unknown> | undefined;
-    const playerName = String(player?.['name'] ?? '').toLowerCase();
-    const clubName = String(teamIn?.['name'] ?? '').toLowerCase();
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return playerName.includes(q) || clubName.includes(q);
+  // Filtrer par ligue sélectionnée en vérifiant si l'équipe source ou destination appartient à la ligue
+  const leagueFiltered = transfersForSeason.filter((t) => {
+    if (!selectedLeagueId) return true;
+    const set = leagueTeamsMap[selectedLeagueId];
+    if (!set) return true; // si pas d'info, ne pas filtrer pour éviter vide
+    const outId = (t as any)?.teams?.out?.id;
+    const inId = (t as any)?.teams?.in?.id;
+    return (typeof outId === 'number' && set.has(outId)) || (typeof inId === 'number' && set.has(inId));
   });
 
-  let filteredTransfers = applySearch(transfersForSeason as LocalTransfer[]);
+  // Appliquer le filtre de recherche (nom joueur ou club entrant)
+  let filteredTransfers = leagueFiltered.filter((t) => {
+    const text = search.trim().toLowerCase();
+    if (!text) return true;
+    const playerName = String((t as any)?.player?.name || '').toLowerCase();
+    const fromName = String((t as any)?.teams?.out?.name || '').toLowerCase();
+    const toName = String((t as any)?.teams?.in?.name || '').toLowerCase();
+    return playerName.includes(text) || fromName.includes(text) || toName.includes(text);
+  });
 
-  // Fallback: if no transfers found for the season, show recent transfers (still respect search)
-  if (filteredTransfers.length === 0) {
-    filteredTransfers = applySearch(sortedTransfers);
-  }
+  // Aucun fallback multi-années: si vide, on affiche vide (conforme au besoin)
 
   // Pagination
   const totalPages = Math.ceil(filteredTransfers.length / pageSize) || 1;
@@ -312,18 +293,7 @@ const Transfers = () => {
               
               
               {/* Barre de recherche */}
-              {import.meta.env.DEV && (
-                <div className="mb-4 p-3 rounded bg-yellow-50 border border-yellow-100 text-xs text-slate-700">
-                  <div className="font-medium mb-1">DEV DEBUG: transfers source</div>
-                  <div>main.len: {data?.response?.length ?? 0} • normalized.len: {allTransfers.length}</div>
-                  <div className="mt-2">
-                    <details>
-                      <summary className="cursor-pointer">Mostrar primeros items (raw)</summary>
-                      <pre className="whitespace-pre-wrap max-h-48 overflow-auto text-xs">{JSON.stringify((data?.response || []).slice(0,3), null, 2)}</pre>
-                    </details>
-                  </div>
-                </div>
-              )}
+              {/* Debug supprimé */}
               <div className="mb-1 flex justify-center">
                 <input
                   type="text"
@@ -335,8 +305,33 @@ const Transfers = () => {
                 />
               </div>
 
+              {/* Sélecteur de ligue (pills) */}
+              <div className="w-full overflow-x-auto pb-2">
+                <div className={`flex items-center gap-2 min-w-max ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  {[{
+                    id: MAIN_LEAGUES.PREMIER_LEAGUE, label: isRTL ? 'الدوري الإنجليزي' : 'Premier League'
+                  }, {
+                    id: MAIN_LEAGUES.LA_LIGA, label: isRTL ? 'الدوري الإسباني' : 'La Liga'
+                  }, {
+                    id: MAIN_LEAGUES.BUNDESLIGA, label: isRTL ? 'الدوري الألماني' : 'Bundesliga'
+                  }, {
+                    id: MAIN_LEAGUES.SERIE_A, label: isRTL ? 'الدوري الإيطالي' : 'Serie A'
+                  }, {
+                    id: MAIN_LEAGUES.LIGUE_1, label: isRTL ? 'الدوري الفرنسي' : 'Ligue 1'
+                  }].map(l => (
+                    <button
+                      key={l.id}
+                      onClick={() => { setSelectedLeagueId(prev => prev === l.id ? null : l.id); setPage(1); }}
+                      className={`px-4 h-9 rounded-full border text-sm whitespace-nowrap transition-colors ${selectedLeagueId === l.id ? 'bg-sport-green text-white border-sport-green' : 'bg-[hsl(var(--input))] text-slate-700 dark:text-slate-200 border-transparent hover:border-sport-green/40'}`}
+                    >
+                      {l.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {paginatedTransfers.length > 0 ? (
-                <div className="flex flex-col gap-4">
+                <div className={`flex flex-col gap-4`}>
                   {paginatedTransfers.map((transfer, index) => {
                     const t = transfer as Record<string, unknown>;
                     const player = t['player'] as Record<string, unknown> | undefined;
@@ -347,8 +342,6 @@ const Transfers = () => {
                     );
                   })}
                 </div>
-              ) : scrapedHtml ? (
-                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: scrapedHtml }} />
               ) : (
                 <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}
@@ -359,7 +352,7 @@ const Transfers = () => {
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">{isRTL ? 'العناصر لكل صفحة' : 'Items per page'}:</span>
-                  <span className="h-9 inline-flex items-center rounded-md bg-[hsl(var(--input))] px-3 text-sm">50</span>
+                  <span className="h-9 inline-flex items-center rounded-md bg-[hsl(var(--input))] px-3 text-sm">{pageSize}</span>
                   <span className="text-xs text-muted-foreground">{filteredTransfers.length} {isRTL ? 'إجمالي' : 'total'}</span>
                   <span className="text-xs text-muted-foreground">
                     {(() => {
