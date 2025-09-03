@@ -6,12 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ArrowRightLeft, TrendingUp, Calendar, Loader2 } from "lucide-react";
 import TeamsLogos from "@/components/TeamsLogos";
-import { useMainLeaguesTransfers } from "@/hooks/useTransfers";
 // Removed per-club fallback list to keep general transfers only
 import { useTranslation } from "@/hooks/useTranslation";
-import { TransferEnriched } from "@/hooks/useTransfers";
+import { TransferEnriched, useMainLeaguesTransfers } from "@/hooks/useTransfers";
 import TransferCard from "@/components/TransferCard";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import DOMPurify from 'dompurify';
 import "../styles/rtl.css";
 
 const Transfers = () => {
@@ -19,8 +19,11 @@ const Transfers = () => {
   const currentSeason = 2025; // Forcer l'affichage des transferts de 2025
   const [activeTab, setActiveTab] = useState("confirmed");
   const [selectedSeason, setSelectedSeason] = useState(2025);
+  // Use hook to get transfers data
   const { data, loading, error } = useMainLeaguesTransfers(selectedSeason);
   const isRTL = currentLanguage === "ar";
+
+  // directRaw and fallback fetching removed
 
   // Barre de recherche
   const [search, setSearch] = useState("");
@@ -29,22 +32,135 @@ const Transfers = () => {
   const [pageSize, setPageSize] = useState(50);
 
   // Tri par date décroissante (sans filtrage strict par saison pour garantir l'affichage)
-  const allTransfers = (data?.response || []);
+  // Normaliser: si API retourne grouped objects (player + transfers[]), aplatir en éléments individuels
+  interface LocalTransfer {
+    date?: string | null;
+    update?: string | null;
+    transfers?: LocalTransfer[];
+    player?: Record<string, unknown>;
+    [k: string]: unknown;
+  }
+
+  type TransferLike = LocalTransfer;
+  const normalizeResponse = (): TransferLike[] => {
+  // No API calls here; normalized response is empty by default. Provide data from props or a parent hook instead.
+  const resp: TransferLike[] = [];
+  const flattened: TransferLike[] = [];
+    resp.forEach((item: TransferLike) => {
+      // If object already looks like a single transfer (has date + teams), use directly
+      if (item && (item.date || item.teams) ) {
+        const normalizedDate = item.date || item.update || null;
+        const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
+        flattened.push({ ...item, normalizedDate, year: yearMatch ? parseInt(yearMatch[1], 10) : null });
+        return;
+      }
+      // If grouped by player with transfers array
+      if (item && Array.isArray(item.transfers) && item.transfers.length > 0) {
+        item.transfers.forEach((tr: LocalTransfer) => {
+          const normalizedDate = tr?.date || tr?.update || item.update || null;
+          const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
+          flattened.push({ ...tr, player: item.player, update: item.update, normalizedDate, year: yearMatch ? parseInt(yearMatch[1], 10) : null });
+        });
+        return;
+      }
+      // Last fallback: push the item as-is
+      flattened.push(item);
+    });
+    return flattened;
+  };
+
+  const allTransfers = normalizeResponse();
+  // DEV: log first few normalized items (empty unless parent provides data)
+  if (import.meta.env.DEV) {
+    console.log('[debug] normalized transfers (first 10):', allTransfers.slice(0, 10));
+  }
+
+  // Client-side fallback: try to load a scraped HTML snippet saved at /scraped-transfers.json and sanitize it
+  const [scrapedHtml, setScrapedHtml] = useState<string | null>(null);
+  useEffect(() => {
+    if (allTransfers.length > 0) return;
+    (async () => {
+      try {
+        const r = await fetch('/scraped-transfers.json');
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j && j.html) {
+          const clean = DOMPurify.sanitize(String(j.html), { USE_PROFILES: { html: true } });
+          setScrapedHtml(clean);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [allTransfers.length]);
+
+  // If no transfers exist for the currently selected season but we have data,
+  // automatically switch to the most recent year present so the UI isn't empty.
+  // No data-driven season auto-switch (API calls removed)
   const sortedTransfers = allTransfers.slice().sort((a, b) => {
-    const dateA = new Date(a.date).getTime();
-    const dateB = new Date(b.date).getTime();
-    return dateB - dateA;
+    const getTime = (t: TransferLike) => {
+      const s = (t as LocalTransfer)?.normalizedDate || t.date || t.update || null;
+      const n = s ? Date.parse(String(s)) : NaN;
+      return Number.isNaN(n) ? 0 : n;
+    };
+    return getTime(b) - getTime(a);
   });
 
-  // Filtrage par recherche
-  const filteredTransfers = sortedTransfers.filter(tr => {
-    const playerName = tr.player?.name?.toLowerCase() || "";
-    const clubName = tr.teams?.in?.name?.toLowerCase() || "";
-    return (
-      playerName.includes(search.toLowerCase()) ||
-      clubName.includes(search.toLowerCase())
-    );
+  // Helper: extract year from a transfer record robustly
+  const getTransferYear = (tr: LocalTransfer): number | null => {
+    const tryParse = (s?: string | null): number | null => {
+      if (!s) return null;
+      const m = String(s).match(/(\d{4})/);
+      if (m) return parseInt(m[1], 10);
+      return null;
+    };
+
+    if (!tr) return null;
+
+    // Prefer precomputed year if available (could be number or string)
+    const trRec = tr as Record<string, unknown>;
+    if (typeof trRec['year'] !== 'undefined' && trRec['year'] !== null) {
+      const y = Number(String(trRec['year']));
+      if (!Number.isNaN(y)) return y;
+    }
+
+    // Prefer top-level date
+    let year = tryParse(tr.date as string | null);
+    if (year) return year;
+    // fallback to update timestamp
+    year = tryParse(tr.update as string | null);
+    if (year) return year;
+    // sometimes data nested differently, try nested transfer date
+    if (Array.isArray(tr.transfers) && tr.transfers.length > 0) {
+      year = tryParse((tr.transfers[0].date as string) || (tr.transfers[0].update as string) || null);
+      if (year) return year;
+    }
+    return null;
+  };
+
+
+  // Filtrer par saison (selectedSeason) en utilisant getTransferYear
+  const transfersForSeason = sortedTransfers.filter(tr => getTransferYear(tr) === selectedSeason);
+
+  // Appliquer le filtre de recherche (nom joueur ou club entrant)
+  const applySearch = (list: LocalTransfer[]) => list.filter((tr) => {
+    const trRec = tr as Record<string, unknown>;
+    const player = trRec['player'] as Record<string, unknown> | undefined;
+    const teams = trRec['teams'] as Record<string, unknown> | undefined;
+    const teamIn = teams?.['in'] as Record<string, unknown> | undefined;
+    const playerName = String(player?.['name'] ?? '').toLowerCase();
+    const clubName = String(teamIn?.['name'] ?? '').toLowerCase();
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return playerName.includes(q) || clubName.includes(q);
   });
+
+  let filteredTransfers = applySearch(transfersForSeason as LocalTransfer[]);
+
+  // Fallback: if no transfers found for the season, show recent transfers (still respect search)
+  if (filteredTransfers.length === 0) {
+    filteredTransfers = applySearch(sortedTransfers);
+  }
 
   // Pagination
   const totalPages = Math.ceil(filteredTransfers.length / pageSize) || 1;
@@ -196,6 +312,18 @@ const Transfers = () => {
               
               
               {/* Barre de recherche */}
+              {import.meta.env.DEV && (
+                <div className="mb-4 p-3 rounded bg-yellow-50 border border-yellow-100 text-xs text-slate-700">
+                  <div className="font-medium mb-1">DEV DEBUG: transfers source</div>
+                  <div>main.len: {data?.response?.length ?? 0} • normalized.len: {allTransfers.length}</div>
+                  <div className="mt-2">
+                    <details>
+                      <summary className="cursor-pointer">Mostrar primeros items (raw)</summary>
+                      <pre className="whitespace-pre-wrap max-h-48 overflow-auto text-xs">{JSON.stringify((data?.response || []).slice(0,3), null, 2)}</pre>
+                    </details>
+                  </div>
+                </div>
+              )}
               <div className="mb-1 flex justify-center">
                 <input
                   type="text"
@@ -209,10 +337,18 @@ const Transfers = () => {
 
               {paginatedTransfers.length > 0 ? (
                 <div className="flex flex-col gap-4">
-                  {paginatedTransfers.map((transfer, index) => (
-                    <TransferCard key={`${transfer.player?.id || 'unknown'}-${transfer.date || 'nodate'}-${index}`} transfer={transfer} />
-                  ))}
+                  {paginatedTransfers.map((transfer, index) => {
+                    const t = transfer as Record<string, unknown>;
+                    const player = t['player'] as Record<string, unknown> | undefined;
+                    const pid = player?.['id'] ?? 'unknown';
+                    const dateKey = t['date'] ?? t['normalizedDate'] ?? 'nodate';
+                    return (
+                      <TransferCard key={`${pid}-${dateKey}-${index}`} transfer={transfer as unknown as TransferEnriched} />
+                    );
+                  })}
                 </div>
+              ) : scrapedHtml ? (
+                <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: scrapedHtml }} />
               ) : (
                 <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                   {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}

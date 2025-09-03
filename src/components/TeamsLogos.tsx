@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -107,15 +107,20 @@ const TeamsLogos = () => {
     );
   };
 
-  // Handle window resize
-  const handleResize = () => {
-    setVisibleTeams(getVisibleTeams());
-  };
-
-  // Add event listener for window resize
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', handleResize);
-  }
+  // Handle window resize and keep listener in effect
+  useEffect(() => {
+    const handleResize = () => setVisibleTeams(getVisibleTeams());
+    // run once to ensure correct size
+    handleResize();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, []);
 
   return (
     <div className="bg-background dark:bg-[#181a20] sm:border-b sm:border-border sm:dark:border-[#23262f] pt-2 pb-0 sm:py-4 mt-0">
@@ -142,39 +147,64 @@ const TeamsLogos = () => {
 
           {/* Teams Logos Carousel */}
           <div className="overflow-hidden sm:mx-8">
-            <div 
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ 
-                transform: `translateX(-${currentIndex * (100 / visibleTeams)}%)`,
-                width: `${(teams.length * 100) / visibleTeams}%`
-              }}
-            >
-              {teams.map((team, index) => (
-                <div
-                  key={team.id}
-                  className="flex-shrink-0"
-                  style={{ width: `${100 / teams.length}%` }}
-                >
-                  <div 
-                    className="group cursor-pointer"
-                    onClick={() => navigate(`/team/${team.id}`)}
-                  >
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-white dark:bg-[#181a20] rounded-lg sm:rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:scale-105 flex items-center justify-center border border-gray-100 dark:border-[#23262f]">
+            {/* Mobile: horizontal scrollable row so all logos are reachable and fixed visually */}
+            {visibleTeams <= 4 ? (
+              <div className="flex gap-3 overflow-x-auto py-2 px-2 -mx-2 sm:hidden">
+                {teams.map((team) => (
+                  <div key={team.id} className="flex-shrink-0 w-20">
+                    <div
+                      className="group cursor-pointer w-20 h-20 bg-white dark:bg-[#181a20] rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 flex items-center justify-center border border-gray-100 dark:border-[#23262f]"
+                      onClick={() => navigate(`/team/${team.id}`)}
+                    >
                       <img
                         src={team.logo}
                         alt={team.name}
-                        className="w-8 h-8 sm:w-12 sm:h-12 object-contain"
+                        className="w-12 h-12 object-contain"
                         onError={(e) => {
-                          // Fallback to placeholder if image fails to load
                           const target = e.target as HTMLImageElement;
                           target.src = "/placeholder.svg";
                         }}
                       />
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              /* Desktop / tablet carousel */
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ 
+                  transform: `translateX(-${currentIndex * (100 / visibleTeams)}%)`,
+                  width: `${(teams.length * 100) / visibleTeams}%`
+                }}
+              >
+                {teams.map((team, index) => (
+                  <div
+                    key={team.id}
+                    className="flex-shrink-0"
+                    style={{ width: `${100 / teams.length}%` }}
+                  >
+                    <div 
+                      className="group cursor-pointer"
+                      onClick={() => navigate(`/team/${team.id}`)}
+                    >
+                      <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-white dark:bg-[#181a20] rounded-lg sm:rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:scale-105 flex items-center justify-center border border-gray-100 dark:border-[#23262f]">
+                        <img
+                          src={team.logo}
+                          alt={team.name}
+                          className="w-8 h-8 sm:w-12 sm:h-12 object-contain"
+                          onError={(e) => {
+                            // Fallback to placeholder if image fails to load
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Mobile swipe indicators */}

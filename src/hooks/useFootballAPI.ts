@@ -496,3 +496,137 @@ export const useLeagues = () => {
     lastUpdated
   };
 };
+
+// Hook pour les meilleurs buteurs d'une ligue
+export const useTopScorers = ({ 
+  leagueId, 
+  season = new Date().getFullYear(),
+  translateContent = false,
+  refreshInterval = 0 
+}: {
+  leagueId: number;
+  season?: number;
+  translateContent?: boolean;
+  refreshInterval?: number;
+}) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      let result = await footballAPI.getTopScorers(leagueId, season);
+      
+      if (translateContent && result?.response) {
+        const translateAPI = (await import('@/config/api')).translateAPI;
+        for (const item of result.response) {
+          if (item.player?.name) {
+            item.player.nameTranslated = {
+              arabic: await translateAPI.translateToArabic(item.player.name)
+            };
+          }
+          if (item.statistics?.[0]?.team?.name) {
+            item.statistics[0].team.nameTranslated = {
+              arabic: await translateAPI.translateToArabic(item.statistics[0].team.name)
+            };
+          }
+        }
+      }
+      
+      setData(result);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  }, [leagueId, season, translateContent]);
+
+  useEffect(() => {
+    fetchData();
+    
+    let interval: NodeJS.Timeout;
+    if (refreshInterval > 0) {
+      interval = setInterval(fetchData, refreshInterval);
+    }
+    return () => clearInterval(interval);
+  }, [fetchData, refreshInterval]);
+
+  return {
+    data,
+    loading,
+    error,
+    refetch: fetchData,
+    lastUpdated
+  };
+};
+
+// Hook pour les meilleurs passeurs d'une ligue
+export const useTopAssists = ({ 
+  leagueId, 
+  season = new Date().getFullYear(),
+  translateContent = false,
+  refreshInterval = 0 
+}: {
+  leagueId: number;
+  season?: number;
+  translateContent?: boolean;
+  refreshInterval?: number;
+}) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      let result = await footballAPI.getTopAssists(leagueId, season);
+      
+      if (translateContent && result?.response) {
+        const translateAPI = (await import('@/config/api')).translateAPI;
+        for (const item of result.response) {
+          if (item.player?.name) {
+            item.player.nameTranslated = {
+              arabic: await translateAPI.translateToArabic(item.player.name)
+            };
+          }
+          if (item.statistics?.[0]?.team?.name) {
+            item.statistics[0].team.nameTranslated = {
+              arabic: await translateAPI.translateToArabic(item.statistics[0].team.name)
+            };
+          }
+        }
+      }
+      
+      setData(result);
+      setLastUpdated(new Date());
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  }, [leagueId, season, translateContent]);
+
+  useEffect(() => {
+    fetchData();
+    
+    let interval: NodeJS.Timeout;
+    if (refreshInterval > 0) {
+      interval = setInterval(fetchData, refreshInterval);
+    }
+    return () => clearInterval(interval);
+  }, [fetchData, refreshInterval]);
+
+  return {
+    data,
+    loading,
+    error,
+    refetch: fetchData,
+    lastUpdated
+  };
+};

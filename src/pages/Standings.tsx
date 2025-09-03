@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { useAllLeagueStandings, useMockStandings } from "@/hooks/useStandings";
 import { useTranslation } from "@/hooks/useTranslation";
+import { useTopScorers, useTopAssists } from "@/hooks/useFootballAPI";
 import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
 
@@ -17,9 +18,32 @@ const Standings = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
   const [showLeagueDetail, setShowLeagueDetail] = useState(false);
+  const [activeTab, setActiveTab] = useState<'teams' | 'players'>('teams');
+  const [playersTab, setPlayersTab] = useState<'topscorers' | 'topassists'>('topscorers');
   
   // Récupérer les classements de toutes les ligues
   const { leagues, isLoading, hasError, refetchAll } = useAllLeagueStandings();
+  
+  // Determine current football season start year (e.g., 2025 for 2025/26 if month >= July)
+  const seasonYear = (() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth(); // 0=Jan, 6=Jul
+    return m >= 6 ? y : y - 1;
+  })();
+
+  // Hooks pour les statistiques des joueurs (conditionnels)
+  const { data: topScorersData, loading: loadingScorers } = useTopScorers({
+    leagueId: selectedLeague || 0,
+    season: seasonYear,
+    translateContent: true
+  });
+  
+  const { data: topAssistsData, loading: loadingAssists } = useTopAssists({
+    leagueId: selectedLeague || 0,
+    season: seasonYear,
+    translateContent: true
+  });
   
   // Données mock en cas d'erreur API
   const mockPremierLeague = useMockStandings(MAIN_LEAGUES.PREMIER_LEAGUE);
@@ -139,11 +163,11 @@ const Standings = () => {
           <>
             {/* En-tête de la page */}
             <div className={`flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
-              <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
-                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent mb-2">
-                  {t('standings')}
+              <div className={`${isRTL ? 'text-right' : 'text-left'}`}> 
+                <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-2 tracking-tight">
+                  {currentLanguage === 'ar' ? 'كوورة - ترتيب البطولات' : 'koora - Classement des tournois'}
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                <p className="text-gray-700 dark:text-gray-300 text-base md:text-lg font-medium">
                   {currentLanguage === 'ar' ? 'اختر البطولة لعرض الترتيب' : 'Sélectionnez un tournoi pour voir le classement'}
                 </p>
               </div>
@@ -174,21 +198,20 @@ const Standings = () => {
                       className={`flex items-center justify-between rounded-2xl bg-white dark:bg-[#181a20] border border-gray-100 dark:border-[#23262f] px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
                     >
                       {/* Chevron */}
-                      <div className={`shrink-0 text-gray-400 ${isRTL ? '' : ''}`}>
+                      <div className={`shrink-0 text-gray-400`}>
                         {isRTL ? (
                           <ChevronRight className="w-4 h-4" />
                         ) : (
                           <ChevronLeft className="w-4 h-4" />
                         )}
                       </div>
-
-                      {/* League name */}
+                      {/* League name and country */}
                       <div className={`flex-1 px-3 ${isRTL ? 'text-right' : 'text-left'}`}>
                         <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm sm:text-base">
                           {league.name}
                         </span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400">{league.country} {league.flag}</span>
                       </div>
-
                       {/* Logo */}
                       <div className="shrink-0">
                         <img
@@ -224,29 +247,66 @@ const Standings = () => {
           </>
         )}
 
-        {/* Vue détail du classement */}
+        {/* Vue détail du classement */
+        }
         {showLeagueDetail && selectedLeague && (
           <>
-            {/* En-tête avec bouton retour */}
-            <div className={`flex items-center gap-4 mb-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <Button 
-                onClick={handleBackToList}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-              >
-                {isRTL ? '→' : '←'} {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
-              </Button>
-              <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
-                <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-gray-200">
-                  {currentLanguage === 'ar' ? 'ترتيب البطولة' : 'Classement du tournoi'}
-                </h1>
-              </div>
-            </div>
+            {/* Header Card + Tabs (match mockup style) */}
+            <Card className="mb-6 border-0 shadow-lg overflow-hidden">
+              <div className={`flex items-center justify-between p-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                {/* League info */}
+                <div className="flex items-center gap-3">
+                  {/* Logo */}
+                  <img
+                    src={getSelectedLeagueData()?.leagueLogo || 'https://via.placeholder.com/48'}
+                    alt={getSelectedLeagueData()?.leagueName || 'League'}
+                    className="w-12 h-12 object-contain rounded-xl bg-white"
+                  />
+                  <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                      {currentLanguage === 'ar' ? (getSelectedLeagueData()?.leagueName || 'البطولة') : (getSelectedLeagueData()?.leagueName || 'League')}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {currentLanguage === 'ar' ? 'الفرق' : 'Équipes'} · {seasonYear}/{seasonYear + 1}
+                    </div>
+                  </div>
+                </div>
 
-            {/* Affichage du classement */}
+                {/* Back button */}
+                <Button 
+                  onClick={handleBackToList}
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
+                >
+                  {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
+                </Button>
+              </div>
+
+              {/* Tabs */}
+              <div className={`flex gap-6 px-4 pb-2 border-t border-gray-100 dark:border-[#23262f] ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                <button
+                  onClick={() => setActiveTab('teams')}
+                  className={`py-2 text-sm font-semibold border-b-2 transition-colors ${
+                    activeTab === 'teams' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {currentLanguage === 'ar' ? 'الفرق' : 'Équipes'}
+                </button>
+                <button
+                  onClick={() => setActiveTab('players')}
+                  className={`py-2 text-sm font-semibold border-b-2 transition-colors ${
+                    activeTab === 'players' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {currentLanguage === 'ar' ? 'اللاعبون' : 'Joueurs'}
+                </button>
+              </div>
+            </Card>
+
+            {/* Tab Content */}
             <div className="max-w-5xl mx-auto">
-              {(() => {
+              {activeTab === 'teams' && (() => {
                 const leagueData = getSelectedLeagueData();
                 if (!leagueData) {
                   return (
@@ -277,6 +337,145 @@ const Standings = () => {
                   />
                 );
               })()}
+              {/* Players Tab */}
+              {activeTab === 'players' && (
+                <Card className="p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
+                  {/* Sub toggle */}
+                  <div className={`mb-4 flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                    <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-[#23262f] rounded-xl">
+                      <button
+                        onClick={() => setPlayersTab('topscorers')}
+                        className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                          playersTab === 'topscorers' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        الهدافون
+                      </button>
+                      <button
+                        onClick={() => setPlayersTab('topassists')}
+                        className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                          playersTab === 'topassists' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        التمريرات
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  {playersTab === 'topscorers' ? (
+                    <>
+                      <div className="flex items-center gap-3 mb-6">
+                        <Trophy className="w-6 h-6 text-yellow-500" />
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">الهدافون</h2>
+                      </div>
+                      {loadingScorers ? (
+                        <div className="space-y-3">
+                          {[...Array(10)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
+                              <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                              <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                              </div>
+                              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : topScorersData?.response?.length > 0 ? (
+                        <div className="space-y-2">
+                          {topScorersData.response.map((item: any, index: number) => (
+                            <div key={item.player?.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors">
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="text-lg font-bold text-gray-500 w-6 text-center">{index + 1}</div>
+                                <img 
+                                  src={item.player?.photo || '/placeholder.svg'} 
+                                  alt={item.player?.name}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {item.player?.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                    <img 
+                                      src={item.statistics?.[0]?.team?.logo} 
+                                      alt={item.statistics?.[0]?.team?.name}
+                                      className="w-4 h-4"
+                                    />
+                                    {item.statistics?.[0]?.team?.name}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xl font-bold text-green-600">{item.statistics?.[0]?.goals?.total || 0}</div>
+                                <div className="text-xs text-gray-500">هدف</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">لا توجد بيانات هدافين متاحة</div>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 mb-6">
+                        <Award className="w-6 h-6 text-blue-500" />
+                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">أفضل الممررين</h2>
+                      </div>
+                      {loadingAssists ? (
+                        <div className="space-y-3">
+                          {[...Array(10)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
+                              <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                              <div className="flex-1 space-y-2">
+                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                              </div>
+                              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : topAssistsData?.response?.length > 0 ? (
+                        <div className="space-y-2">
+                          {topAssistsData.response.map((item: any, index: number) => (
+                            <div key={item.player?.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors">
+                              <div className="flex items-center gap-3 flex-1">
+                                <div className="text-lg font-bold text-gray-500 w-6 text-center">{index + 1}</div>
+                                <img 
+                                  src={item.player?.photo || '/placeholder.svg'} 
+                                  alt={item.player?.name}
+                                  className="w-12 h-12 rounded-full object-cover"
+                                />
+                                <div className="flex-1">
+                                  <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {item.player?.nameTranslated?.arabic || item.player?.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                    <img 
+                                      src={item.statistics?.[0]?.team?.logo} 
+                                      alt={item.statistics?.[0]?.team?.name}
+                                      className="w-4 h-4"
+                                    />
+                                    {item.statistics?.[0]?.team?.nameTranslated?.arabic || item.statistics?.[0]?.team?.name}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xl font-bold text-blue-600">{item.statistics?.[0]?.goals?.assists || 0}</div>
+                                <div className="text-xs text-gray-500">تمريرة</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">لا توجد بيانات تمريرات متاحة</div>
+                      )}
+                    </>
+                  )}
+                </Card>
+              )}
             </div>
           </>
         )}

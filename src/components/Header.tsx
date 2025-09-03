@@ -1,4 +1,5 @@
 import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight } from "lucide-react";
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "react-router-dom";
@@ -15,6 +16,7 @@ const Header = () => {
   const location = useLocation();
   const { t, isRTL, direction, currentLanguage } = useTranslation();
   const { isAdmin } = useAuth();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   
   const navItemsWithIcons = [
     { ...NAV_ITEMS.find(item => item.key === 'home'), icon: Home },
@@ -56,12 +58,12 @@ const Header = () => {
                   <img 
                     src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="w-28 h-10 object-contain dark:hidden neon-glow hover:neon-glow"
+                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain dark:hidden neon-glow hover:neon-glow"
                   />
                   <img 
                     src="/kooralogo.png" 
                     alt="Koora Logo" 
-                    className="w-28 h-10 object-contain hidden dark:block neon-glow hover:neon-glow"
+                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain hidden dark:block neon-glow hover:neon-glow"
                   />
                 </div>
               </div>
@@ -140,12 +142,12 @@ const Header = () => {
 
       {/* Mobile Header (no border/shadow/blur to avoid any separation over logos) */}
       <header className="modern-header bg-slate-50 dark:bg-slate-900 sticky top-0 z-50 transition-all duration-300 lg:hidden">
-        <div className="container mx-auto px-4">
-          <div className={`flex items-center justify-between h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="container mx-auto px-3">
+          <div className={`flex items-center justify-between h-14 sm:h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Logo */}
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+            <div className={`flex items-center flex-shrink-0 ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
               <div 
-                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} group cursor-pointer`}
+                className={`flex items-center flex-shrink-0 ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} group cursor-pointer`}
                 onClick={handleLogoClick}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -160,7 +162,7 @@ const Header = () => {
                   <img 
                     src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="w-10 h-10 sm:w-8 sm:h-8 object-contain neon-glow hover:neon-glow"
+                    className="w-16 h-16 sm:w-10 sm:h-10 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {
                       console.log('Erreur de chargement du logo:', e);
                       // Fallback vers une icône Football si l'image ne charge pas
@@ -176,7 +178,7 @@ const Header = () => {
                   <img 
                     src="/koora-logo/black-logo.png" 
                     alt="Koora Logo" 
-                    className="w-20 h-7 object-contain neon-glow hover:neon-glow"
+                    className="w-24 h-8 sm:w-28 sm:h-9 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {
                       console.log('Erreur de chargement du logo texte:', e);
                       e.currentTarget.style.display = 'none';
@@ -187,14 +189,20 @@ const Header = () => {
             </div>
 
             {/* Mobile Actions */}
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2`}>
+            <div className={`flex items-center gap-2 ${isRTL ? 'space-x-reverse flex-row-reverse' : ''}`}>
               {/* Langue et Mode sombre disponibles dans Paramètres */}
               {/* Search Icon */}
-              <Button variant="ghost" size="icon" className="rounded-full bg-[hsl(var(--input))] hover:bg-sport-10 hover:text-sport transition-all duration-300">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Search"
+                onClick={() => setMobileSearchOpen(true)}
+                className="rounded-full bg-[hsl(var(--input))] hover:bg-sport-10 hover:text-sport transition-all duration-300"
+              >
                 <Search className="w-5 h-5" />
               </Button>
               
-              {/* Admin Button - Mobile */}
+              {/* Admin Button - Mobile (show only from sm+) */}
               <AdminButton isAdmin={isAdmin} className="hidden sm:flex" />
               
               {/* Bouton de connexion déplacé dans Paramètres */}
@@ -203,6 +211,24 @@ const Header = () => {
           </div>
         </div>
       </header>
+
+      {/* Mobile search overlay */}
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-4 bg-black/40" onClick={() => setMobileSearchOpen(false)}>
+          <div className="w-full max-w-md mt-12" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-slate-800 rounded-xl p-2 shadow-lg border border-slate-200 dark:border-slate-700">
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4`} />
+                <Input
+                  autoFocus
+                  placeholder={t('search')}
+                  className={`pl-10 pr-3 w-full h-10 rounded-lg bg-slate-100 border border-slate-200 text-sm placeholder:text-slate-400 focus:bg-white focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200 transition-all duration-200`}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Bottom Navigation */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-lg">

@@ -244,38 +244,11 @@ const LeagueStandingTable = ({
   return (
     <div className={`space-y-4 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       {/* En-tête de la ligue */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-700 dark:from-blue-800 dark:to-purple-900 p-4 rounded-t-lg">
-        <div className="flex items-center justify-between">
-          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <img src={leagueLogo} alt={leagueName} className="w-12 h-12 sm:w-10 sm:h-10 bg-white rounded-full p-1 flex-shrink-0" />
-            <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
-              <h3 className="text-base sm:text-lg font-bold text-white">
-                {currentLanguage === 'ar' 
-                  ? getArabicLeagueName(leagueName)
-                  : leagueName
-                }
-              </h3>
-              <p className={`text-blue-100 text-xs sm:text-sm flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <span>{flag}</span>
-                <span>{country}</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+     
 
       {/* Contenu avec onglets */}
       <Tabs defaultValue="standings" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4">
-          <TabsTrigger value="standings" className="flex items-center gap-2">
-            <Trophy className="w-4 h-4" />
-            <span>{currentLanguage === 'ar' ? 'الترتيب' : 'Classement'}</span>
-          </TabsTrigger>
-          <TabsTrigger value="players" className="flex items-center gap-2">
-            <Users className="w-4 h-4" />
-            <span>{currentLanguage === 'ar' ? 'إحصائيات اللاعبين' : 'Statistiques Joueurs'}</span>
-          </TabsTrigger>
-        </TabsList>
+      
 
         <TabsContent value="standings">
           <Card className="overflow-hidden bg-white dark:bg-[#181a20] border-0 shadow-xl hover:shadow-2xl transition-all duration-300">

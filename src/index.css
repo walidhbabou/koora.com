@@ -7,39 +7,40 @@
 
 @layer base {
   :root {
-    --background: 240 10% 98%;
-    --foreground: 240 10% 15%;
+    /* Light (Fat7) */
+    --background: 210 20% 98%;              /* #F9FAFB */
+    --foreground: 0 0% 12%;                 /* #1E1E1E */
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 15%;
+    --card: 0 0% 100%;                      /* #FFFFFF */
+    --card-foreground: 0 0% 12%;            /* #1E1E1E */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 15%;
+    --popover: 0 0% 100%;                   /* #FFFFFF */
+    --popover-foreground: 0 0% 12%;         /* #1E1E1E */
 
-    --primary: 84 81% 59%; /* aligns with brand green */
-    --primary-foreground: 0 0% 100%;
+    --primary: 141 72% 42%;                 /* #1DB954 */
+    --primary-foreground: 0 0% 100%;        /* white */
 
-    --secondary: 200 95% 60%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 211 100% 50%;              /* #007BFF */
+    --secondary-foreground: 0 0% 100%;      /* white */
 
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 5% 45%;
+    --muted: 210 16% 96%;
+    --muted-foreground: 0 0% 33%;           /* #555555 */
 
-    --accent: 120 100% 50%;
+    --accent: 141 72% 42%;                  /* use primary as accent */
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 240 10% 92%;
-    --input: 240 10% 96%;
-    --ring: 84 81% 59%;
+    --border: 210 16% 90%;
+    --input: 210 16% 96%;
+    --ring: 141 72% 42%;                    /* #1DB954 */
 
     /* Brand palette (accessible): lime/azure */
-    --sport-green: 84 81% 59%; /* readable lime 500 */
-    --sport-blue: 200 90% 50%; /* vivid but balanced azure */
-    --sport-dark: 240 10% 15%;
-    --sport-light: 240 5% 98%;
+    --sport-green: 141 72% 42%;             /* #1DB954 */
+    --sport-blue: 211 100% 50%;             /* #007BFF */
+    --sport-dark: 0 0% 12%;                 /* #1E1E1E */
+    --sport-light: 210 20% 98%;             /* #F9FAFB */
     
     --gradient-primary: linear-gradient(135deg, hsl(var(--sport-green)), hsl(var(--sport-blue)));
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(240 5% 98%));
@@ -75,49 +76,50 @@
   }
 
   .dark {
-    /* Deep blue-gray dark mode similar to reference */
-    --background: 222 30% 8%;      /* page bg */
-    --foreground: 210 25% 90%;     /* text */
+    /* Dark (Gham9) */
+    --background: 215 28% 7%;              /* #0D1117 */
+    --foreground: 0 0% 92%;                /* #EAEAEA */
 
-    --card: 222 24% 12%;           /* surfaces */
-    --card-foreground: 210 25% 90%;
+    --card: 216 22% 12%;                   /* #161B22 */
+    --card-foreground: 0 0% 92%;           /* #EAEAEA */
 
-    --popover: 222 24% 12%;
-    --popover-foreground: 210 25% 90%;
+    --popover: 216 22% 12%;                /* #161B22 */
+    --popover-foreground: 0 0% 92%;        /* #EAEAEA */
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 141 72% 42%;                /* #1DB954 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 194 100% 47%;             /* #00AEEF */
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 220 18% 16%;
-    --muted-foreground: 215 16% 70%;
+    --muted: 216 16% 18%;                  /* subtle surface */
+    --muted-foreground: 215 13% 73%;       /* #9CA3AF */
 
-    --accent: 220 18% 16%;
-    --accent-foreground: 210 25% 90%;
+    --accent: 141 72% 42%;                 /* use green as accent */
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 25% 96%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 16% 22%;
-    --input: 220 20% 14%;          /* inputs/pills */
-    --ring: 215 84% 56%;           /* blue accent */
+    --border: 215 14% 22%;
+    --input: 215 16% 16%;
+    --ring: 141 72% 42%;                   /* #1DB954 */
     
-    /* Use blue accent in dark mode for clarity */
-    --sport-green: 215 84% 56%;    /* becomes brand blue in dark */
-    --sport-blue: 215 84% 56%;
-    --sport-dark: 210 40% 98%;
-    --sport-light: 217.2 32.6% 17.5%;
+    /* Brand tokens in dark */
+    --sport-green: 141 72% 42%;            /* #1DB954 */
+    --sport-blue: 194 100% 47%;            /* #00AEEF */
+    --sport-dark: 0 0% 92%;                /* #EAEAEA (text) */
+    --sport-light: 216 22% 12%;            /* #161B22 (surface) */
     
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    /* Sidebar */
+    --sidebar-background: 216 22% 12%;     /* #161B22 */
+    --sidebar-foreground: 0 0% 92%;        /* #EAEAEA */
+    --sidebar-primary: 141 72% 42%;        /* #1DB954 */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 215 16% 18%;         /* slightly raised */
+    --sidebar-accent-foreground: 0 0% 92%;
+    --sidebar-border: 215 14% 22%;
+    --sidebar-ring: 141 72% 42%;
   }
 }
 

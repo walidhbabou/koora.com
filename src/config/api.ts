@@ -328,6 +328,16 @@ export class FootballAPI {
   async getPlayerStats(leagueId: number, season: number = new Date().getFullYear(), statType: string = 'topscorers') {
     return this.makeRequest(`/players/${statType}`, { league: leagueId, season });
   }
+
+  // Meilleurs buteurs d'une ligue
+  async getTopScorers(leagueId: number, season: number = new Date().getFullYear()) {
+    return this.makeRequest('/players/topscorers', { league: leagueId, season });
+  }
+
+  // Meilleurs passeurs d'une ligue
+  async getTopAssists(leagueId: number, season: number = new Date().getFullYear()) {
+    return this.makeRequest('/players/topassists', { league: leagueId, season });
+  }
   
   // Fixtures: Events timeline
   async getFixtureEvents(fixtureId: number) {
@@ -902,6 +912,70 @@ export interface Fixture {
       away: number | null;
     };
   };
+}
+
+export interface PlayerStatistic {
+  player: {
+    id: number;
+    name: string;
+    firstname: string;
+    lastname: string;
+    age: number;
+    birth: {
+      date: string;
+      place: string;
+      country: string;
+    };
+    nationality: string;
+    height: string;
+    weight: string;
+    injured: boolean;
+    photo: string;
+  };
+  statistics: Array<{
+    team: {
+      id: number;
+      name: string;
+      logo: string;
+    };
+    league: {
+      id: number;
+      name: string;
+      country: string;
+      logo: string;
+      flag: string;
+      season: number;
+    };
+    games: {
+      appearences: number;
+      lineups: number;
+      minutes: number;
+      number: number | null;
+      position: string;
+      rating: string;
+      captain: boolean;
+    };
+    goals: {
+      total: number | null;
+      conceded: number | null;
+      assists: number | null;
+      saves: number | null;
+    };
+    passes: {
+      total: number;
+      key: number;
+      accuracy: number;
+    };
+    shots: {
+      total: number;
+      on: number;
+    };
+    cards: {
+      yellow: number;
+      yellowred: number;
+      red: number;
+    };
+  }>;
 }
 
 export interface Standing {

@@ -68,11 +68,11 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   };
 
   return (
-    <div className="w-full max-w-xl mx-auto mb-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center p-4 gap-4">
+    <div className="w-full mx-auto mb-3">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center p-3 gap-3">
         {/* Heure uniquement */}
-        <div className="flex flex-col items-center min-w-[90px]">
-          <span className="bg-blue-500 text-white rounded-full px-3 py-0.5 text-xs text-center">{getMatchTime()}</span>
+        <div className="flex flex-col items-center min-w-[72px]">
+          <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-[11px] text-center">{getMatchTime()}</span>
         </div>
         {/* Equipes */}
         <div className={`flex-1 flex items-center justify-between gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}> 
@@ -81,7 +81,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
               <img
                 src={homeLogo}
                 alt={homeName}
-                className="w-9 h-9 rounded-full border object-contain"
+                className="w-8 h-8 rounded-full border object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -92,7 +92,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
                 crossOrigin="anonymous"
               />
             ) : null}
-            <div className={`w-9 h-9 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${homeLogo ? 'hidden' : ''}`}>
+            <div className={`w-8 h-8 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${homeLogo ? 'hidden' : ''}`}>
               H
             </div>
             <span className="font-bold text-md">{homeName}</span>
@@ -104,7 +104,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
               <img
                 src={awayLogo}
                 alt={awayName}
-                className="w-9 h-9 rounded-full border object-contain"
+                className="w-8 h-8 rounded-full border object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -115,7 +115,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
                 crossOrigin="anonymous"
               />
             ) : null}
-            <div className={`w-9 h-9 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${awayLogo ? 'hidden' : ''}`}>
+            <div className={`w-8 h-8 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${awayLogo ? 'hidden' : ''}`}>
               A
             </div>
           </div>
@@ -201,19 +201,19 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const displayAwayName = currentLanguage === 'ar' ? getArabicTeamName(awayName) : awayName;
 
 return (
-  <div 
-    dir={direction} 
-    className={`flex items-center justify-between my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
+  <div
+    dir={direction}
+    className={`flex flex-col sm:flex-row items-center justify-between my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
     onClick={() => setShowMatchDetails(true)}
   >
     {/* Small left image card */}
-    <div className={`shrink-0 me-2`}>
-      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
-        <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-rose-400" />
+    <div className={`shrink-0 me-2 mb-2 sm:mb-0`}>
+      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
+        <QrCode className="w-3.5 h-3.5 text-rose-400" />
       </div>
     </div>
     {/* Away team (right) - left side of row, take equal space */}
-    <div className={`flex items-center gap-2 flex-1 justify-end min-w-[120px] sm:min-w-[160px]`}>
+  <div className={`flex items-center gap-2 flex-1 justify-end min-w-[80px] sm:min-w-[160px]`}>
       {isRTL ? (
         <>
           <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
@@ -256,27 +256,27 @@ return (
     </div>
     
     {/* Centre: score/time only, exactly centered */}
-    <div className="flex items-center justify-center w-[120px] min-w-[120px]">
+  <div className="flex items-center justify-center w-[88px] min-w-[72px] sm:w-[120px] sm:min-w-[120px]">
       {(isLiveState || isFinishedState)
         ? (
           <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
             {isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}
           </span>
         ) : (
-          <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-base sm:text-lg">{currentLanguage==='ar' && upcomingArabicParts ? upcomingArabicParts.hhmm : time}</span>
+          <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-sm sm:text-base">{currentLanguage==='ar' && upcomingArabicParts ? upcomingArabicParts.hhmm : time}</span>
         )
       }
     </div>
     
     {/* Home team (left) - right side of row, take equal space */}
-    <div className={`flex items-center gap-2 flex-1 justify-start min-w-[120px] sm:min-w-[160px]`}>
+  <div className={`flex items-center gap-2 flex-1 justify-start min-w-[80px] sm:min-w-[160px]`}>
       {isRTL ? (
         <>
           {homeLogo ? (
             <img
               src={homeLogo}
               alt={displayHomeName}
-              className="w-7 h-7 object-contain"
+              className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

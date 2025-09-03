@@ -93,9 +93,14 @@ export const useTransfers = (options: UseTransfersOptions = {}): UseTransfersRes
         (apiResult.response as any[]).forEach((playerObj: any) => {
           if (Array.isArray(playerObj?.transfers)) {
             playerObj.transfers.forEach((transfer: any) => {
+              const normalizedDate = transfer?.date || transfer?.update || playerObj.update || null;
+              const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
+              const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
               flattened.push({
                 ...transfer,
                 player: playerObj.player,
+                normalizedDate,
+                year,
               });
             });
           }
@@ -151,10 +156,15 @@ export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => 
         (result as any).response.forEach((playerObj: any) => {
           if (Array.isArray(playerObj?.transfers)) {
             playerObj.transfers.forEach((transfer: any) => {
+              const normalizedDate = transfer?.date || transfer?.update || playerObj.update || null;
+              const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
+              const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
               const enriched: TransferEnriched = {
                 ...transfer,
                 player: playerObj.player,
                 update: playerObj.update,
+                normalizedDate,
+                year,
               };
               allTransfers.push(enriched);
             });
@@ -169,10 +179,15 @@ export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => 
           (allRes as any).response.forEach((playerObj: any) => {
             if (Array.isArray(playerObj?.transfers)) {
               playerObj.transfers.forEach((transfer: any) => {
+                const normalizedDate = transfer?.date || transfer?.update || playerObj.update || null;
+                const yearMatch = normalizedDate ? String(normalizedDate).match(/(\d{4})/) : null;
+                const year = yearMatch ? parseInt(yearMatch[1], 10) : null;
                 const enriched: TransferEnriched = {
                   ...transfer,
                   player: playerObj.player,
                   update: playerObj.update,
+                  normalizedDate,
+                  year,
                 };
                 allTransfers.push(enriched);
               });

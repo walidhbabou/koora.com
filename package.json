@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+  "scrape:ysscores": "node ./scripts/scrape-ysscores.js",
     "dev:full": "concurrently \"npm run dev\" \"npm run proxy\"",
     "proxy": "node proxy-server.js",
     "build": "vite build",
@@ -46,6 +47,7 @@
     "axios": "^1.11.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+  "dompurify": "^2.4.0",
     "cmdk": "^1.1.1",
     "concurrently": "^8.2.2",
     "cors": "^2.8.5",
@@ -68,6 +70,10 @@
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.9",
     "zod": "^3.25.76"
+  },
+  "optionalDependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
