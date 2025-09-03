@@ -12,7 +12,7 @@ import { TransferEnriched, useMainLeaguesTransfers } from "@/hooks/useTransfers"
 import { useIsMobile } from "@/hooks/use-mobile";
 import { footballAPI, MAIN_LEAGUES, SELECTED_LEAGUES } from "@/config/api";
 import TransferCard from "@/components/TransferCard";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import "../styles/rtl.css";
 
 const Transfers = () => {
@@ -31,18 +31,23 @@ const Transfers = () => {
   const [selectedLeagueId, setSelectedLeagueId] = useState<number | null>(null);
   const [leagueTeamsMap, setLeagueTeamsMap] = useState<Record<number, Set<number>>>({});
   useEffect(() => {
-    // Charger les équipes pour chaque ligue sélectionnée (cache via apiCache interne)
+    // Charger en parallèle les équipes pour chaque ligue (plus rapide sur mobile)
     const loadTeams = async () => {
       const probeSeason = selectedSeason || new Date().getFullYear();
+      const entries = await Promise.all(
+        SELECTED_LEAGUES.map(async (lid) => {
+          try {
+            const res = await footballAPI.getTeamsByLeague(lid, probeSeason);
+            const ids = new Set<number>((res?.response || []).map((r: any) => r?.team?.id).filter((x: any) => typeof x === 'number'));
+            return [lid, ids] as const;
+          } catch {
+            return [lid, new Set<number>()] as const;
+          }
+        })
+      );
       const map: Record<number, Set<number>> = {};
-      for (const lid of SELECTED_LEAGUES) {
-        try {
-          const res = await footballAPI.getTeamsByLeague(lid, probeSeason);
-          const ids = new Set<number>((res?.response || []).map((r: any) => r?.team?.id).filter((x: any) => typeof x === 'number'));
-          if (ids.size > 0) map[lid] = ids;
-        } catch {
-          // ignore
-        }
+      for (const [lid, ids] of entries) {
+        if (ids.size > 0) map[lid] = ids;
       }
       setLeagueTeamsMap(map);
     };
@@ -75,14 +80,16 @@ const Transfers = () => {
   // If no transfers exist for the currently selected season but we have data,
   // automatically switch to the most recent year present so the UI isn't empty.
   // No data-driven season auto-switch (API calls removed)
-  const sortedTransfers = allTransfers.slice().sort((a, b) => {
-    const getTime = (t: TransferLike) => {
-      const s = (t as LocalTransfer)?.normalizedDate || t.date || t.update || null;
-      const n = s ? Date.parse(String(s)) : NaN;
-      return Number.isNaN(n) ? 0 : n;
-    };
-    return getTime(b) - getTime(a);
-  });
+  const sortedTransfers = useMemo(() => {
+    return allTransfers.slice().sort((a, b) => {
+      const getTime = (t: TransferLike) => {
+        const s = (t as LocalTransfer)?.normalizedDate || t.date || t.update || null;
+        const n = s ? Date.parse(String(s)) : NaN;
+        return Number.isNaN(n) ? 0 : n;
+      };
+      return getTime(b) - getTime(a);
+    });
+  }, [allTransfers]);
 
   // Helper: extract year from a transfer record robustly
   const getTransferYear = (tr: LocalTransfer): number | null => {
@@ -119,34 +126,44 @@ const Transfers = () => {
 
   // Filtrer par saison (selectedSeason) en utilisant getTransferYear –
   // l'utilisateur veut uniquement les transferts de cette année
-  const transfersForSeason = sortedTransfers.filter(tr => getTransferYear(tr) === selectedSeason);
+  const transfersForSeason = useMemo(() => (
+    sortedTransfers.filter(tr => getTransferYear(tr) === selectedSeason)
+  ), [sortedTransfers, selectedSeason]);
 
   // Filtrer par ligue sélectionnée en vérifiant si l'équipe source ou destination appartient à la ligue
-  const leagueFiltered = transfersForSeason.filter((t) => {
-    if (!selectedLeagueId) return true;
-    const set = leagueTeamsMap[selectedLeagueId];
-    if (!set) return true; // si pas d'info, ne pas filtrer pour éviter vide
-    const outId = (t as any)?.teams?.out?.id;
-    const inId = (t as any)?.teams?.in?.id;
-    return (typeof outId === 'number' && set.has(outId)) || (typeof inId === 'number' && set.has(inId));
-  });
+  const leagueFiltered = useMemo(() => (
+    transfersForSeason.filter((t) => {
+      if (!selectedLeagueId) return true;
+      const set = leagueTeamsMap[selectedLeagueId];
+      if (!set) return true; // si pas d'info, ne pas filtrer pour éviter vide
+      const outId = (t as any)?.teams?.out?.id;
+      const inId = (t as any)?.teams?.in?.id;
+      return (typeof outId === 'number' && set.has(outId)) || (typeof inId === 'number' && set.has(inId));
+    })
+  ), [transfersForSeason, selectedLeagueId, leagueTeamsMap]);
 
   // Appliquer le filtre de recherche (nom joueur ou club entrant)
-  let filteredTransfers = leagueFiltered.filter((t) => {
-    const text = search.trim().toLowerCase();
-    if (!text) return true;
-    const playerName = String((t as any)?.player?.name || '').toLowerCase();
-    const fromName = String((t as any)?.teams?.out?.name || '').toLowerCase();
-    const toName = String((t as any)?.teams?.in?.name || '').toLowerCase();
-    return playerName.includes(text) || fromName.includes(text) || toName.includes(text);
-  });
+  const deferredSearch = useDeferredValue(search);
+  const filteredTransfers = useMemo(() => (
+    leagueFiltered.filter((t) => {
+      const text = deferredSearch.trim().toLowerCase();
+      if (!text) return true;
+      const playerName = String((t as any)?.player?.name || '').toLowerCase();
+      const fromName = String((t as any)?.teams?.out?.name || '').toLowerCase();
+      const toName = String((t as any)?.teams?.in?.name || '').toLowerCase();
+      return playerName.includes(text) || fromName.includes(text) || toName.includes(text);
+    })
+  ), [leagueFiltered, deferredSearch]);
 
   // Aucun fallback multi-années: si vide, on affiche vide (conforme au besoin)
 
   // Pagination
-  const totalPages = Math.ceil(filteredTransfers.length / pageSize) || 1;
-  const safePage = Math.min(page, totalPages);
-  const paginatedTransfers = filteredTransfers.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const { totalPages, safePage, paginatedTransfers } = useMemo(() => {
+    const total = Math.ceil(filteredTransfers.length / pageSize) || 1;
+    const safe = Math.min(page, total);
+    const slice = filteredTransfers.slice((safe - 1) * pageSize, safe * pageSize);
+    return { totalPages: total, safePage: safe, paginatedTransfers: slice };
+  }, [filteredTransfers, pageSize, page]);
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -246,8 +263,9 @@ const Transfers = () => {
       <div className="w-full max-w-7xl mx-auto px-4 py-3">
         {/* Main Content full width */}
         <div className="space-y-6">
-            <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-              <div className={isRTL ? 'text-right' : 'text-left'}>
+            <div className={`flex items-center justify-between gap-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} flex-wrap`}>
+              <div className={`${isRTL ? 'text-right' : 'text-left'} min-w-[200px] flex-1`}
+              >
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-sport-dark to-sport-green bg-clip-text text-transparent">
                   {isRTL ? "الانتقالات" : "Transfers"}
                 </h1>
@@ -256,7 +274,7 @@ const Transfers = () => {
                 </p>
               </div>
               
-              <div className="flex gap-3">
+              <div className="flex gap-2 overflow-x-auto md:overflow-visible py-1">
                 <Button variant="outline" size="sm">
                   <Calendar className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                   {isRTL ? "نافذة الانتقالات" : "Transfer Window"}

@@ -93,6 +93,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
                 src={homeLogo}
                 alt={homeName}
                 className="w-8 h-8 rounded-full border object-contain"
+                loading="lazy"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -120,6 +121,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
                 src={awayLogo}
                 alt={awayName}
                 className="w-8 h-8 rounded-full border object-contain"
+                loading="lazy"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -206,7 +208,7 @@ return (
       </div>
     </div>
     {/* Away team (right) - left side of row, take equal space */}
-  <div className={`flex items-center gap-2 flex-1 justify-end min-w-[80px] sm:min-w-[160px] min-w-0`}>
+  <div className={`flex items-center gap-2 flex-1 basis-0 min-w-0 justify-end`}>
       {isRTL ? (
         <>
           <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base truncate max-w-[120px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
@@ -234,6 +236,7 @@ return (
               src={awayLogo}
               alt={displayAwayName}
               className="w-7 h-7 object-contain"
+              loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
@@ -249,7 +252,7 @@ return (
     </div>
     
     {/* Centre: score/time only, exactly centered */}
-  <div className="flex items-center justify-center w-[76px] min-w-[68px] sm:w-[120px] sm:min-w-[120px]">
+  <div className="flex items-center justify-center w-[64px] min-w-[56px] sm:w-[120px] sm:min-w-[120px]">
       {(isLiveState || isFinishedState)
         ? (
           <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
@@ -262,7 +265,7 @@ return (
     </div>
     
     {/* Home team (left) - right side of row, take equal space */}
-  <div className={`flex items-center gap-2 flex-1 justify-start min-w-[80px] sm:min-w-[160px] min-w-0`}>
+  <div className={`flex items-center gap-2 flex-1 basis-0 min-w-0 justify-start`}>
       {isRTL ? (
         <>
           {homeLogo ? (
@@ -291,6 +294,7 @@ return (
               src={homeLogo}
               alt={displayHomeName}
               className="w-7 h-7 object-contain"
+              loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';

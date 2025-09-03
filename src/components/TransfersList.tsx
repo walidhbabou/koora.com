@@ -41,7 +41,8 @@ const TransfersList: React.FC<TransfersListProps> = ({ playerId, teamId, title, 
         if (mounted) setItems(list);
       } catch (e) {
         if (!mounted) return;
-        setError(currentLanguage === 'ar' ? 'فشل تحميل الانتقالات' : 'Échec du chargement des transferts');
+        // Always Arabic per request
+        setError('فشل تحميل الانتقالات');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -74,15 +75,14 @@ const TransfersList: React.FC<TransfersListProps> = ({ playerId, teamId, title, 
     <Card>
       <CardHeader>
         <CardTitle>
-          {title || (currentLanguage === 'ar' 
-            ? `انتقالات ${seasonStart}/${seasonStart + 1}` 
-            : `Transferts ${seasonStart}/${seasonStart + 1}`)}
+          {/* Always show Arabic labels inside this widget */}
+          {title || `انتقالات ${seasonStart}/${seasonStart + 1}`}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent dir="rtl" className="rtl">
         {loading && (
           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-            {currentLanguage === 'ar' ? 'جارٍ التحميل...' : 'Chargement...'}
+            {'جارٍ التحميل...'}
           </div>
         )}
         {error && (
@@ -90,48 +90,68 @@ const TransfersList: React.FC<TransfersListProps> = ({ playerId, teamId, title, 
         )}
         {!loading && !error && transfersSeason.length === 0 && (
           <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-            {currentLanguage === 'ar' ? 'لا توجد انتقالات في هذا العام' : 'Aucun transfert pour cette année'}
+            {'لا توجد انتقالات في هذا العام'}
           </div>
         )}
         {!loading && !error && transfersSeason.length > 0 && (
-          <ul className="space-y-3">
-            {transfersSeason.map((t, idx) => (
-              <li
-                key={`${t.date}-${idx}`}
-                className="rounded-2xl px-4 py-3 bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md hover:shadow-lg transition-all"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={t.teams?.out?.logo || ''} alt={t.teams?.out?.name || 'team-out'} onError={onImgError} />
-                      <AvatarFallback>{t.teams?.out?.name?.charAt(0) || '?'}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm opacity-95 truncate max-w-[140px]">{t.teams?.out?.name}</span>
-                    <span className="mx-2 opacity-80">{currentLanguage === 'ar' ? '←' : '→'}</span>
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={t.teams?.in?.logo || ''} alt={t.teams?.in?.name || 'team-in'} onError={onImgError} />
-                      <AvatarFallback>{t.teams?.in?.name?.charAt(0) || '?'}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm opacity-95 truncate max-w-[140px]">{t.teams?.in?.name}</span>
+          <ul className="space-y-5">
+            {transfersSeason.map((t, idx) => {
+              const rawType = (t.type || '').toLowerCase();
+              const typeAr = rawType.includes('loan') ? 'إعارة' : rawType.includes('free') ? 'انتقال حر' : rawType ? 'انتقال' : 'غير محدد';
+              const typeStyle = rawType.includes('loan')
+                ? 'bg-amber-100 text-amber-800 border-amber-200'
+                : rawType.includes('free')
+                ? 'bg-slate-100 text-slate-800 border-slate-200'
+                : 'bg-emerald-100 text-emerald-800 border-emerald-200';
+
+              return (
+                <li key={`${t.date}-${idx}`} className="relative">
+                  {/* timeline line */}
+                  <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+
+                  {/* center badge */}
+                  <div className="relative z-10 w-full flex items-center justify-center">
+                    <span className={`px-3 py-1 rounded-full text-[11px] font-semibold border shadow-sm ${typeStyle}`}>{typeAr}</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    {/* Player */}
-                    <div className="flex items-center gap-2">
+
+                  {/* row content */}
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    {/* From team */}
+                    <div className="flex items-center gap-2 min-w-0">
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={t.player?.photo || ''} alt={t.player?.name || 'player'} onError={onImgError} />
-                        <AvatarFallback>{t.player?.name?.charAt(0) || 'P'}</AvatarFallback>
+                        <AvatarImage src={t.teams?.out?.logo || ''} alt={t.teams?.out?.name || 'team-out'} onError={onImgError} />
+                        <AvatarFallback>{t.teams?.out?.name?.charAt(0) || '?'}</AvatarFallback>
                       </Avatar>
-                      <span className="text-sm opacity-95 max-w-[160px] truncate">{t.player?.name || (currentLanguage === 'ar' ? 'لاعب' : 'Player')}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-100 truncate max-w-[140px]">{t.teams?.out?.name}</span>
                     </div>
-                    {/* Meta */}
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-white text-black">
-                      {t.type || (currentLanguage === 'ar' ? 'غير محدد' : 'N/A')}
-                    </span>
-                    <span className="text-xs opacity-80">{t.date}</span>
+
+                    {/* Arrow */}
+                    <span className="mx-1 text-slate-500">←</span>
+
+                    {/* To team */}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={t.teams?.in?.logo || ''} alt={t.teams?.in?.name || 'team-in'} onError={onImgError} />
+                        <AvatarFallback>{t.teams?.in?.name?.charAt(0) || '?'}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-slate-700 dark:text-slate-100 truncate max-w-[140px]">{t.teams?.in?.name}</span>
+                    </div>
+
+                    {/* Player + meta */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={t.player?.photo || ''} alt={t.player?.name || 'player'} onError={onImgError} />
+                          <AvatarFallback>{t.player?.name?.charAt(0) || 'P'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-slate-700 dark:text-slate-100 truncate max-w-[160px]">{t.player?.name || 'لاعب'}</span>
+                      </div>
+                      <span className="text-xs text-slate-500 whitespace-nowrap">{t.date}</span>
+                    </div>
                   </div>
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>
