@@ -80,13 +80,13 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
 
   return (
     <div className="w-full mx-auto mb-2 sm:mb-3">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center p-2.5 sm:p-3 gap-2.5 sm:gap-3">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-row items-center p-2.5 sm:p-3 gap-2.5 sm:gap-3 overflow-hidden">
         {/* Heure uniquement */}
         <div className="flex flex-col items-center min-w-[64px]">
           <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] text-center">{getMatchTime()}</span>
         </div>
         {/* Equipes */}
-        <div className={`flex-1 w-full flex items-center justify-between gap-3 sm:gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}> 
+        <div className={`flex-1 basis-0 min-w-0 w-full flex items-center justify-between gap-3 sm:gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}> 
           <div className="flex items-center gap-2 min-w-0">
             {homeLogo ? (
               <img
@@ -107,15 +107,15 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
             <div className={`w-8 h-8 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${homeLogo ? 'hidden' : ''}`}>
               H
             </div>
-            <span className={`font-bold text-sm sm:text-base truncate max-w-[110px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
+            <span className={`font-bold text-sm sm:text-base truncate max-w-[100px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
           </div>
-          <div className="text-gray-700 dark:text-gray-200 font-extrabold text-base sm:text-lg min-w-[56px] text-center">
+          <div className="text-gray-700 dark:text-gray-200 font-extrabold text-base sm:text-lg min-w-[56px] w-[64px] text-center shrink-0">
             {(isLiveState || isFinishedState)
               ? (isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`)
               : 'vs'}
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            <span className={`font-bold text-sm sm:text-base truncate max-w-[110px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
+            <span className={`font-bold text-sm sm:text-base truncate max-w-[100px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
             {awayLogo ? (
               <img
                 src={awayLogo}
@@ -138,8 +138,8 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
           </div>
         </div>
         {/* Bouton détails */}
-        <div className="w-full sm:w-auto">
-          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => onDetails(match)}>
+        <div className="shrink-0">
+          <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => onDetails(match)}>
             {currentLanguage === 'ar' ? 'تفاصيل' : 'Détails'}
           </Button>
         </div>
@@ -195,20 +195,19 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const displayHomeName = currentLanguage === 'ar' ? getArabicTeamName(homeName) : homeName;
   const displayAwayName = currentLanguage === 'ar' ? getArabicTeamName(awayName) : awayName;
 
-return (
-  <div
-    dir={direction}
-    className={`flex flex-col sm:flex-row items-center justify-between my-1.5 sm:my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
-    onClick={() => setShowMatchDetails(true)}
-  >
-    {/* Small left image card */}
-    <div className={`shrink-0 me-2 mb-1.5 sm:mb-0`}>
-      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
-        <QrCode className="w-3.5 h-3.5 text-rose-400" />
+  return (
+    <div
+      dir={direction}
+      className={`flex flex-col sm:flex-row items-center justify-between my-1.5 sm:my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
+      onClick={() => setShowMatchDetails(true)}
+    >
+      {/* Small left image card */}
+      <div className={`shrink-0 me-2 mb-1.5 sm:mb-0 hidden sm:block`}>
+        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
+          <QrCode className="w-3.5 h-3.5 text-rose-400" />
+        </div>
       </div>
-    </div>
-    {/* Away team (right) - left side of row, take equal space */}
-  <div className={`flex items-center gap-2 flex-1 basis-0 min-w-0 justify-end`}>
+      <div className={`flex items-center gap-2 flex-1 basis-0 min-w-0 justify-end`}>
       {isRTL ? (
         <>
           <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base truncate max-w-[120px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
@@ -217,6 +216,7 @@ return (
               src={awayLogo}
               alt={displayAwayName}
               className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
+              loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
@@ -273,6 +273,7 @@ return (
               src={homeLogo}
               alt={displayHomeName}
               className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
+              loading="lazy"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
