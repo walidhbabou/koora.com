@@ -114,13 +114,29 @@ const AdminDashboard: React.FC = () => {
   const [createUserError, setCreateUserError] = useState('');
   const [createUserInfo, setCreateUserInfo] = useState('');
 
-  // Load news from Supabase
+  // Pagination state (10 per page)
+  const pageSize = 10;
+  const [newsPage, setNewsPage] = useState(1);
+  const [newsTotal, setNewsTotal] = useState(0);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [categoriesPage, setCategoriesPage] = useState(1);
+  const [categoriesTotal, setCategoriesTotal] = useState(0);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [commentsTotal, setCommentsTotal] = useState(0);
+
+  // Load news from Supabase (paged)
   const fetchNews = async () => {
+    setLoadingNews(true);
     try {
-      const { data, error } = await supabase
+      const from = (newsPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error, count } = await supabase
         .from('news')
-        .select('id, title, status, created_at, image_url')
-        .order('created_at', { ascending: false });
+        .select('id, title, status, created_at, image_url', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
       const mapped: News[] = (data || []).map((n: any) => ({
         id: String(n.id),
@@ -131,8 +147,13 @@ const AdminDashboard: React.FC = () => {
         imageUrl: n.image_url || undefined,
       }));
       setNews(mapped);
+      setNewsTotal(count || 0);
     } catch (e) {
       console.error('Failed to load news:', e);
+      setNews([]);
+      setNewsTotal(0);
+    } finally {
+      setLoadingNews(false);
     }
   };
 
@@ -201,48 +222,63 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Load categories from Supabase
+  // Load categories from Supabase (paged)
   const fetchCategories = async () => {
     setLoadingCategories(true);
     try {
-      const { data, error } = await supabase
+      const from = (categoriesPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error, count } = await supabase
         .from('categories')
-        .select('id, name, name_ar, description, created_at')
-        .order('created_at', { ascending: false });
+        .select('id, name, name_ar, description, created_at', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
       setCategories((data || []) as CategoryRow[]);
+      setCategoriesTotal(count || 0);
     } catch (e) {
       console.error('Failed to load categories:', e);
+      setCategories([]);
+      setCategoriesTotal(0);
     } finally {
       setLoadingCategories(false);
     }
   };
 
-  // Load comments from Supabase
+  // Load comments from Supabase (paged)
   const fetchComments = async () => {
     setLoadingComments(true);
     try {
-      const { data, error } = await supabase
+      const from = (commentsPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error, count } = await supabase
         .from('comments')
-        .select('id, news_id, user_id, content, created_at')
-        .order('created_at', { ascending: false });
+        .select('id, news_id, user_id, content, created_at', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
       setComments((data || []) as CommentRow[]);
+      setCommentsTotal(count || 0);
     } catch (e) {
       console.error('Failed to load comments:', e);
+      setComments([]);
+      setCommentsTotal(0);
     } finally {
       setLoadingComments(false);
     }
   };
 
-  // Load users from Supabase
+  // Load users from Supabase (paged)
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const { data, error } = await supabase
+      const from = (usersPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error, count } = await supabase
         .from('users')
-        .select('id, email, first_name, last_name, name, role, status, last_login, created_at, avatar_url')
-        .order('created_at', { ascending: false });
+        .select('id, email, first_name, last_name, name, role, status, last_login, created_at, avatar_url', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
       const mapped: User[] = (data || []).map((u: any) => ({
         id: u.id,
@@ -255,8 +291,11 @@ const AdminDashboard: React.FC = () => {
         avatar: u.avatar_url || '/placeholder.svg',
       }));
       setUsers(mapped);
+      setUsersTotal(count || 0);
     } catch (e) {
       console.error('Failed to load users:', e);
+      setUsers([]);
+      setUsersTotal(0);
     } finally {
       setLoadingUsers(false);
     }
@@ -269,6 +308,15 @@ const AdminDashboard: React.FC = () => {
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Refetch on page changes
+  useEffect(() => { fetchNews(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [newsPage]);
+  useEffect(() => { fetchUsers(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [usersPage]);
+  useEffect(() => { fetchCategories(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [categoriesPage]);
+  useEffect(() => { fetchComments(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [commentsPage]);
+
+  // Reset news page when search term changes (client-side filter)
+  useEffect(() => { setNewsPage(1); }, [searchTerm]);
 
   const stats = [
     { 
@@ -704,6 +752,20 @@ const AdminDashboard: React.FC = () => {
                     ))}
                   </TableBody>
                 </Table>
+                {/* News pagination */}
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-3`}>
+                  <div className="text-xs text-slate-500">
+                    {currentLanguage === 'ar' ? `صفحة ${newsPage}` : `Page ${newsPage}`} · {currentLanguage === 'ar' ? `${newsTotal} إجمالي` : `${newsTotal} au total`}
+                  </div>
+                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+                    <Button variant="outline" size="sm" disabled={newsPage <= 1 || loadingNews} onClick={() => setNewsPage(p => Math.max(1, p - 1))}>
+                      {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={loadingNews || (newsPage * pageSize >= newsTotal)} onClick={() => setNewsPage(p => p + 1)}>
+                      {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -798,6 +860,20 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                {/* Categories pagination */}
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-3`}>
+                  <div className="text-xs text-slate-500">
+                    {currentLanguage === 'ar' ? `صفحة ${categoriesPage}` : `Page ${categoriesPage}`} · {currentLanguage === 'ar' ? `${categoriesTotal} إجمالي` : `${categoriesTotal} au total`}
+                  </div>
+                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+                    <Button variant="outline" size="sm" disabled={categoriesPage <= 1 || loadingCategories} onClick={() => setCategoriesPage(p => Math.max(1, p - 1))}>
+                      {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={loadingCategories || (categoriesPage * pageSize >= categoriesTotal)} onClick={() => setCategoriesPage(p => p + 1)}>
+                      {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -824,6 +900,20 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+                {/* Comments pagination */}
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-3`}>
+                  <div className="text-xs text-slate-500">
+                    {currentLanguage === 'ar' ? `صفحة ${commentsPage}` : `Page ${commentsPage}`} · {currentLanguage === 'ar' ? `${commentsTotal} إجمالي` : `${commentsTotal} au total`}
+                  </div>
+                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+                    <Button variant="outline" size="sm" disabled={commentsPage <= 1 || loadingComments} onClick={() => setCommentsPage(p => Math.max(1, p - 1))}>
+                      {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={loadingComments || (commentsPage * pageSize >= commentsTotal)} onClick={() => setCommentsPage(p => p + 1)}>
+                      {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1047,6 +1137,20 @@ const AdminDashboard: React.FC = () => {
                     ))}
                   </TableBody>
                 </Table>
+                {/* Users pagination */}
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-3`}>
+                  <div className="text-xs text-slate-500">
+                    {currentLanguage === 'ar' ? `صفحة ${usersPage}` : `Page ${usersPage}`} · {currentLanguage === 'ar' ? `${usersTotal} إجمالي` : `${usersTotal} au total`}
+                  </div>
+                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+                    <Button variant="outline" size="sm" disabled={usersPage <= 1 || loadingUsers} onClick={() => setUsersPage(p => Math.max(1, p - 1))}>
+                      {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={loadingUsers || (usersPage * pageSize >= usersTotal)} onClick={() => setUsersPage(p => p + 1)}>
+                      {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -8,11 +8,15 @@ import Footer from "@/components/Footer";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, TrendingUp, Clock, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, MoreHorizontal, MessageSquare } from "lucide-react";
+import { Search, Filter, TrendingUp, Clock, ThumbsUp, ThumbsDown, ChevronLeft, ChevronRight, MoreHorizontal, MessageSquare, Flag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // CommentsSection removed from the list page; moved to reusable component for details page
 
@@ -32,6 +36,11 @@ const News = () => {
   const pageSize = 10;
   const [hasMore, setHasMore] = useState(true);
   const { isRTL, currentLanguage } = useTranslation();
+  const { toast } = useToast();
+  const [reportingId, setReportingId] = useState<string | null>(null);
+  const { user, isAuthenticated } = useAuth();
+  const [reportOpenId, setReportOpenId] = useState<string | null>(null);
+  const [reportDesc, setReportDesc] = useState('');
 
   const fetchNews = async (nextPage: number, append: boolean = false) => {
     setLoadingNews(true);
@@ -68,6 +77,46 @@ const News = () => {
   };
 
   useEffect(() => { fetchNews(1, false); }, []);
+
+  const reportNews = async (newsId: string, description: string) => {
+    if (reportingId) return;
+    if (!isAuthenticated || !user?.id) {
+      toast({ title: 'يرجى تسجيل الدخول', description: 'يجب تسجيل الدخول لإرسال البلاغ', variant: 'destructive' });
+      return;
+    }
+    setReportingId(newsId);
+    try {
+      try {
+        const { error } = await supabase.rpc('create_report', {
+          p_type: 'content',
+          p_target: `news:${newsId}`,
+          p_reason: 'inappropriate',
+          p_description: description,
+          p_reported_by: user.id
+        });
+        if (error) throw error;
+      } catch (rpcErr: any) {
+        const msg = rpcErr?.message || '';
+        const fnMissing = msg.includes('create_report') && msg.toLowerCase().includes('function');
+        if (!fnMissing) throw rpcErr; // do not fallback on RLS/permission errors
+        const { error: insErr } = await supabase.from('reports').insert({
+          type: 'content',
+          target: `news:${newsId}`,
+          reason: 'inappropriate',
+          description,
+          reported_by: user.id
+        });
+        if (insErr) throw insErr;
+      }
+      toast({ description: 'تم إرسال البلاغ' });
+      setReportOpenId(null);
+      setReportDesc('');
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e?.message || 'تعذر إرسال البلاغ', variant: 'destructive' });
+    } finally {
+      setReportingId(null);
+    }
+  };
 
   const handleLoadMore = async () => {
     if (loadingNews || !hasMore) return;
@@ -220,7 +269,7 @@ const News = () => {
                           alt={news.title}
                           className="w-20 h-14 sm:w-24 sm:h-16 object-cover rounded-md flex-shrink-0"
                         />
-                        <div className={`min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <div className={`min-w-0 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                           <h3 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">
                             {news.title}
                           </h3>
@@ -229,6 +278,15 @@ const News = () => {
                             <span>{news.publishedAt}</span>
                           </div>
                         </div>
+                        <button
+                          className="shrink-0 inline-flex items-center gap-1 text-slate-500 hover:text-red-600"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReportOpenId(news.id); }}
+                          disabled={reportingId === news.id}
+                          title="تبليغ عن الخبر"
+                        >
+                          <Flag className="w-4 h-4" />
+                          <span className="text-[11px]">{reportingId === news.id ? '...' : 'تبليغ'}</span>
+                        </button>
                       </div>
                     </Card>
                   </Link>
@@ -292,6 +350,38 @@ const News = () => {
       </div>
       
       <Footer />
+
+      {/* Report Dialog */}
+      <Dialog open={!!reportOpenId} onOpenChange={(o) => { setReportOpenId(o ? reportOpenId : null); if (!o) setReportDesc(''); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>سبب التبليغ</DialogTitle>
+          </DialogHeader>
+          <Textarea
+            placeholder="اكتب سبب التبليغ بإيجاز"
+            value={reportDesc}
+            onChange={(e) => setReportDesc(e.target.value)}
+            className="min-h-[120px]"
+            dir="auto"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setReportOpenId(null); setReportDesc(''); }} disabled={!!reportingId}>إلغاء</Button>
+            <Button
+              onClick={() => {
+                const d = reportDesc.trim();
+                if (!d) {
+                  toast({ title: 'مطلوب وصف', description: 'يرجى كتابة سبب التبليغ', variant: 'destructive' });
+                  return;
+                }
+                if (reportOpenId) reportNews(reportOpenId, d);
+              }}
+              disabled={!!reportingId}
+            >
+              {reportingId ? '...' : 'إرسال البلاغ'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

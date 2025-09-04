@@ -18,28 +18,29 @@ import MatchHeader from "@/components/MatchHeader";
 import MatchDetails from "@/components/MatchDetails";
 import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useSettings } from "@/contexts/SettingsContext";
 
-// Shared formatters to match TeamDetails.tsx
-const formatDisplayDate = (dateString: string, currentLanguage: string) => {
+// Shared formatters to match TeamDetails.tsx, extended with timezone
+const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
   if (!dateString) return '';
   const date = new Date(dateString);
   if (currentLanguage === 'ar') {
-    return date.toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric' });
+    return date.toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric', timeZone: tz });
   }
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: tz });
 };
 
-const formatTimeLocalized = (dateString: string, currentLanguage: string) => {
+const formatTimeLocalized = (dateString: string, currentLanguage: string, tz: string, hourFormat: '12'|'24') => {
   if (!dateString) return '';
   const date = new Date(dateString);
   if (currentLanguage === 'ar') {
-    const parts = new Intl.DateTimeFormat('ar', { hour: '2-digit', minute: '2-digit', hour12: true }).formatToParts(date);
+    const parts = new Intl.DateTimeFormat('ar', { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: tz }).formatToParts(date);
     const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value || '';
     const hour = parts.find(p => p.type === 'hour')?.value || '';
     const minute = parts.find(p => p.type === 'minute')?.value || '';
-    return `${dayPeriod} ${hour}:${minute}`.trim(); // e.g., "م 02:00"
+    return hourFormat === '12' ? `${dayPeriod} ${hour}:${minute}`.trim() : `${hour}:${minute}`;
   }
-  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: tz }).format(date);
 };
 
 // Composant carte de match stylée avec bouton détails
@@ -55,7 +56,8 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const awayScore = (match.goals?.away ?? match.score?.fulltime?.away ?? 0);
 
   // Date affichée sous le centre, alignée avec TeamDetails.tsx
-  const getFormattedMatchDateTime = () => formatDisplayDate(match.date, currentLanguage);
+  const { timezone, hourFormat } = useSettings();
+  const getFormattedMatchDateTime = () => formatDisplayDate(match.date, currentLanguage, timezone);
 
   // Statut/heure
   const getMatchTime = () => {
@@ -71,7 +73,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
     if (isFinished) return currentLanguage === 'ar' ? 'انتهت' : 'Terminé';
 
     // Upcoming or scheduled: show localized time same as TeamDetails
-    return formatTimeLocalized(match.date, currentLanguage);
+    return formatTimeLocalized(match.date, currentLanguage, timezone, hourFormat);
   };
 
   const statusShort = match.status || '';
@@ -151,6 +153,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
 // Ancien composant (gardé pour référence)
 const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/config/api").Fixture, currentLanguage: string }) => {
   const { isRTL, direction } = useTranslation();
+  const { timezone, hourFormat } = useSettings();
   const homeLogo = match.teams?.home?.logo;
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
@@ -168,10 +171,10 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
     if (isLive) return currentLanguage === 'ar' ? 'مباشر' : 'En direct';
     if (isFinished) return currentLanguage === 'ar' ? 'انتهت' : 'Terminé';
 
-    // Match à venir : utiliser le même format que TeamDetails
-    return formatTimeLocalized(match.date, currentLanguage);
+    // Match à venir : utiliser le même format que TeamDetails, avec fuseau et format heure
+    return formatTimeLocalized(match.date, currentLanguage, timezone, hourFormat);
   };
-   const getFormattedMatchDateTime = () => formatDisplayDate(match.date, currentLanguage);
+   const getFormattedMatchDateTime = () => formatDisplayDate(match.date, currentLanguage, timezone);
   const time = getMatchTime();
   // Status helpers for rendering
   const statusShort = match.status || '';
@@ -198,19 +201,19 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   return (
     <div
       dir={direction}
-      className={`flex flex-col sm:flex-row items-center justify-between my-1.5 sm:my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
+      className={`flex flex-row items-center justify-between my-1.5 sm:my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
       onClick={() => setShowMatchDetails(true)}
     >
       {/* Small left image card */}
-      <div className={`shrink-0 me-2 mb-1.5 sm:mb-0 hidden sm:block`}>
+      <div className={`shrink-0 me-2 hidden sm:block`}>
         <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
           <QrCode className="w-3.5 h-3.5 text-rose-400" />
         </div>
       </div>
-      <div className={`flex items-center gap-2 flex-1 basis-0 min-w-0 justify-end`}>
+      <div className={`flex items-center gap-2 sm:gap-2.5 flex-1 basis-0 min-w-0 justify-end`}>
       {isRTL ? (
         <>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base truncate max-w-[120px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
           {awayLogo ? (
             <img
               src={awayLogo}
@@ -246,13 +249,13 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
             />
           ) : null}
           <div className={`w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold ${awayLogo ? 'hidden' : ''}`}>A</div>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base truncate max-w-[120px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
         </>
       )}
     </div>
     
     {/* Centre: score/time only, exactly centered */}
-  <div className="flex items-center justify-center w-[64px] min-w-[56px] sm:w-[120px] sm:min-w-[120px]">
+  <div className="flex items-center justify-center w-[64px] min-w-[64px] sm:w-[120px] sm:min-w-[120px]">
       {(isLiveState || isFinishedState)
         ? (
           <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
@@ -285,11 +288,11 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
             />
           ) : null}
           <div className={`w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold ${homeLogo ? 'hidden' : ''}`}>H</div>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base truncate max-w-[120px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
         </>
       ) : (
         <>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base truncate max-w-[120px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
+          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
           {homeLogo ? (
             <img
               src={homeLogo}
@@ -333,7 +336,10 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
               match={{
                 id: match.id,
                 date: match.date,
-                time: new Date(match.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                time: new Intl.DateTimeFormat(
+                  currentLanguage === 'ar' ? 'ar' : 'fr-FR',
+                  { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: timezone }
+                ).format(new Date(match.date)),
                 status: match.status || 'scheduled', // Provide default status if undefined
                 venue: undefined,
                 referee: undefined,
@@ -373,6 +379,7 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
 
 const Matches = () => {
   const { currentLanguage, isRTL, direction } = useTranslation();
+  const { timezone, hourFormat } = useSettings();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedLeagues, setSelectedLeagues] = useState<number[]>([]);
   const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
@@ -645,7 +652,10 @@ const Matches = () => {
           match={{
             id: selectedMatch.id,
             date: selectedMatch.date,
-            time: new Date(selectedMatch.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            time: new Intl.DateTimeFormat(
+              currentLanguage === 'ar' ? 'ar' : 'fr-FR',
+              { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: timezone }
+            ).format(new Date(selectedMatch.date)),
             status: selectedMatch.status || 'scheduled',
             venue: undefined,
             referee: undefined,

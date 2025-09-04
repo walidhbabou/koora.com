@@ -9,6 +9,7 @@ import { LANGUAGES, LanguageCode } from '../config/constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from '@/components/ui/switch';
+import { useSettings } from '@/contexts/SettingsContext';
 
 interface UserSettingsProps {
   className?: string;
@@ -17,8 +18,11 @@ interface UserSettingsProps {
 export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) => {
   const { t, isRTL } = useTranslation();
   const { currentLanguage, setLanguage } = useLanguage();
+  const { timezone, setTimezone, hourFormat, setHourFormat } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [tempLanguage, setTempLanguage] = useState(currentLanguage);
+  const [tempTimezone, setTempTimezone] = useState<string>(timezone);
+  const [tempHourFormat, setTempHourFormat] = useState<'12' | '24'>(hourFormat);
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState<boolean>(false);
@@ -44,11 +48,15 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
 
   const handleSaveSettings = () => {
     setLanguage(tempLanguage);
+    setTimezone(tempTimezone);
+    setHourFormat(tempHourFormat);
     setIsOpen(false);
   };
 
   const handleCancel = () => {
     setTempLanguage(currentLanguage);
+    setTempTimezone(timezone);
+    setTempHourFormat(hourFormat);
     setIsOpen(false);
   };
 
@@ -191,10 +199,20 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
           <div className="mt-3">
             <div className="flex items-center justify-between py-3">
               <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'منطقتك الزمنية' : 'Fuseau horaire'}</div>
-              <button className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <span className="text-emerald-600 font-semibold">Africa/Casablanca</span>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <select
+                  value={tempTimezone}
+                  onChange={(e) => setTempTimezone(e.target.value)}
+                  className="text-emerald-700 dark:text-emerald-300 font-semibold bg-transparent border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm"
+                >
+                  {/* Small curated list plus current */}
+                  {![tempTimezone].includes('UTC') && <option value={tempTimezone}>{tempTimezone}</option>}
+                  <option value="Africa/Casablanca">Africa/Casablanca</option>
+                  <option value="Europe/Paris">Europe/Paris</option>
+                  <option value="UTC">UTC</option>
+                </select>
                 <ChevronLeft className="w-4 h-4 text-slate-400" />
-              </button>
+              </div>
             </div>
             <hr className="border-slate-200 dark:border-slate-800" />
           </div>
@@ -203,10 +221,17 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
           <div className="mt-3">
             <div className="flex items-center justify-between py-3">
               <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'صيغة الوقت' : 'Format de l\'heure'}</div>
-              <button className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <span className="text-emerald-600 font-semibold">{isRTL ? '12 ساعة' : '12h'}</span>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <select
+                  value={tempHourFormat}
+                  onChange={(e) => setTempHourFormat(e.target.value as '12' | '24')}
+                  className="text-emerald-700 dark:text-emerald-300 font-semibold bg-transparent border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-sm"
+                >
+                  <option value="12">{isRTL ? '12 ساعة' : '12h'}</option>
+                  <option value="24">{isRTL ? '24 ساعة' : '24h'}</option>
+                </select>
                 <ChevronLeft className="w-4 h-4 text-slate-400" />
-              </button>
+              </div>
             </div>
             <hr className="border-slate-200 dark:border-slate-800" />
           </div>

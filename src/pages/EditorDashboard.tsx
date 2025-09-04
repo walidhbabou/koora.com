@@ -53,6 +53,10 @@ const EditorDashboard: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  // Pagination state for Articles tab
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const [totalCount, setTotalCount] = useState(0);
   const navigate = useNavigate();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -66,11 +70,14 @@ const EditorDashboard: React.FC = () => {
     setLoading(true);
     try {
       // Fetch submissions queue for editors
-      const { data, error } = await supabase
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      const { data, error, count } = await supabase
         .from('news_submissions')
-        .select('id, title, content, created_at, status, image_url, user_id, category_id, categories(name, name_ar), users(name)')
+        .select('id, title, content, created_at, status, image_url, user_id, category_id, categories(name, name_ar), users(name)', { count: 'exact' })
         .in('status', ['submitted', 'draft', 'rejected', 'published'])
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
       const mapped: Article[] = (data || []).map((n: any) => ({
         id: String(n.id),
@@ -85,6 +92,7 @@ const EditorDashboard: React.FC = () => {
         lastModified: n.created_at ? new Date(n.created_at).toLocaleString() : '-',
       }));
       setArticles(mapped);
+      setTotalCount(count || 0);
     } catch (e) {
       console.error('Failed to load editor articles:', e);
     } finally {
@@ -95,6 +103,14 @@ const EditorDashboard: React.FC = () => {
   useEffect(() => {
     fetchArticles();
   }, []);
+
+  // Refetch when page changes on Articles tab
+  useEffect(() => {
+    if (activeTab === 'articles') {
+      fetchArticles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, activeTab]);
 
   const stats = [
     { 
@@ -551,6 +567,36 @@ const EditorDashboard: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  {/* Pagination controls */}
+                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-2`}>
+                    <div className="text-xs text-slate-500">
+                      {(() => {
+                        const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+                        const end = Math.min(page * pageSize, totalCount);
+                        return currentLanguage === 'ar'
+                          ? `عرض ${start}–${end} من ${totalCount}`
+                          : `Affichage ${start}–${end} sur ${totalCount}`;
+                      })()}
+                    </div>
+                    <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={page <= 1 || loading}
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                      >
+                        {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={page * pageSize >= totalCount || loading}
+                        onClick={() => setPage(p => p + 1)}
+                      >
+                        {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
