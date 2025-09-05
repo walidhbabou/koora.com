@@ -1,36 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Shield, 
-  Users, 
-  MessageSquare, 
-  Flag, 
-  Eye, 
-  Ban, 
-  CheckCircle,
-  XCircle,
-  Clock,
-  TrendingUp,
-  Search,
-  Filter,
-  AlertTriangle,
-  User,
-  Mail,
-  Globe,
-  Settings,
-  Activity,
-  Trash
-} from 'lucide-react';
+import { Shield, Clock, TrendingUp, Flag, MessageSquare, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTranslation } from '../hooks/useTranslation';
+import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import ModeratorProfileTab from './moderator/ModeratorProfileTab';
+import ModeratorOverviewTab from './moderator/ModeratorOverviewTab';
+import ModeratorReportsTab from './moderator/ModeratorReportsTab';
+import ModeratorCommentsTab from './moderator/ModeratorCommentsTab';
+import ModeratorUsersTab from './moderator/ModeratorUsersTab';
 
 interface Report {
   id: string;
@@ -67,7 +49,7 @@ interface ModerationUser {
 
 const ModeratorDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { currentLanguage, isRTL, direction } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useLanguage();
   const [activeTab, setActiveTab] = useState('overview');
   const [reports, setReports] = useState<Report[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -85,9 +67,16 @@ const ModeratorDashboard: React.FC = () => {
   // Profile details
   const [myProfile, setMyProfile] = useState<Record<string, any> | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
+  // Profile edit states
+  const [profileForm, setProfileForm] = useState<{ first_name: string; last_name: string; name: string } | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [passwordForm, setPasswordForm] = useState<{ currentPassword?: string; newPassword: string; confirmPassword: string }>({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [changingPassword, setChangingPassword] = useState(false);
   // Enrichment maps and dialog state
   const [userNameMap, setUserNameMap] = useState<Record<string, string>>({});
   const [newsTitleMap, setNewsTitleMap] = useState<Record<string, string>>({});
+  const [commentTextMap, setCommentTextMap] = useState<Record<string, string>>({});
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [viewPayload, setViewPayload] = useState<{
     title: string;
@@ -108,6 +97,22 @@ const ModeratorDashboard: React.FC = () => {
   const [commentsHasNext, setCommentsHasNext] = useState(false);
   const [usersPage, setUsersPage] = useState(1);
   const [usersHasNext, setUsersHasNext] = useState(false);
+
+  // Utility: extract UUID from any string like "user:uuid" or raw uuid
+  const extractUUID = (val?: string | null): string | null => {
+    if (!val) return null;
+    const m = String(val).match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+    return m ? m[0] : null;
+  };
+
+  // Utility: format a user full name from row (supports snake_case and camelCase)
+  const formatUserName = (row?: any, fallback?: string) => {
+    if (!row) return fallback || '—';
+    const fn = row.first_name ?? row.firstName ?? '';
+    const ln = row.last_name ?? row.lastName ?? '';
+    const full = [fn, ln].filter(Boolean).join(' ');
+    return full || row.name || fallback || '—';
+  };
 
   useEffect(() => {
     // Initial fetches
@@ -209,6 +214,11 @@ const ModeratorDashboard: React.FC = () => {
     const lower = String(target).toLowerCase();
     const m = lower.match(/news[:#\s-]?(\d+)/);
     if (m) return { kind: 'news', id: m[1] };
+    // comment targets: comment:UUID or comment:123
+    const uuid = lower.match(/comment[:#\s-]?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (uuid) return { kind: 'comment', id: uuid[1] };
+    const num = lower.match(/comment[:#\s-]?(\d+)/);
+    if (num) return { kind: 'comment', id: num[1] };
     return { kind: 'unknown' };
   };
 
@@ -216,17 +226,19 @@ const ModeratorDashboard: React.FC = () => {
     try {
       // Collect unknown reporter ids that look like UUIDs
       const reporterIds = Array.from(new Set(rows
-        .map(r => r.reportedBy)
+        .map(r => extractUUID(r.reportedBy) || '')
         .filter((v): v is string => !!v && !userNameMap[v])
       ));
       if (reporterIds.length) {
         const { data: usersData } = await supabase
           .from('users')
-          .select('id, name, first_name, last_name')
+          .select('id, name, first_name, last_name, firstName, lastName, email')
           .in('id', reporterIds as any);
         const map: Record<string, string> = { ...userNameMap };
         (usersData || []).forEach((u: any) => {
-          const display = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name || u.id;
+          const fn = u.first_name ?? u.firstName;
+          const ln = u.last_name ?? u.lastName;
+          const display = [fn, ln].filter(Boolean).join(' ') || u.name || u.email || '';
           map[u.id] = display;
         });
         setUserNameMap(map);
@@ -248,6 +260,27 @@ const ModeratorDashboard: React.FC = () => {
         });
         setNewsTitleMap(map);
       }
+
+      // Collect comment ids to hydrate comment content preview
+      const commentIds = Array.from(new Set(rows
+        .map(r => parseTarget(r.target))
+        .filter((t): t is { kind: 'comment'; id: string } => !!t.id && t.kind === 'comment')
+        .map(t => t.id!)
+        .filter((cid) => !commentTextMap[cid])
+      ));
+      if (commentIds.length) {
+        // Try to fetch comments by id; support numeric and uuid
+        // If some ids are numeric, the cast will still work as text comparison
+        const { data: commentsData } = await supabase
+          .from('comments')
+          .select('id, content, created_at')
+          .in('id', commentIds as any);
+        const cmap: Record<string, string> = { ...commentTextMap };
+        (commentsData || []).forEach((c: any) => {
+          cmap[String(c.id)] = c.content || '';
+        });
+        setCommentTextMap(cmap);
+      }
     } catch (_) {
       // best-effort enrichment
     }
@@ -255,23 +288,27 @@ const ModeratorDashboard: React.FC = () => {
 
   const openViewReported = async (rep: Report) => {
     // Ensure reporter display name (avoid showing UUID)
-    let reporter = userNameMap[rep.reportedBy];
-    if (!reporter && rep.reportedBy) {
+    const rid = extractUUID(rep.reportedBy) || rep.reportedBy;
+    let reporter = userNameMap[rid];
+    if (!reporter && rid) {
       try {
         const { data: u } = await supabase
           .from('users')
-          .select('id, name, first_name, last_name')
-          .eq('id', rep.reportedBy)
+          .select('id, name, first_name, last_name, firstName, lastName, email')
+          .eq('id', rid)
           .maybeSingle();
         if (u) {
-          reporter = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.name || u.id;
+          const fn = (u as any).first_name ?? (u as any).firstName;
+          const ln = (u as any).last_name ?? (u as any).lastName;
+          reporter = [fn, ln].filter(Boolean).join(' ') || (u as any).name || (u as any).email || '—';
           setUserNameMap((m) => ({ ...m, [u.id]: reporter! }));
         }
       } catch (_) {
         // ignore, fallback below
       }
     }
-    reporter = reporter || rep.reportedBy || '—';
+    // Do not show raw ID; if not found, show placeholder
+    reporter = reporter || '—';
 
     const tgt = parseTarget(rep.target);
 
@@ -303,6 +340,32 @@ const ModeratorDashboard: React.FC = () => {
         targetKind: 'news',
         targetId: tgt.id,
         imageUrl,
+        createdAt,
+      });
+    } else if (tgt.kind === 'comment' && tgt.id) {
+      // Load the comment content and show in dialog
+      let content: string | undefined = commentTextMap[tgt.id];
+      let createdAt: string | null | undefined = undefined;
+      try {
+        if (!content) {
+          const { data: c } = await supabase
+            .from('comments')
+            .select('id, content, created_at')
+            .eq('id', tgt.id)
+            .maybeSingle();
+          if (c) {
+            content = c.content || undefined;
+            createdAt = c.created_at ?? null;
+            setCommentTextMap((m) => ({ ...m, [String(c.id)]: c.content || '' }));
+          }
+        }
+      } catch (_) {}
+      setViewPayload({
+        title: currentLanguage === 'ar' ? 'تعليق مُبلَّغ' : 'Commentaire signalé',
+        subtitle: (currentLanguage === 'ar' ? 'مُبلّغ من ' : 'Signalé par ') + reporter,
+        content,
+        targetKind: 'comment',
+        targetId: tgt.id,
         createdAt,
       });
     } else {
@@ -482,7 +545,7 @@ const ModeratorDashboard: React.FC = () => {
         const rows = (data || []) as any[];
         mapped = rows.map(r => ({
           id: String(r.id),
-          name: r.name ?? '—',
+          name: formatUserName(r, r.name ?? '—'),
           email: r.email ?? '',
           avatar_url: r.avatar_url ?? null,
           role: (r.role ?? 'user'),
@@ -514,7 +577,7 @@ const ModeratorDashboard: React.FC = () => {
         if (terr) throw terr;
         mapped = (tdata || []).map((r: any) => ({
           id: String(r.id),
-          name: r.name ?? '—',
+          name: formatUserName(r, r.name ?? '—'),
           email: r.email ?? '',
           avatar_url: r.avatar_url ?? null,
           role: (r.role ?? 'user'),
@@ -569,16 +632,218 @@ const ModeratorDashboard: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('users')
-          .select('id, email, name, first_name, last_name, role, status, created_at')
+          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
           .eq('id', user.id)
           .maybeSingle();
-        if (!error) setMyProfile(data as any);
+        if (!error && data) {
+          setMyProfile(data as any);
+        } else if (!data) {
+          // Upsert a minimal profile to avoid empty UI when row doesn't exist
+          const minimal: any = {
+            id: user.id,
+            email: (user as any).email ?? null,
+            name: (user as any).name ?? [
+              (user as any).first_name ?? (user as any).firstName,
+              (user as any).last_name ?? (user as any).lastName,
+            ]
+              .filter(Boolean)
+              .join(' '),
+            first_name: (user as any).first_name ?? (user as any).firstName ?? null,
+            last_name: (user as any).last_name ?? (user as any).lastName ?? null,
+            role: (user as any).role ?? 'moderator',
+            status: (user as any).status ?? 'active',
+            avatar_url: null,
+          };
+          const { data: up, error: upErr } = await supabase
+            .from('users')
+            .upsert(minimal, { onConflict: 'id' })
+            .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (upErr) throw upErr;
+          setMyProfile(up as any);
+        }
       } finally {
         setLoadingProfile(false);
       }
     };
     run();
   }, [activeTab, user?.id]);
+
+  // Initialize profile form when myProfile changes
+  useEffect(() => {
+    if (!myProfile) return;
+    setProfileForm({
+      first_name: myProfile.first_name ?? myProfile.firstName ?? '',
+      last_name: myProfile.last_name ?? myProfile.lastName ?? '',
+      name: myProfile.name ?? '',
+    });
+  }, [myProfile]);
+
+  const handleProfileChange = (field: 'first_name' | 'last_name' | 'name', value: string) => {
+    setProfileForm((prev) => (prev ? { ...prev, [field]: value } : { first_name: '', last_name: '', name: '' }));
+  };
+
+  const handleSaveProfile = async () => {
+    if (!user?.id || !profileForm) return;
+    setSavingProfile(true);
+    try {
+      // Attempt to update including name; if DB forbids updating name (generated column), retry without it
+      const basePayload: Record<string, any> = {
+        first_name: profileForm.first_name || null,
+        last_name: profileForm.last_name || null,
+      };
+      let triedWithName = false;
+      let updateErr: any = null;
+      // First try with name if provided
+      if (typeof profileForm.name !== 'undefined') {
+        triedWithName = true;
+        const { error } = await supabase
+          .from('users')
+          .update({ ...basePayload, name: profileForm.name || null })
+          .eq('id', user.id);
+        updateErr = error;
+      }
+      if (updateErr) {
+        const msg = String(updateErr.message || '');
+        const immutableName = msg.includes('can only be updated to DEFAULT') || msg.toLowerCase().includes('generated');
+        if (immutableName) {
+          // Retry without name
+          const { error: e2 } = await supabase
+            .from('users')
+            .update(basePayload)
+            .eq('id', user.id);
+          if (e2) throw e2;
+          toast({ description: currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profil mis à jour' });
+        } else {
+          // If we have no auth session or RLS blocks the update, try RPC fallback that authenticates with email+password
+          try {
+            const { data: sessionRes } = await supabase.auth.getSession();
+            const hasAuthSession = !!sessionRes?.session;
+            const rlsViolation = msg.toLowerCase().includes('row-level security') || msg.toLowerCase().includes('rls');
+            if (!hasAuthSession || rlsViolation) {
+              const email = (myProfile as any)?.email || (user as any)?.email;
+              const payload: any = {
+                p_email: email,
+                p_password: passwordForm.currentPassword || null,
+                p_name: typeof profileForm.name !== 'undefined' ? (profileForm.name || null) : null,
+                p_first_name: profileForm.first_name || null,
+                p_last_name: profileForm.last_name || null,
+                p_avatar_url: null,
+              };
+              const { error: rpcErr } = await supabase.rpc('app_update_user_profile', payload);
+              if (rpcErr) throw rpcErr;
+              toast({ description: currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profil mis à jour' });
+            } else {
+              throw updateErr;
+            }
+          } catch (e: any) {
+            const hint = String(e?.message || '').includes('function app_update_user_profile')
+              ? (currentLanguage === 'ar' ? 'أنشئ دالة RPC app_update_user_profile في Supabase' : 'Créez la fonction RPC app_update_user_profile dans Supabase')
+              : '';
+            throw new Error(`${e?.message || updateErr?.message || ''} ${hint}`.trim());
+          }
+        }
+      } else if (!triedWithName) {
+        const { error } = await supabase
+          .from('users')
+          .update(basePayload)
+          .eq('id', user.id);
+        if (error) throw error;
+        toast({ description: currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profil mis à jour' });
+      } else {
+        toast({ description: currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي' : 'Profil mis à jour' });
+      }
+      // Refresh from DB to ensure UI is in sync
+      const { data: fresh } = await supabase
+        .from('users')
+        .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (fresh) setMyProfile(fresh as any);
+    } catch (e: any) {
+      toast({ title: currentLanguage === 'ar' ? 'خطأ' : 'Erreur', description: e?.message || (currentLanguage === 'ar' ? 'تعذر تحديث الملف الشخصي' : 'Échec de la mise à jour du profil'), variant: 'destructive' });
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user?.id || !file) return;
+    setAvatarUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `users/${user.id}/avatar_${Date.now()}.${ext}`;
+      const bucket = (import.meta as any).env?.VITE_SUPABASE_AVATAR_BUCKET || 'avatars';
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, cacheControl: '3600' });
+      if (upErr) {
+        const msg = String(upErr.message || '');
+        if (msg.toLowerCase().includes('bucket not found')) {
+          throw new Error((currentLanguage === 'ar'
+            ? 'لم يتم العثور على حاوية الصور "avatars". أنشئها واجعلها عامة أو حدّد VITE_SUPABASE_AVATAR_BUCKET.'
+            : "Bucket de stockage 'avatars' introuvable. Créez-le (public) ou définissez VITE_SUPABASE_AVATAR_BUCKET."));
+        }
+        throw upErr;
+      }
+      const { data: pub } = supabase.storage.from(bucket).getPublicUrl(path);
+      const publicUrl = pub?.publicUrl;
+      if (!publicUrl) throw new Error('No public URL');
+      const { error: updErr } = await supabase.from('users').update({ avatar_url: publicUrl }).eq('id', user.id);
+      if (updErr) throw updErr;
+      toast({ description: currentLanguage === 'ar' ? 'تم تحديث الصورة' : 'Avatar mis à jour' });
+      setMyProfile((p) => (p ? { ...p, avatar_url: publicUrl } : p));
+    } catch (e: any) {
+      toast({ title: currentLanguage === 'ar' ? 'خطأ' : 'Erreur', description: e?.message || (currentLanguage === 'ar' ? 'تعذر رفع الصورة' : "Échec du téléversement de l'avatar"), variant: 'destructive' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  // Clear local state on logout and reload on login
+  useEffect(() => {
+    if (!user?.id) {
+      setMyProfile(null);
+      setProfileForm(null);
+      setPasswordForm({ newPassword: '', confirmPassword: '' });
+    }
+  }, [user?.id]);
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      toast({ title: currentLanguage === 'ar' ? 'تحقق' : 'Validation', description: currentLanguage === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Le mot de passe doit contenir au moins 6 caractères', variant: 'destructive' });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({ title: currentLanguage === 'ar' ? 'تحقق' : 'Validation', description: currentLanguage === 'ar' ? 'كلمتا المرور غير متطابقتين' : 'Les mots de passe ne correspondent pas', variant: 'destructive' });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const hasAuthSession = !!sessionRes?.session;
+      if (hasAuthSession) {
+        const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
+        if (error) throw error;
+      } else {
+        const email = (myProfile as any)?.email || (user as any)?.email;
+        const { error } = await supabase.rpc('app_change_password', {
+          p_email: email,
+          p_current_password: passwordForm.currentPassword,
+          p_new_password: passwordForm.newPassword,
+        });
+        if (error) throw error;
+      }
+      toast({ description: currentLanguage === 'ar' ? 'تم تغيير كلمة المرور' : 'Mot de passe modifié' });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (e: any) {
+      const hint = String(e?.message || '').includes('function app_change_password')
+        ? (currentLanguage === 'ar' ? 'أنشئ دالة RPC app_change_password في Supabase' : 'Créez la fonction RPC app_change_password dans Supabase')
+        : '';
+      toast({ title: currentLanguage === 'ar' ? 'خطأ' : 'Erreur', description: `${e?.message || (currentLanguage === 'ar' ? 'تعذر تغيير كلمة المرور' : 'Échec de la modification du mot de passe')} ${hint}`.trim(), variant: 'destructive' });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   const handleBlock = async (uid: string) => {
     const prev = users;
@@ -680,13 +945,7 @@ const ModeratorDashboard: React.FC = () => {
       change: '+5', 
       color: 'text-orange-600' 
     },
-    { 
-      title: currentLanguage === 'ar' ? 'المستخدمين المحظورين' : 'Utilisateurs Bannis', 
-      value: 12, 
-      icon: Ban, 
-      change: '+2', 
-      color: 'text-purple-600' 
-    },
+   
     { 
       title: currentLanguage === 'ar' ? 'الإجراءات اليوم' : 'Actions Aujourd\'hui', 
       value: 8, 
@@ -776,29 +1035,29 @@ const ModeratorDashboard: React.FC = () => {
 
       <div className="container mx-auto px-6 py-8">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-8 mb-10">
           {stats.map((stat, index) => (
             <Card 
               key={stat.title}
               className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
-              <CardContent className="p-6">
+              <CardContent className="p-8">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
                       {stat.title}
                     </p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                    <p className="text-3xl font-bold text-slate-900 dark:text-white">
                       {stat.value}
                     </p>
                   </div>
-                  <div className={`p-3 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:scale-110 transition-transform duration-300`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                  <div className={`p-4 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:scale-110 transition-transform duration-300`}>
+                    <stat.icon className={`w-7 h-7 ${stat.color}`} />
                   </div>
                 </div>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-                  <span className="text-sm text-green-600 font-medium">{stat.change}</span>
+                <div className="flex items-center mt-3">
+                  <TrendingUp className="w-5 h-5 text-green-600 mr-1" />
+                  <span className="text-base text-green-600 font-medium">{stat.change}</span>
                 </div>
               </CardContent>
             </Card>
@@ -827,428 +1086,82 @@ const ModeratorDashboard: React.FC = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                    <span>{currentLanguage === 'ar' ? 'بلاغات عاجلة' : 'Signalements Urgents'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {reports.filter(r => r.priority === 'high' && r.status === 'pending').map((report) => (
-                      <div key={report.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors border border-red-200 dark:border-red-800">
-                        <div className="w-12 h-12 rounded-lg bg-red-100 dark:bg-red-900 flex items-center justify-center">
-                          <Flag className="w-6 h-6 text-red-600 dark:text-red-400" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white">{report.target}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{report.reason}</p>
-                        </div>
-                        <Badge variant="destructive">
-                          {currentLanguage === 'ar' ? 'عاجل' : 'Urgent'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5 text-orange-600" />
-                    <span>{currentLanguage === 'ar' ? 'تعليقات للمراجعة' : 'Commentaires à Réviser'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {comments.filter(c => c.status === 'pending').slice(0, 3).map((comment) => (
-                      <div key={comment.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white text-sm">{comment.author}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">{comment.content}</p>
-                          <div className="flex items-center space-x-2 mt-2">
-                            <Button size="sm" variant="outline" onClick={() => handleApprove(comment.id)} className="text-green-600 border-green-200 hover:bg-green-50">
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              {currentLanguage === 'ar' ? 'موافقة' : 'Approuver'}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleReject(comment.id)} className="text-red-600 border-red-200 hover:bg-red-50">
-                              <XCircle className="w-3 h-3 mr-1" />
-                              {currentLanguage === 'ar' ? 'رفض' : 'Rejeter'}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <ModeratorOverviewTab
+              reports={reports as any}
+              comments={comments as any}
+              currentLanguage={currentLanguage as any}
+              isRTL={isRTL}
+              onApproveComment={handleApprove}
+              onRejectComment={handleReject}
+              getStatusBadge={getStatusBadge as any}
+            />
           </TabsContent>
 
           {/* Reports Tab */}
           <TabsContent value="reports" className="space-y-6">
-            <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
-                <Input
-                  placeholder={currentLanguage === 'ar' ? 'البحث في البلاغات...' : 'Rechercher des signalements...'}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-64"
-                />
-                <Button variant="outline" size="sm">
-                  <Filter className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                  {currentLanguage === 'ar' ? 'تصفية' : 'Filtrer'}
-                </Button>
-              </div>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{currentLanguage === 'ar' ? 'إدارة البلاغات' : 'Gestion des Signalements'}</CardTitle>
-                <CardDescription>
-                  {currentLanguage === 'ar' ? 'مراجعة ومعالجة جميع البلاغات' : 'Examinez et traitez tous les signalements'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {reports.map((report) => (
-                    <div key={report.id} className="flex items-center justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                          <Flag className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-slate-900 dark:text-white cursor-pointer hover:underline" onClick={() => openViewReported(report)}>
-                            {/* Prefer pretty title for news targets */}
-                            {(() => {
-                              const t = parseTarget(report.target);
-                              if (t.kind === 'news' && t.id) return newsTitleMap[t.id] || report.target;
-                              return report.target;
-                            })()}
-                          </h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{report.reason}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-500">
-                            {currentLanguage === 'ar' ? 'بلغ من قبل:' : 'Signalé par:'} {userNameMap[report.reportedBy] || report.reportedBy} • {report.date}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button size="sm" variant="outline" onClick={() => openViewReported(report)} className="text-slate-700 border-slate-200 hover:bg-slate-50">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Badge variant={getPriorityBadge(report.priority).variant}>
-                          {getPriorityBadge(report.priority).label}
-                        </Badge>
-                        <Badge variant={getStatusBadge(report.status).variant}>
-                          {getStatusBadge(report.status).label}
-                        </Badge>
-                        {report.status === 'pending' && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => { setPendingAction('resolve'); openViewReported(report); }} className="text-green-600 border-green-200 hover:bg-green-50">
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => { setPendingAction('dismiss'); openViewReported(report); }} className="text-red-600 border-red-200 hover:bg-red-50">
-                              <XCircle className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {/* Reports pagination */}
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-2`}>
-                  <div className="text-xs text-slate-500">
-                    {currentLanguage === 'ar' ? `صفحة ${reportsPage}` : `Page ${reportsPage}`}
-                  </div>
-                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={reportsPage <= 1}
-                      onClick={() => setReportsPage(p => Math.max(1, p - 1))}
-                    >
-                      {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!reportsHasNext}
-                      onClick={() => setReportsPage(p => p + 1)}
-                    >
-                      {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ModeratorReportsTab
+              currentLanguage={currentLanguage as any}
+              isRTL={isRTL}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              reports={reports as any}
+              userNameMap={userNameMap}
+              extractUUID={extractUUID}
+              newsTitleMap={newsTitleMap}
+              commentTextMap={commentTextMap}
+              openViewReported={openViewReported as any}
+              getPriorityBadge={getPriorityBadge as any}
+              getStatusBadge={getStatusBadge as any}
+              reportsPage={reportsPage}
+              setReportsPage={setReportsPage}
+              reportsHasNext={reportsHasNext}
+            />
           </TabsContent>
 
           {/* Comments Tab */}
           <TabsContent value="comments" className="space-y-6">
-            <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
-                <Input
-                  placeholder={currentLanguage === 'ar' ? 'ابحث في التعليقات...' : 'Rechercher des commentaires...'}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-64"
-                />
-              </div>
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>{currentLanguage === 'ar' ? 'التعليقات للمراجعة' : 'Commentaires à modérer'}</CardTitle>
-                <CardDescription>{currentLanguage === 'ar' ? 'راجع التعليقات ووافق/ارفض' : 'Passez en revue et approuvez/rejetez'}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {loadingComments && (
-                    <div className="animate-pulse space-y-3">
-                      <div className="h-16 bg-slate-200 dark:bg-slate-800 rounded" />
-                      <div className="h-16 bg-slate-200 dark:bg-slate-800 rounded" />
-                    </div>
-                  )}
-                  {!loadingComments && comments.map((c) => (
-                    <div key={c.id} className="group flex items-start justify-between p-4 border border-slate-200 dark:border-slate-700 rounded-lg bg-white/70 dark:bg-slate-900/70 hover:shadow-md transition-all duration-200">
-                      <div className={`flex items-start ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
-                        <Avatar className="w-10 h-10">
-                          <AvatarFallback>{(c.author || '—').charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold text-slate-900 dark:text-white">{c.author || '—'}</h4>
-                            <Badge variant={getStatusBadge(c.status).variant}>{getStatusBadge(c.status).label}</Badge>
-                            {c.reports > 0 && <Badge variant="destructive">{c.reports}</Badge>}
-                          </div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 whitespace-pre-wrap">{c.content}</p>
-                        </div>
-                      </div>
-                      <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                        <Button size="sm" variant="outline" onClick={() => handleApprove(c.id)} className="text-green-600 border-green-200 hover:bg-green-50">
-                          <CheckCircle className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleReject(c.id)} className="text-red-600 border-red-200 hover:bg-red-50">
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleDeleteComment(c.id)} className="text-slate-700 border-slate-200 hover:bg-slate-50">
-                          <Trash className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {!loadingComments && comments.length === 0 && (
-                    <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا توجد تعليقات' : 'Aucun commentaire'}</div>
-                  )}
-                </div>
-                {/* Comments pagination */}
-                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-2`}>
-                  <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? `صفحة ${commentsPage}` : `Page ${commentsPage}`}</div>
-                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                    <Button variant="outline" size="sm" disabled={commentsPage <= 1} onClick={() => setCommentsPage((p) => Math.max(1, p - 1))}>{currentLanguage === 'ar' ? 'السابق' : 'Précédent'}</Button>
-                    <Button variant="outline" size="sm" disabled={!commentsHasNext} onClick={() => setCommentsPage((p) => p + 1)}>{currentLanguage === 'ar' ? 'التالي' : 'Suivant'}</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ModeratorCommentsTab
+              currentLanguage={currentLanguage as any}
+              isRTL={isRTL}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              loadingComments={loadingComments}
+              comments={comments as any}
+              getStatusBadge={getStatusBadge as any}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              onDelete={(id: string) => handleDeleteComment(id)}
+              commentsPage={commentsPage}
+              setCommentsPage={setCommentsPage}
+              commentsHasNext={commentsHasNext}
+            />
           </TabsContent>
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
-            <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
-                <Input
-                  placeholder={currentLanguage === 'ar' ? 'ابحث عن المستخدمين...' : 'Rechercher des utilisateurs...'}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-64"
-                />
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="border rounded-md px-3 py-2 text-sm bg-white dark:bg-slate-900"
-                >
-                  <option value="all">{currentLanguage === 'ar' ? 'الكل' : 'Tous'}</option>
-                  <option value="user">{currentLanguage === 'ar' ? 'مستخدم' : 'Utilisateur'}</option>
-                  <option value="author">{currentLanguage === 'ar' ? 'كاتب' : 'Auteur'}</option>
-                  <option value="editor">{currentLanguage === 'ar' ? 'محرر' : 'Éditeur'}</option>
-                  <option value="moderator">{currentLanguage === 'ar' ? 'مشرف' : 'Modérateur'}</option>
-                  <option value="admin">{currentLanguage === 'ar' ? 'مدير' : 'Admin'}</option>
-                </select>
-              </div>
-            </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>{currentLanguage === 'ar' ? 'قائمة المستخدمين' : 'Liste des utilisateurs'}</CardTitle>
-                <CardDescription>{currentLanguage === 'ar' ? 'عرض المعلومات الشخصية واتخاذ الإجراءات' : 'Afficher les infos personnelles et gérer les actions'}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingUsers && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="h-40 bg-slate-200 dark:bg-slate-800 rounded-xl" />
-                    ))}
-                  </div>
-                )}
-                {!loadingUsers && (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border border-slate-200 dark:border-slate-700 rounded-md bg-white/70 dark:bg-slate-900/70">
-                      <thead className="bg-slate-50 dark:bg-slate-800">
-                        <tr>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">{currentLanguage === 'ar' ? 'المستخدم' : 'Utilisateur'}</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">Email</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">{currentLanguage === 'ar' ? 'الدور' : 'Rôle'}</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">{currentLanguage === 'ar' ? 'الحالة' : 'Statut'}</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">{currentLanguage === 'ar' ? 'أنشئ في' : 'Créé le'}</th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 dark:text-slate-300">{currentLanguage === 'ar' ? 'إجراءات' : 'Actions'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {users.map((u) => (
-                          <React.Fragment key={u.id}>
-                            <tr className="border-t border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800">
-                              <td className="px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="w-8 h-8">
-                                    <AvatarFallback>{(u.name || 'U').charAt(0).toUpperCase()}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="font-medium truncate max-w-[200px]">{u.name || '—'}</span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 text-xs text-slate-600 dark:text-slate-300 truncate max-w-[220px]">{u.email || '—'}</td>
-                              <td className="px-3 py-2"><Badge variant="outline">{u.role}</Badge></td>
-                              <td className="px-3 py-2"><Badge variant={u.status === 'banned' ? 'destructive' : 'secondary'}>{u.status}</Badge></td>
-                              <td className="px-3 py-2 text-xs text-slate-500">{u.raw?.created_at ? new Date(u.raw.created_at).toISOString().slice(0,10) : '—'}</td>
-                              <td className="px-3 py-2">
-                                <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                                  {u.status === 'banned' ? (
-                                    <Button size="sm" variant="outline" onClick={() => handleUnblock(u.id)} className="text-green-600 border-green-200 hover:bg-green-50">
-                                      <CheckCircle className="w-4 h-4" />
-                                    </Button>
-                                  ) : (
-                                    <Button size="sm" variant="outline" onClick={() => handleBlock(u.id)} className="text-red-600 border-red-200 hover:bg-red-50">
-                                      <Ban className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                  <Button size="sm" variant="outline" onClick={() => { setSelectedUserId(u.id); fetchCommentsForUser(u.id); }} className="text-slate-700 border-slate-200 hover:bg-slate-50">
-                                    <MessageSquare className="w-4 h-4" />
-                                  </Button>
-                                  <Button size="sm" variant="outline" onClick={() => setExpandedUserId(expandedUserId === u.id ? null : u.id)} className="text-slate-700 border-slate-200 hover:bg-slate-50">
-                                    {currentLanguage === 'ar' ? 'تفاصيل' : 'Détails'}
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                            {expandedUserId === u.id && (
-                              <tr className="bg-slate-50/60 dark:bg-slate-800/60">
-                                <td colSpan={6} className="px-3 py-3">
-                                  {u.raw ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
-                                      {Object.entries(u.raw)
-                                        .filter(([_, v]) => v !== null && typeof v !== 'undefined' && String(v).trim() !== '')
-                                        .map(([k, v]) => (
-                                          <div key={k} className="flex items-center justify-between rounded bg-white dark:bg-slate-900 px-2 py-1 border border-slate-200 dark:border-slate-700">
-                                            <span className="font-medium text-slate-700 dark:text-slate-200">{k}</span>
-                                            <span className="truncate ml-2 text-slate-600 dark:text-slate-300">{String(v)}</span>
-                                          </div>
-                                        ))}
-                                    </div>
-                                  ) : (
-                                    <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'لا توجد تفاصيل' : 'Aucun détail'}</div>
-                                  )}
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        ))}
-                        {users.length === 0 && (
-                          <tr>
-                            <td colSpan={6} className="px-3 py-4 text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا يوجد مستخدمون' : 'Aucun utilisateur'}</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {/* Users pagination */}
-                <div className={`mt-4 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? `صفحة ${usersPage}` : `Page ${usersPage}`}</div>
-                  <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                    <Button variant="outline" size="sm" disabled={usersPage <= 1} onClick={() => setUsersPage((p) => Math.max(1, p - 1))}>{currentLanguage === 'ar' ? 'السابق' : 'Précédent'}</Button>
-                    <Button variant="outline" size="sm" disabled={!usersHasNext} onClick={() => setUsersPage((p) => p + 1)}>{currentLanguage === 'ar' ? 'التالي' : 'Suivant'}</Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ModeratorUsersTab
+              currentLanguage={currentLanguage as any}
+              isRTL={isRTL}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              roleFilter={roleFilter}
+              setRoleFilter={setRoleFilter}
+              loadingUsers={loadingUsers}
+              users={users as any}
+              onBlock={handleBlock}
+              onUnblock={handleUnblock}
+              onSelectUserComments={(id: string) => { setSelectedUserId(id); fetchCommentsForUser(id); }}
+              expandedUserId={expandedUserId}
+              setExpandedUserId={setExpandedUserId}
+              usersPage={usersPage}
+              setUsersPage={setUsersPage}
+              usersHasNext={usersHasNext}
+            />
           </TabsContent>
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            <Card className="overflow-hidden">
-              <CardHeader>
-                <CardTitle>{currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}</CardTitle>
-                <CardDescription>{currentLanguage === 'ar' ? 'معلومات حسابك' : 'Informations de votre compte'}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
-                  <Avatar className="w-14 h-14">
-                    <AvatarImage src={user?.avatar_url || undefined} onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}} />
-                    <AvatarFallback>{(user?.name || 'U').charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-bold text-lg">{user?.name || '—'}</div>
-                    <div className="text-sm text-slate-500">{user?.email || '—'}</div>
-                  </div>
-                </div>
-                {/* Full details */}
-                <div className="mt-4">
-                  {loadingProfile && (
-                    <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جارِ التحميل…' : 'Chargement…'}</div>
-                  )}
-                  {!loadingProfile && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      {(() => {
-                        const base: Record<string, any> = {
-                          id: user?.id,
-                          email: user?.email,
-                          name: user?.name,
-                          first_name: (user as any)?.firstName,
-                          last_name: (user as any)?.lastName,
-                          role: user?.role,
-                          status: user?.status,
-                        };
-                        const extra = myProfile || {};
-                        const primaryKeys = ['id','email','name','first_name','last_name','role','status','created_at','phone','country','city'];
-                        const primaryNodes = primaryKeys
-                          .filter(k => typeof (extra[k] ?? base[k]) !== 'undefined' && (extra[k] ?? base[k]) !== null && String(extra[k] ?? base[k]).trim() !== '')
-                          .map(k => (
-                            <div key={k} className="flex items-center justify-between rounded bg-slate-50 dark:bg-slate-800 px-3 py-2">
-                              <span className="font-medium text-slate-700 dark:text-slate-200">{k}</span>
-                              <span className="truncate ml-2 text-slate-600 dark:text-slate-300">{String((extra[k] ?? base[k]))}</span>
-                            </div>
-                          ));
-                        const extraNodes = Object.entries(extra)
-                          .filter(([k]) => !primaryKeys.includes(k))
-                          .filter(([, v]) => v !== null && typeof v !== 'undefined' && String(v).trim() !== '')
-                          .map(([k, v]) => (
-                            <div key={k} className="flex items-center justify-between rounded bg-slate-50 dark:bg-slate-800 px-3 py-2">
-                              <span className="font-medium text-slate-700 dark:text-slate-200">{k}</span>
-                              <span className="truncate ml-2 text-slate-600 dark:text-slate-300">{String(v)}</span>
-                            </div>
-                          ));
-                        return [...primaryNodes, ...extraNodes];
-                      })()}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <ModeratorProfileTab />
           </TabsContent>
         </Tabs>
 

@@ -32,6 +32,15 @@ const Header = () => {
     window.location.reload();
   };
 
+  // Scroll to top when clicking any nav link (desktop or mobile)
+  const scrollToTop = () => {
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      window.scrollTo(0, 0);
+    }
+  };
+
   return (
     <div dir={direction} className={isRTL ? 'rtl' : 'ltr'}>
       {/* Desktop Header */}
@@ -75,6 +84,7 @@ const Header = () => {
                 <Link
                   key={item.key}
                   to={item.href}
+                  onClick={scrollToTop}
                   className={`nav-link relative text-slate-700 dark:text-gray-200 transition-all duration-300 font-semibold py-2.5 px-4 rounded-xl group ${
                     location.pathname === item.href 
                       ? 'text-emerald-600 bg-emerald-50/80 dark:bg-emerald-900/20 shadow-[inset_0_-2px_0_0_rgba(16,185,129,0.6)]' 
@@ -145,7 +155,7 @@ const Header = () => {
       {/* Mobile Header */}
       <header className="modern-header lg:hidden sticky top-0 z-50 bg-white/90 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-700/60">
         <div className="container mx-auto px-3">
-          <div className={`flex items-center justify-between h-14 sm:h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-center justify-between h-20 sm:h-20 ${isRTL ? 'flex-row-reverse' : ''}`}>
             {/* Logo */}
             <div className={`flex items-center flex-shrink-0 ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
               <div 
@@ -164,7 +174,7 @@ const Header = () => {
                   <img 
                     src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="w-16 h-16 sm:w-10 sm:h-10 object-contain neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="w-24 h-24 sm:w-14 sm:h-14 object-contain neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
                     onError={(e) => {
                       console.log('Erreur de chargement du logo:', e);
                       // Fallback vers une icône Football si l'image ne charge pas
@@ -180,7 +190,7 @@ const Header = () => {
                   <img 
                     src="/koora-logo/black-logo.png" 
                     alt="Koora Logo" 
-                    className="w-24 h-8 sm:w-28 sm:h-9 object-contain neon-glow hover:neon-glow"
+                    className="w-28 h-10 sm:w-32 sm:h-10 object-contain neon-glow hover:neon-glow"
                     onError={(e) => {
                       console.log('Erreur de chargement du logo texte:', e);
                       e.currentTarget.style.display = 'none';
@@ -242,6 +252,7 @@ const Header = () => {
               <Link
                 key={item.key}
                 to={item.href}
+                onClick={scrollToTop}
                 className={`mobile-nav-item flex flex-col items-center justify-center min-w-0 flex-1 py-2 px-1 transition-all duration-300 rounded-lg ${
                   isActive 
                     ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 shadow-[inset_0_-2px_0_0_rgba(16,185,129,0.6)] scale-[1.02]' 

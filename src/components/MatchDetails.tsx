@@ -312,73 +312,63 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
           </div>
         </div>
 
-        {/* Match Info */}
+        {/* Match Info (Minimalist Header) */}
         <div className="p-6">
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-center">
-                {/* Home Team */}
-                <div className={`text-center sm:text-right sm:pr-4 ${isRTL ? 'order-5 sm:order-1' : 'order-1'}`}>
-                  <div className="flex items-center sm:justify-end justify-center gap-3">
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                      <img src={match.teams.home.logo} alt={homeTeamName} className="w-20 h-20 object-contain" />
-                    </div>
-                    <div className="hidden sm:block text-left">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{homeTeamName}</h3>
-                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{match.teams.home.score || 0}</div>
+          {(() => {
+            const homeScore = match.teams.home.score ?? 0;
+            const awayScore = match.teams.away.score ?? 0;
+            const statusShort = (match.status || '').toString().toUpperCase();
+            const isLive = ['LIVE','1H','2H','HT','ET'].includes(statusShort);
+            const isFinished = ['FT','AET','PEN','FINISHED'].includes(statusShort);
+            const statusLabel = isLive
+              ? (currentLanguage === 'ar' ? 'مباشر' : 'En direct')
+              : isFinished
+                ? (currentLanguage === 'ar' ? 'انتهت المباراة' : 'Terminé')
+                : (currentLanguage === 'ar' ? 'موعد المباراة' : 'Heure du match');
+            const homeWin = homeScore > awayScore;
+            const awayWin = awayScore > homeScore;
+            const scoreClassHome = `text-3xl sm:text-4xl font-extrabold ${homeWin ? 'text-teal-600' : 'text-slate-900 dark:text-white'}`;
+            const scoreClassAway = `text-3xl sm:text-4xl font-extrabold ${awayWin ? 'text-teal-600' : 'text-slate-900 dark:text-white'}`;
+            return (
+              <div className="relative overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-6 sm:p-8">
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  {/* Home side */}
+                  <div className="flex-1 flex flex-col items-center">
+                    <div className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 mb-2 truncate max-w-[160px] text-center">{homeTeamName}</div>
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white/70 dark:bg-slate-900/60 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
+                      <img src={match.teams.home.logo} alt={homeTeamName} className="w-16 h-16 sm:w-20 sm:h-20 object-contain" />
                     </div>
                   </div>
-                  <div className="block sm:hidden mt-2">
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{homeTeamName}</div>
-                    <div className="text-xl font-bold text-slate-900 dark:text-white">{match.teams.home.score || 0}</div>
-                  </div>
-                </div>
 
-                {/* spacer for small screens */}
-                <div className="sm:col-span-3 col-span-1 text-center">
-                  <div className="uppercase text-xs text-slate-500 dark:text-slate-400 mb-1">VS</div>
-                  <div className="flex items-center justify-center gap-4">
-                    <div className="text-center">
-                      <div className="text-4xl sm:text-5xl font-extrabold text-slate-900 dark:text-white">{match.teams.home.score ?? 0} - {match.teams.away.score ?? 0}</div>
-                      <div className="mt-2 flex items-center justify-center gap-3 text-sm text-slate-600 dark:text-slate-400">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span>{formatMatchTime(match.date, match.time)}</span>
-                        </div>
-                        <div className="hidden sm:flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>{new Date(match.date).toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</span>
-                        </div>
+                  {/* Center: score with status */}
+                  <div className="flex-1 min-w-[220px] sm:min-w-[260px] flex items-center justify-center px-2">
+                    {isRTL ? (
+                      <div className="flex items-center gap-2 sm:gap-3 text-center">
+                        <span className={scoreClassAway}>{awayScore}</span>
+                        <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{statusLabel}</span>
+                        <span className={scoreClassHome}>{homeScore}</span>
                       </div>
-                      {match.venue && (
-                        <div className="mt-2 text-sm text-slate-600 dark:text-slate-400 flex items-center justify-center gap-1">
-                          <MapPin className="w-4 h-4" />
-                          <span>{match.venue}</span>
-                        </div>
-                      )}
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-2 sm:gap-3 text-center">
+                        <span className={scoreClassHome}>{homeScore}</span>
+                        <span className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">{statusLabel}</span>
+                        <span className={scoreClassAway}>{awayScore}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Away Team */}
-                <div className={`text-center sm:text-left sm:pl-4 ${isRTL ? 'order-1 sm:order-5' : 'order-5'}`}>
-                  <div className="flex items-center sm:justify-start justify-center gap-3">
-                    <div className="hidden sm:block text-right">
-                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{awayTeamName}</h3>
-                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{match.teams.away.score || 0}</div>
+                  {/* Away side */}
+                  <div className="flex-1 flex flex-col items-center">
+                    <div className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 mb-2 truncate max-w-[160px] text-center">{awayTeamName}</div>
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white/70 dark:bg-slate-900/60 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
+                      <img src={match.teams.away.logo} alt={awayTeamName} className="w-16 h-16 sm:w-20 sm:h-20 object-contain" />
                     </div>
-                    <div className="w-24 h-24 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                      <img src={match.teams.away.logo} alt={awayTeamName} className="w-20 h-20 object-contain" />
-                    </div>
-                  </div>
-                  <div className="block sm:hidden mt-2">
-                    <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{awayTeamName}</div>
-                    <div className="text-xl font-bold text-slate-900 dark:text-white">{match.teams.away.score || 0}</div>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            );
+          })()}
+        </div>
 
           {/* Tabs */}
           <div className="mb-6">
@@ -643,7 +633,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    
   );
 };
 

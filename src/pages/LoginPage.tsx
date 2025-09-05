@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 // Inline alerts replaced by toasts
-import { Eye, EyeOff, Mail } from 'lucide-react';
+import { Eye, EyeOff, Mail, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from '../hooks/useTranslation';
 // No supabase direct calls here; we use custom table-based auth via AuthContext
@@ -145,6 +145,19 @@ const LoginPage: React.FC = () => {
       <div className="w-full max-w-xl">
         {/* Brand header */}
         <div className="relative bg-gradient-to-br from-sport-green to-emerald-600 text-white px-6 py-8">
+          {/* Back to site button */}
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/')}
+            className={`absolute top-3 ${isRTL ? 'right-3' : 'left-3'} z-10 bg-white/95 text-slate-700 hover:bg-white`}
+          >
+            <span className="flex items-center gap-2">
+              <ArrowLeft className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+              {currentLanguage === 'ar' ? 'العودة للموقع' : 'Retour au site'}
+            </span>
+          </Button>
           <div className="flex items-center justify-center gap-3">
             <img src="/black koora.png" alt="Koora" className="w-12 h-12 rounded-md bg-white/95 p-1" />
             <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   PenTool, 
   FileText, 
@@ -18,20 +18,34 @@ import {
   MapPin,
   Phone,
   Globe,
-  Settings
+  Settings,
+  Shield,
+  Camera,
+  Lock,
+  Save,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useTranslation } from '../hooks/useTranslation';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import AuthorProfileTab from './author/AuthorProfileTab';
+import AuthorOverviewTab from './author/AuthorOverviewTab';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
+
+// Helper to build a public URL to an article; adjust the path to match your router
+const getPublicArticleUrl = (id: string) => `${window.location.origin}/news/${id}`;
 
 interface Article {
   id: string;
@@ -47,8 +61,60 @@ interface Article {
 
 const AuthorDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const { currentLanguage, isRTL, direction } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useLanguage();
   const { toast } = useToast();
+
+  // Quill refs for custom handlers
+  const newQuillRef = useRef<ReactQuill | null>(null);
+  const editQuillRef = useRef<ReactQuill | null>(null);
+  const writingQuillRef = useRef<ReactQuill | null>(null);
+
+  // Insert a simple HTML table via clipboard API
+  const buildModules = (ref: React.RefObject<ReactQuill>) => ({
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ script: 'sub' }, { script: 'super' }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ align: [] }, { direction: isRTL ? 'rtl' : 'ltr' }],
+        ['blockquote', 'code-block', 'link', 'image'],
+        ['clean', 'table'],
+      ],
+      handlers: {
+        table: () => {
+          const editor: any = ref.current?.getEditor?.();
+          if (!editor) return;
+          const range = editor.getSelection(true) || { index: editor.getLength(), length: 0 };
+          const rtlStyle = isRTL ? 'direction:rtl;text-align:right;' : '';
+          const tableHtml = `
+            <table border="1" style="border-collapse:collapse;width:100%;${rtlStyle}">
+              <thead>
+                <tr>
+                  <th>${currentLanguage === 'ar' ? 'عمود 1' : 'Col 1'}</th>
+                  <th>${currentLanguage === 'ar' ? 'عمود 2' : 'Col 2'}</th>
+                  <th>${currentLanguage === 'ar' ? 'عمود 3' : 'Col 3'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${currentLanguage === 'ar' ? 'نص' : 'Texte'}</td>
+                  <td>${currentLanguage === 'ar' ? 'نص' : 'Texte'}</td>
+                  <td>${currentLanguage === 'ar' ? 'نص' : 'Texte'}</td>
+                </tr>
+              </tbody>
+            </table>`;
+          editor.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
+          editor.setSelection(range.index + 1, 0);
+        },
+      },
+    },
+  });
+  const newModules = useMemo(() => buildModules(newQuillRef), [isRTL, currentLanguage]);
+  const editModules = useMemo(() => buildModules(editQuillRef), [isRTL, currentLanguage]);
+  const writingModules = useMemo(() => buildModules(writingQuillRef), [isRTL, currentLanguage]);
   const [activeTab, setActiveTab] = useState('overview');
   const [articles, setArticles] = useState<Article[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,9 +141,26 @@ const AuthorDashboard: React.FC = () => {
   const [writingCategoryId, setWritingCategoryId] = useState<number | null>(null);
   const [writingImageFile, setWritingImageFile] = useState<File | null>(null);
   const [writingError, setWritingError] = useState('');
-  const [savingDraft, setSavingDraft] = useState(false);
   const [submittingWriting, setSubmittingWriting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Profile editing state
+  const [myProfile, setMyProfile] = useState<Record<string, any> | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
 
   const fetchArticles = async () => {
     if (!user?.id) return;
@@ -319,6 +402,67 @@ const AuthorDashboard: React.FC = () => {
     } catch (e) { console.error(e); }
   };
 
+  // Publish to public news and provide a shareable link
+  const shareArticle = async (article: Article) => {
+    try {
+      const now = new Date().toISOString();
+      const idValue: any = !isNaN(Number(article.id)) && String(article.id).trim() !== '' ? Number(article.id) : article.id;
+      const category_id = (articles.find(a => a.id === article.id) as any)?.category_id
+        ?? categories.find(c => c.name === article.category || c.name_ar === article.category)?.id
+        ?? null;
+      const payload: any = {
+        id: idValue,
+        title: (article as any).title_fr ?? article.title ?? '',
+        title_ar: (article as any).title_ar ?? article.title ?? '',
+        content: DOMPurify.sanitize(((article as any).content_fr ?? article.content ?? '')),
+        content_ar: DOMPurify.sanitize(((article as any).content_ar ?? article.content ?? '')),
+        status: 'published',
+        image_url: (article as any).imageUrl ?? (article as any).image_url ?? null,
+        category_id,
+        // Do NOT send user_id to satisfy RLS WITH CHECK (user_id = auth.uid()) via column default
+        // Let database default set user_id = auth.uid()
+        created_at: (article as any).created_at ?? now,
+        updated_at: now,
+      };
+      // Debug payload (without sensitive fields) to help diagnose RLS issues if any persist
+      console.debug('shareArticle upsert payload (no user_id):', { ...payload, user_id: undefined });
+      const { data, error: upsertErr } = await supabase
+        .from('news')
+        .upsert(payload, { onConflict: 'id' })
+        .select();
+      if (upsertErr) throw upsertErr;
+      if (!data || data.length === 0) {
+        throw new Error(currentLanguage === 'ar'
+          ? 'لم يتم إدراج السجل (قد تمنع سياسات RLS العملية)'
+          : "Aucun enregistrement renvoyé (les politiques RLS peuvent bloquer l'opération)");
+      }
+
+      // Optionally reflect status locally
+      if (article.status !== 'published') {
+        try { await updateStatus(article.id, 'published'); } catch {}
+      }
+
+      const url = getPublicArticleUrl(String(article.id));
+      if ((navigator as any).share) {
+        try { await (navigator as any).share({ title: article.title, url }); } catch {}
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast({ title: currentLanguage === 'ar' ? 'تم نسخ الرابط' : 'Lien copié', description: url });
+      }
+      toast({
+        title: currentLanguage === 'ar' ? 'تم النشر والمشاركة' : 'Publication partagée',
+        description: url,
+      });
+    } catch (e: any) {
+      console.error('Share upsert error:', e);
+      toast({
+        title: currentLanguage === 'ar' ? 'فشل المشاركة' : 'Échec du partage',
+        description: `${e?.code ? `[${e.code}] ` : ''}${e?.message || (currentLanguage === 'ar' ? 'تحقق من الاتصال والصلاحيات' : 'Vérifiez la connexion et les permissions')}`,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const openEdit = (a: Article) => {
     setEditingId(a.id);
     setEditTitle(a.title);
@@ -339,9 +483,14 @@ const AuthorDashboard: React.FC = () => {
   };
 
   const saveEdit = async () => {
-    if (!editingId) return;
+    if (!user?.id || !editingId) return;
+    setEditError('');
     if (!editTitle || !editContent) {
       setEditError(currentLanguage === 'ar' ? 'العنوان والمحتوى إجباريان' : 'Titre et contenu requis');
+      return;
+    }
+    if (!editCategoryId) {
+      setEditError(currentLanguage === 'ar' ? 'اختر الفئة' : 'Choisissez une catégorie');
       return;
     }
     setSavingEdit(true);
@@ -350,38 +499,22 @@ const AuthorDashboard: React.FC = () => {
         .from('news_submissions')
         .update({ title: editTitle, content: editContent, category_id: editCategoryId })
         .eq('id', Number(editingId))
-        .eq('user_id', user?.id || '');
+        .eq('user_id', user.id);
       if (error) throw error;
       setEditingId(null);
       await fetchArticles();
+      toast({ title: currentLanguage === 'ar' ? 'تم الحفظ' : 'Enregistré', description: currentLanguage === 'ar' ? 'تم تحديث المقال' : 'Article mis à jour' });
     } catch (e: any) {
-      setEditError(e?.message || 'Failed to save');
+      setEditError(e?.message || (currentLanguage === 'ar' ? 'فشل الحفظ' : "Échec de l'enregistrement"));
     } finally {
       setSavingEdit(false);
     }
   };
 
+  // Delete a draft/rejected submission
   const deleteSubmission = async (id: string) => {
     try {
-      // 1) Try RPC (SECURITY DEFINER) to avoid RLS issues
-      if (user?.id) {
-        const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_news_submission', {
-          submission_id: Number(id),
-          current_user_id: user.id,
-          current_user_role: (user as any)?.role || 'author'
-        });
-        if (!rpcErr) {
-          const ok = Boolean(rpcRes);
-          if (!ok) throw new Error(currentLanguage === 'ar' ? 'غير مصرح بالحذف أو السجل غير موجود' : 'Suppression non autorisée ou enregistrement introuvable');
-          await fetchArticles();
-          toast({ title: currentLanguage === 'ar' ? 'تم الحذف' : 'Supprimé', description: currentLanguage === 'ar' ? 'تم حذف المقال بنجاح' : 'Article supprimé avec succès' });
-          return;
-        }
-        // If function missing, fallback to direct delete below
-      }
-
-      // 2) Fallback: direct delete under RLS (only own draft/rejected)
-      const { error, data } = await supabase
+      const { data, error } = await supabase
         .from('news_submissions')
         .delete()
         .eq('id', Number(id))
@@ -403,25 +536,187 @@ const AuthorDashboard: React.FC = () => {
     }
   };
 
+  // Load full profile when Profile tab is active
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (activeTab !== 'profile' || !user?.id) return;
+      setLoadingProfile(true);
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!error && data) {
+          setMyProfile(data);
+          setProfileForm({
+            name: data.name || '',
+            firstName: data.first_name || (data as any).firstName || '',
+            lastName: data.last_name || (data as any).lastName || '',
+            email: data.email || '',
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          });
+        } else {
+          const minimal = {
+            id: user.id,
+            email: user.email,
+            name: user.name ?? [user.firstName, user.lastName].filter(Boolean).join(' '),
+            first_name: user.firstName ?? null,
+            last_name: user.lastName ?? null,
+            role: (user as any).role,
+            status: (user as any).status,
+            avatar_url: null as string | null,
+          };
+          const { data: inserted, error: upErr } = await supabase
+            .from('users')
+            .upsert(minimal, { onConflict: 'id' })
+            .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+            .single();
+          if (!upErr && inserted) {
+            setMyProfile(inserted);
+            setProfileForm({
+              name: inserted.name || '',
+              firstName: inserted.first_name || '',
+              lastName: inserted.last_name || '',
+              email: inserted.email || '',
+              currentPassword: '',
+              newPassword: '',
+              confirmPassword: ''
+            });
+          }
+        }
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    loadProfile();
+  }, [activeTab, user?.id]);
+
+  // Profile update functions
+  const handleProfileUpdate = async () => {
+    setProfileError('');
+    setProfileSuccess('');
+    setEditingProfile(true);
+    
+    try {
+      if (!user?.id) {
+        setProfileError(currentLanguage === 'ar' ? 'جلسة غير صالحة' : 'Session invalide');
+        return;
+      }
+
+      // Validate password change if requested
+      if (profileForm.newPassword) {
+        if (profileForm.newPassword !== profileForm.confirmPassword) {
+          setProfileError(currentLanguage === 'ar' ? 'كلمات المرور غير متطابقة' : 'Les mots de passe ne correspondent pas');
+          return;
+        }
+        if (profileForm.newPassword.length < 6) {
+          setProfileError(currentLanguage === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Le mot de passe doit contenir au moins 6 caractères');
+          return;
+        }
+      }
+
+      let avatarUrl = myProfile?.avatar_url;
+      
+      // Upload new profile image if provided
+      if (profileImageFile) {
+        const ext = profileImageFile.name.split('.').pop();
+        const filePath = `users/${user.id}/avatar_${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, profileImageFile, { upsert: false });
+        if (upErr) {
+          if ((upErr as any)?.message?.toLowerCase?.().includes('bucket') && (upErr as any)?.message?.toLowerCase?.().includes('not found')) {
+            setProfileError(currentLanguage === 'ar' ? 'حاوية الصور غير موجودة: avatars' : "Bucket d'avatars introuvable: avatars");
+            throw upErr;
+          }
+          throw upErr;
+        }
+        const { data: pub } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        avatarUrl = pub?.publicUrl;
+      }
+
+      // Update profile information
+      const updateData: any = {
+        name: profileForm.name,
+        first_name: profileForm.firstName,
+        last_name: profileForm.lastName,
+      };
+      
+      if (avatarUrl !== myProfile?.avatar_url) {
+        updateData.avatar_url = avatarUrl;
+      }
+
+      // Attempt update, retry without name if the DB forbids updating it
+      let updateErr: any | null = null;
+      const doUpdate = async (payload: any) => supabase
+        .from('users')
+        .update(payload)
+        .eq('id', user.id);
+
+      {
+        const { error } = await doUpdate(updateData);
+        updateErr = error;
+      }
+      if (updateErr) {
+        const msg = String(updateErr.message || '').toLowerCase();
+        if (msg.includes("column") && msg.includes("name") && msg.includes("default")) {
+          const { name, ...withoutName } = updateData;
+          const { error: retryErr } = await doUpdate(withoutName);
+          if (retryErr) throw retryErr;
+        } else {
+          throw updateErr;
+        }
+      }
+
+      // Update password if requested
+      if (profileForm.newPassword) {
+        const { error: pwErr } = await supabase.auth.updateUser({
+          password: profileForm.newPassword
+        });
+        if (pwErr) throw pwErr;
+      }
+
+      setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي بنجاح' : 'Profil mis à jour avec succès');
+      setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      setProfileImageFile(null);
+      
+      // Refresh profile data
+      if (activeTab === 'profile') {
+        const { data } = await supabase
+          .from('users')
+          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (data) setMyProfile(data);
+      }
+      
+    } catch (e: any) {
+      setProfileError(e?.message || (currentLanguage === 'ar' ? 'فشل في تحديث الملف الشخصي' : 'Échec de mise à jour du profil'));
+    } finally {
+      setEditingProfile(false);
+    }
+  };
+
   return (
-    <div className={`min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-lg dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50 shadow-lg">
         <div className="container mx-auto px-6 py-4">
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
-              <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300">
-                  <PenTool className="w-6 h-6 text-white" />
-                </div>
-                <div className={isRTL ? 'text-right' : 'text-left'}>
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {currentLanguage === 'ar' ? 'لوحة تحكم الكاتب' : 'Dashboard Auteur'}
-                  </h1>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {currentLanguage === 'ar' ? `مرحباً ${user?.name}` : `Bienvenue ${user?.name}`}
-                  </p>
-                </div>
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
+              <div className="p-3 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300">
+                <PenTool className="w-6 h-6 text-white" />
+              </div>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {currentLanguage === 'ar' ? 'لوحة تحكم الكاتب' : 'Dashboard Auteur'}
+                </h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {currentLanguage === 'ar' ? `مرحباً ${user?.name}` : `Bienvenue ${user?.name}`}
+                </p>
               </div>
             </div>
             <Button 
@@ -469,112 +764,28 @@ const AuthorDashboard: React.FC = () => {
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'نظرة عامة' : 'Vue d\'ensemble'}
             </TabsTrigger>
-            <TabsTrigger value="articles" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+            <TabsTrigger value="articles" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'مقالاتي' : 'Mes Articles'}
             </TabsTrigger>
-            <TabsTrigger value="writing" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+            <TabsTrigger value="writing" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'الكتابة' : 'Écriture'}
             </TabsTrigger>
-            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}
             </TabsTrigger>
           </TabsList>
 
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <AuthorProfileTab />
+          </TabsContent>
+
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Quick Stats */}
-              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Send className="w-5 h-5 text-blue-600" />
-                    <span>{currentLanguage === 'ar' ? 'قيد المراجعة' : 'En Attente de Révision'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {articles.filter(a => a.status === 'submitted').slice(0, 3).map((article) => (
-                      <div key={article.id} className="flex items-center space-x-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-white hover:to-purple-50 dark:hover:from-slate-700 dark:hover:to-purple-900/20 transition-all duration-300 hover:shadow-md hover:scale-[1.02] bg-white/60 dark:bg-slate-800/60">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center shadow-md">
-                          <FileText className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white text-sm">{article.title}</h4>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">{article.category}</p>
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {currentLanguage === 'ar' ? 'مرسل' : 'Soumis'}
-                        </Badge>
-                      </div>
-                    ))}
-                    {articles.filter(a => a.status === 'submitted').length === 0 && (
-                      <div className="text-sm text-slate-500 text-center py-4">
-                        {currentLanguage === 'ar' ? 'لا توجد مقالات قيد المراجعة' : 'Aucun article en attente'}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <BookOpen className="w-5 h-5 text-purple-600" />
-                    <span>{currentLanguage === 'ar' ? 'إحصائيات الكتابة' : 'Statistiques d\'Écriture'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'مقالات هذا الشهر' : 'Articles ce mois'}
-                      </span>
-                      <span className="font-semibold text-purple-600">4</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'معدل القبول' : 'Taux d\'acceptation'}
-                      </span>
-                      <span className="font-semibold text-green-600">75%</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'متوسط المشاهدات' : 'Vues moyennes'}
-                      </span>
-                      <span className="font-semibold text-blue-600">850</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Recent Feedback */}
-            {articles.some(a => a.feedback) && (
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Edit className="w-5 h-5 text-orange-600" />
-                    <span>{currentLanguage === 'ar' ? 'ملاحظات حديثة' : 'Commentaires Récents'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {articles.filter(a => a.feedback).map((article) => (
-                      <div key={article.id} className="p-4 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
-                        <h4 className="font-medium text-slate-900 dark:text-white mb-2">{article.title}</h4>
-                        <p className="text-sm text-red-700 dark:text-red-300">{article.feedback}</p>
-                        <Badge variant="destructive" className="mt-2">
-                          {currentLanguage === 'ar' ? 'مرفوض' : 'Rejeté'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <AuthorOverviewTab articles={articles} />
           </TabsContent>
 
           {/* Articles Tab */}
@@ -609,7 +820,17 @@ const AuthorDashboard: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}</label>
-                      <Textarea rows={6} value={newContent} onChange={(e) => setNewContent(e.target.value)} />
+                      <div className="border rounded-md">
+                        <ReactQuill
+                          ref={newQuillRef}
+                          theme="snow"
+                          value={newContent}
+                          onChange={setNewContent}
+                          placeholder={currentLanguage === 'ar' ? 'اكتب المحتوى هنا...' : 'Écrivez le contenu ici...'}
+                          modules={newModules}
+                          className={isRTL ? 'rtl' : 'ltr'}
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}</label>
@@ -673,6 +894,13 @@ const AuthorDashboard: React.FC = () => {
                         <Badge variant={getStatusBadge(article.status).variant}>
                           {getStatusBadge(article.status).label}
                         </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => shareArticle(article)}
+                        >
+                          {currentLanguage === 'ar' ? 'مشاركة' : 'Partager'}
+                        </Button>
                         {article.status === 'draft' && (
                           <Button variant="outline" size="sm" onClick={() => updateStatus(article.id, 'submitted')}>
                             {currentLanguage === 'ar' ? 'إرسال' : 'Soumettre'}
@@ -714,7 +942,17 @@ const AuthorDashboard: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}</label>
-                    <Textarea rows={6} value={editContent} onChange={(e) => setEditContent(e.target.value)} />
+                    <div className="border rounded-md">
+                      <ReactQuill
+                        ref={editQuillRef}
+                        theme="snow"
+                        value={editContent}
+                        onChange={setEditContent}
+                        placeholder={currentLanguage === 'ar' ? 'اكتب المحتوى هنا...' : 'Écrivez le contenu ici...'}
+                        modules={editModules}
+                        className={isRTL ? 'rtl' : 'ltr'}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}</label>
@@ -772,12 +1010,18 @@ const AuthorDashboard: React.FC = () => {
                       value={writingTitle}
                       onChange={(e) => setWritingTitle(e.target.value)}
                     />
-                    <textarea
-                      placeholder={currentLanguage === 'ar' ? 'ابدأ الكتابة هنا...' : 'Commencez à écrire ici...'}
-                      className="w-full h-64 p-4 border border-slate-200 dark:border-slate-700 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      value={writingContent}
-                      onChange={(e) => setWritingContent(e.target.value)}
-                    />
+                    
+                    <div className="border rounded-md">
+                      <ReactQuill
+                        ref={writingQuillRef}
+                        theme="snow"
+                        value={writingContent}
+                        onChange={setWritingContent}
+                        placeholder={currentLanguage === 'ar' ? 'ابدأ الكتابة هنا...' : 'Commencez à écrire ici...'}
+                        modules={writingModules}
+                        className={isRTL ? 'rtl' : 'ltr'}
+                      />
+                    </div>
                     <div>
                       <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}</label>
                       <select
@@ -799,8 +1043,8 @@ const AuthorDashboard: React.FC = () => {
                       )}
                     </div>
                     {writingError && <p className="text-sm text-red-600">{writingError}</p>}
-                    <div className="flex justify-between items-center">
-                      <div className="flex space-x-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className={`flex ${isRTL ? 'space-x-reverse' : ''} space-x-2 flex-wrap`}>
                         <Button variant="outline" size="sm" disabled={savingDraft} onClick={handleSaveDraftWriting}>
                           {savingDraft ? (currentLanguage === 'ar' ? 'حفظ...' : 'Enregistrement...') : (currentLanguage === 'ar' ? 'حفظ كمسودة' : 'Sauvegarder')}
                         </Button>
@@ -808,7 +1052,7 @@ const AuthorDashboard: React.FC = () => {
                           {currentLanguage === 'ar' ? 'معاينة' : 'Aperçu'}
                         </Button>
                       </div>
-                      <Button className="bg-purple-600 hover:bg-purple-700" disabled={submittingWriting} onClick={handleSubmitWriting}>
+                      <Button className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto" disabled={submittingWriting} onClick={handleSubmitWriting}>
                         <Send className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
                         {submittingWriting ? (currentLanguage === 'ar' ? 'جارٍ الإرسال...' : 'Envoi...') : (currentLanguage === 'ar' ? 'إرسال للمراجعة' : 'Soumettre')}
                       </Button>
@@ -828,7 +1072,10 @@ const AuthorDashboard: React.FC = () => {
                   </DialogHeader>
                   <div className="space-y-3">
                     <h3 className="text-xl font-semibold">{writingTitle || (currentLanguage === 'ar' ? 'بدون عنوان' : 'Sans titre')}</h3>
-                    <div className="prose dark:prose-invert max-w-none whitespace-pre-wrap">{writingContent || (currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Pas de contenu')}</div>
+                    <div
+                      className="prose dark:prose-invert max-w-none"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(writingContent || (currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Pas de contenu')) }}
+                    />
                   </div>
                 </DialogContent>
               </Dialog>
@@ -867,89 +1114,6 @@ const AuthorDashboard: React.FC = () => {
             </div>
           </TabsContent>
 
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Personal Information */}
-              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-purple-50 dark:from-slate-800 dark:to-purple-900/20 border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <User className="w-5 h-5 text-purple-600" />
-                    <span>{currentLanguage === 'ar' ? 'المعلومات الشخصية' : 'Informations Personnelles'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                        {user?.name?.charAt(0) || 'A'}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{user?.name || 'Auteur'}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">{user?.email}</p>
-                        <Badge variant="outline" className="mt-1">{user?.role || 'author'}</Badge>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <Mail className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">{user?.email || 'Non renseigné'}</span>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <Calendar className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {currentLanguage === 'ar' ? 'عضو منذ' : 'Membre depuis'} {new Date().getFullYear()}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <Globe className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {currentLanguage === 'ar' ? 'اللغة' : 'Langue'}: {currentLanguage === 'ar' ? 'العربية' : 'Français'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Account Settings */}
-              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-indigo-50 dark:from-slate-800 dark:to-indigo-900/20 border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Settings className="w-5 h-5 text-indigo-600" />
-                    <span>{currentLanguage === 'ar' ? 'إعدادات الحساب' : 'Paramètres du Compte'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20">
-                      <h4 className="font-medium text-slate-900 dark:text-white mb-2">
-                        {currentLanguage === 'ar' ? 'إحصائيات الكاتب' : 'Statistiques Auteur'}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{articles.length}</div>
-                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'مقالات' : 'Articles'}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-green-600">{articles.filter(a => a.status === 'published').length}</div>
-                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'منشور' : 'Publiés'}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full">
-                      <Settings className="w-4 h-4 mr-2" />
-                      {currentLanguage === 'ar' ? 'تعديل الملف الشخصي' : 'Modifier le Profil'}
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      <Mail className="w-4 h-4 mr-2" />
-                      {currentLanguage === 'ar' ? 'تغيير كلمة المرور' : 'Changer le Mot de Passe'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
         </Tabs>
       </div>
     </div>

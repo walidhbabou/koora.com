@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Edit, 
   FileText, 
@@ -18,7 +18,12 @@ import {
   Mail,
   Globe,
   Settings,
-  MessageSquare
+  MessageSquare,
+  Shield,
+  Camera,
+  Lock,
+  Save,
+  Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,11 +31,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useTranslation } from '../hooks/useTranslation';
+import { useLanguage } from '@/contexts/LanguageContext';
+import EditorOverviewTab from './editor/EditorOverviewTab';
+import EditorArticlesTab from './editor/EditorArticlesTab';
+import AuthorProfileTab from './author/AuthorProfileTab';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
 
 interface Article {
   id: string;
@@ -47,7 +58,7 @@ interface Article {
 
 const EditorDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const { currentLanguage, isRTL, direction } = useTranslation();
+  const { currentLanguage, isRTL, direction } = useLanguage();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [articles, setArticles] = useState<Article[]>([]);
@@ -65,6 +76,50 @@ const EditorDashboard: React.FC = () => {
   const [editError, setEditError] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // New Article (Editor) state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newContent, setNewContent] = useState('');
+  const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [createError, setCreateError] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [categories, setCategories] = useState<{id:number,name:string,name_ar:string}[]>([]);
+  const newQuillRef = useRef<ReactQuill | null>(null);
+  const buildModules = (ref: React.RefObject<ReactQuill>) => ({
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ script: 'sub' }, { script: 'super' }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ align: [] }, { direction: isRTL ? 'rtl' : 'ltr' }],
+        ['blockquote', 'code-block', 'link', 'image'],
+        ['clean'],
+      ],
+    },
+  });
+  const newModules = useMemo(() => buildModules(newQuillRef), [isRTL, currentLanguage]);
+
+  // Profile editing state
+  const [myProfile, setMyProfile] = useState<Record<string, any> | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -111,6 +166,78 @@ const EditorDashboard: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, activeTab]);
+
+  // Load categories for creation form
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase.from('categories').select('id, name, name_ar').order('id');
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (e) { console.error('load categories failed', e); }
+  };
+  useEffect(() => { fetchCategories(); }, []);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (activeTab !== 'profile' || !user?.id) return;
+      setLoadingProfile(true);
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!error && data) {
+          setMyProfile(data);
+          setProfileForm({
+            name: data.name || '',
+            firstName: data.first_name || (data as any).firstName || '',
+            lastName: data.last_name || (data as any).lastName || '',
+            email: data.email || '',
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          });
+        } else {
+          const minimal = {
+            id: user.id,
+            email: user.email,
+            name: user.name ?? [user.firstName, user.lastName].filter(Boolean).join(' '),
+            first_name: user.firstName ?? null,
+            last_name: user.lastName ?? null,
+            role: (user as any).role,
+            status: (user as any).status,
+            avatar_url: null as string | null,
+          };
+          const { data: inserted, error: upErr } = await supabase
+            .from('users')
+            .upsert(minimal, { onConflict: 'id' })
+            .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+            .single();
+          if (!upErr && inserted) {
+            setMyProfile(inserted);
+            setProfileForm({
+              name: inserted.name || '',
+              firstName: inserted.first_name || '',
+              lastName: inserted.last_name || '',
+              email: inserted.email || '',
+              currentPassword: '',
+              newPassword: '',
+              confirmPassword: ''
+            });
+          }
+        }
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+    loadProfile();
+  }, [activeTab, user?.id]);
+
+  useEffect(() => {
+    fetchArticles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
 
   const stats = [
     { 
@@ -189,9 +316,9 @@ const EditorDashboard: React.FC = () => {
         content: sub?.content,
         image_url: sub?.image_url || null,
         status: 'published',
-        user_id: sub?.user_id,
+        // IMPORTANT: do not send user_id; let DB default auth.uid() satisfy RLS
         category_id: sub?.category_id ?? null,
-      });
+      }).select();
       if (insErr) throw insErr;
       // Mark submission as published
       const { error: upErr } = await supabase.from('news_submissions').update({ status: 'published' }).eq('id', Number(id));
@@ -235,6 +362,211 @@ const EditorDashboard: React.FC = () => {
       setEditError(e?.message || 'Failed to save');
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  // --- Create Article Helpers (Editor) ---
+  const uploadNewImageIfAny = async (): Promise<string | undefined> => {
+    if (!newImageFile || !user?.id) return undefined;
+    const ext = newImageFile.name.split('.').pop();
+    const filePath = `${user.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from('news-images')
+      .upload(filePath, newImageFile, { upsert: false });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from('news-images').getPublicUrl(filePath);
+    return pub?.publicUrl;
+  };
+
+  const resetCreateForm = () => {
+    setNewTitle('');
+    setNewContent('');
+    setNewCategoryId(null);
+    setNewImageFile(null);
+    setCreateError('');
+  };
+
+  const handleCreate = async () => {
+    if (!user?.id) return;
+    setCreateError('');
+    if (!newTitle || !newContent) {
+      setCreateError(currentLanguage === 'ar' ? 'أدخل العنوان والمحتوى' : 'Entrez le titre et le contenu');
+      return;
+    }
+    if (!newCategoryId) {
+      setCreateError(currentLanguage === 'ar' ? 'اختر الفئة' : 'Choisissez une catégorie');
+      return;
+    }
+    setCreating(true);
+    try {
+      const imageUrl = await uploadNewImageIfAny();
+      const payload: any = {
+        title: newTitle,
+        content: newContent,
+        status: 'published',
+        image_url: imageUrl ?? null,
+        category_id: newCategoryId,
+      };
+      console.debug('Editor create news payload (no user_id):', payload);
+      const { error } = await supabase.from('news').insert(payload).select();
+      if (error) throw error;
+      setIsCreateOpen(false);
+      resetCreateForm();
+      await fetchArticles();
+      setActiveTab('articles');
+      toast({ title: currentLanguage === 'ar' ? 'تم النشر' : 'Publié', description: currentLanguage === 'ar' ? 'تم إضافة مقال جديد' : 'Nouvel article publié' });
+    } catch (e: any) {
+      setCreateError(e?.message || (currentLanguage === 'ar' ? 'فشل الإنشاء' : 'Échec de la création'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // Profile update functions
+  const handleProfileUpdate = async () => {
+    setProfileError('');
+    setProfileSuccess('');
+    setEditingProfile(true);
+    
+    try {
+      if (!user?.id) {
+        setProfileError(currentLanguage === 'ar' ? 'جلسة غير صالحة' : 'Session invalide');
+        return;
+      }
+
+      // Validate password change if requested
+      if (profileForm.newPassword) {
+        if (profileForm.newPassword !== profileForm.confirmPassword) {
+          setProfileError(currentLanguage === 'ar' ? 'كلمات المرور غير متطابقة' : 'Les mots de passe ne correspondent pas');
+          return;
+        }
+        if (profileForm.newPassword.length < 6) {
+          setProfileError(currentLanguage === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Le mot de passe doit contenir au moins 6 caractères');
+          return;
+        }
+      }
+
+      let avatarUrl = myProfile?.avatar_url;
+      
+      // Upload new profile image if provided
+      if (profileImageFile) {
+        const ext = profileImageFile.name.split('.').pop();
+        const filePath = `users/${user.id}/avatar_${Date.now()}.${ext}`;
+        const bucket = (import.meta as any).env?.VITE_SUPABASE_AVATAR_BUCKET || 'avatars';
+        const { error: upErr } = await supabase
+          .storage
+          .from(bucket)
+          .upload(filePath, profileImageFile, { upsert: true, cacheControl: '3600' });
+        if (upErr) {
+          const msg = String(upErr.message || '');
+          if (msg.toLowerCase().includes('bucket not found')) {
+            throw new Error(currentLanguage === 'ar'
+              ? 'لم يتم العثور على حاوية الصور "avatars". أنشئها واجعلها عامة أو حدّد VITE_SUPABASE_AVATAR_BUCKET.'
+              : "Bucket de stockage 'avatars' introuvable. Créez-le (public) ou définissez VITE_SUPABASE_AVATAR_BUCKET.");
+          }
+          throw upErr;
+        }
+        const { data: pub } = supabase.storage.from(bucket).getPublicUrl(filePath);
+        avatarUrl = pub?.publicUrl;
+      }
+
+      // Update profile information
+      const updateData: any = {
+        name: profileForm.name,
+        first_name: profileForm.firstName,
+        last_name: profileForm.lastName,
+      };
+      
+      if (avatarUrl !== myProfile?.avatar_url) {
+        updateData.avatar_url = avatarUrl;
+      }
+
+      // Try update; if name is immutable (generated), retry without name; if RLS/session issue, use RPC fallback
+      let { error: updateErr } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id);
+      if (updateErr) {
+        const msg = String(updateErr.message || '');
+        const immutableName = msg.includes('can only be updated to DEFAULT') || msg.toLowerCase().includes('generated');
+        if (immutableName) {
+          const { name, ...rest } = updateData;
+          const { error: e2 } = await supabase
+            .from('users')
+            .update(rest)
+            .eq('id', user.id);
+          if (e2) {
+            updateErr = e2;
+          } else {
+            updateErr = null as any;
+          }
+        }
+      }
+      if (updateErr) {
+        // RPC fallback when no auth session or RLS blocks
+        try {
+          const { data: sessionRes } = await supabase.auth.getSession();
+          const hasAuthSession = !!sessionRes?.session;
+          const msg = String(updateErr.message || '').toLowerCase();
+          const rlsViolation = msg.includes('row-level security') || msg.includes('rls');
+          if (!hasAuthSession || rlsViolation) {
+            const email = myProfile?.email || (user as any)?.email;
+            const { error: rpcErr } = await supabase.rpc('app_update_user_profile', {
+              p_email: email,
+              p_password: profileForm.currentPassword || null,
+              p_name: updateData.name ?? null,
+              p_first_name: updateData.first_name ?? null,
+              p_last_name: updateData.last_name ?? null,
+              p_avatar_url: updateData.avatar_url ?? null,
+            });
+            if (rpcErr) throw rpcErr;
+          } else {
+            throw updateErr;
+          }
+        } catch (e: any) {
+          const hint = String(e?.message || '').includes('function app_update_user_profile')
+            ? (currentLanguage === 'ar' ? 'أنشئ دالة RPC app_update_user_profile في Supabase' : 'Créez la fonction RPC app_update_user_profile dans Supabase')
+            : '';
+          throw new Error(`${e?.message || updateErr?.message || ''} ${hint}`.trim());
+        }
+      }
+
+      // Update password if requested
+      if (profileForm.newPassword) {
+        const { data: sessionRes } = await supabase.auth.getSession();
+        const hasAuthSession = !!sessionRes?.session;
+        if (hasAuthSession) {
+          const { error: pwErr } = await supabase.auth.updateUser({ password: profileForm.newPassword });
+          if (pwErr) throw pwErr;
+        } else {
+          const email = myProfile?.email || (user as any)?.email;
+          const { error: pwRpcErr } = await supabase.rpc('app_change_password', {
+            p_email: email,
+            p_current_password: profileForm.currentPassword,
+            p_new_password: profileForm.newPassword,
+          });
+          if (pwRpcErr) throw pwRpcErr;
+        }
+      }
+
+      setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي بنجاح' : 'Profil mis à jour avec succès');
+      setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      setProfileImageFile(null);
+      
+      // Refresh profile data
+      if (activeTab === 'profile') {
+        const { data } = await supabase
+          .from('users')
+          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (data) setMyProfile(data);
+      }
+      
+    } catch (e: any) {
+      setProfileError(e?.message || (currentLanguage === 'ar' ? 'فشل في تحديث الملف الشخصي' : 'Échec de mise à jour du profil'));
+    } finally {
+      setEditingProfile(false);
     }
   };
 
@@ -381,65 +713,7 @@ const EditorDashboard: React.FC = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Clock className="w-5 h-5 text-orange-600" />
-                    <span>{currentLanguage === 'ar' ? 'قيد المراجعة' : 'En Attente de Révision'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {articles.filter(a => a.status === 'review').map((article) => (
-                      <div key={article.id} className="flex items-center space-x-3 p-4 rounded-xl hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 dark:hover:from-slate-700 dark:hover:to-orange-900/20 transition-all duration-300 hover:shadow-md hover:scale-[1.02]">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center shadow-lg">
-                          <FileText className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white">{article.title}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{article.author}</p>
-                        </div>
-                        <Badge variant="secondary">
-                          {currentLanguage === 'ar' ? 'مراجعة' : 'Révision'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <TrendingUp className="w-5 h-5 text-green-600" />
-                    <span>{currentLanguage === 'ar' ? 'الأداء' : 'Performance'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'مقالات هذا الشهر' : 'Articles ce mois'}
-                      </span>
-                      <span className="font-semibold text-green-600">12</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'متوسط المشاهدات' : 'Vues moyennes'}
-                      </span>
-                      <span className="font-semibold text-blue-600">1,450</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'معدل النشر' : 'Taux de publication'}
-                      </span>
-                      <span className="font-semibold text-purple-600">85%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <EditorOverviewTab articles={articles} currentLanguage={currentLanguage} isRTL={isRTL} />
           </TabsContent>
           {/* Preview Dialog */}
           <Dialog open={!!previewId} onOpenChange={(open) => { if (!open) setPreviewId(null); }}>
@@ -463,9 +737,10 @@ const EditorDashboard: React.FC = () => {
                       </div>
                       <Badge variant={getStatusBadge(art.status).variant}>{getStatusBadge(art.status).label}</Badge>
                     </div>
-                    <div className="whitespace-pre-wrap leading-7 text-slate-800 dark:text-slate-200">
-                      {art.content}
-                    </div>
+                    <div
+                      className="prose max-w-none leading-7 text-slate-800 dark:text-slate-200"
+                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(art.content) }}
+                    />
                     <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
                       {(['submitted','draft','review'] as const).includes(art.status as any) && (
                         <>
@@ -484,141 +759,87 @@ const EditorDashboard: React.FC = () => {
             </DialogContent>
           </Dialog>
 
-          {/* Articles Management Tab */}
+          {/* Articles Tab */}
           <TabsContent value="articles" className="space-y-6">
             <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
               <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
                 <Input
-                  placeholder={currentLanguage === 'ar' ? 'البحث في المقالات...' : 'Rechercher des articles...'}
+                  placeholder={currentLanguage === 'ar' ? '...ابحث في المقالات' : 'Rechercher...'}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-64"
+                  className="max-w-sm"
                 />
-                <Button variant="outline" size="sm">
-                  <Filter className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
-                  {currentLanguage === 'ar' ? 'تصفية' : 'Filtrer'}
-                </Button>
               </div>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <Plus className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+              <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setIsCreateOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
                 {currentLanguage === 'ar' ? 'مقال جديد' : 'Nouvel Article'}
               </Button>
             </div>
+            <EditorArticlesTab
+              articles={articles as any}
+              loading={loading}
+              searchTerm={searchTerm}
+              setSearchTerm={(v: string) => setSearchTerm(v)}
+              isRTL={isRTL}
+              currentLanguage={currentLanguage as any}
+              getStatusBadge={getStatusBadge}
+              setPreviewId={(id: string) => setPreviewId(id)}
+              approveArticle={approveArticle}
+              rejectArticle={rejectArticle}
+              openEdit={openEdit as any}
+              setConfirmDeleteId={(id: string) => setConfirmDeleteId(id)}
+            />
 
-            <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-0 shadow-xl">
-              <CardHeader>
-                <CardTitle>{currentLanguage === 'ar' ? 'إدارة المقالات' : 'Gestion des Articles'}</CardTitle>
-                <CardDescription>
-                  {currentLanguage === 'ar' ? 'إدارة جميع المقالات والمحتوى' : 'Gérez tous vos articles et contenus'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {loading && <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...'}</div>}
-                  {articles
-                    .filter(a => !searchTerm || a.title.toLowerCase().includes(searchTerm.toLowerCase()))
-                    .map((article) => (
-                    <div key={article.id} className="flex items-center justify-between p-4 border-0 rounded-xl hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 dark:hover:from-slate-700 dark:hover:to-blue-900/20 transition-all duration-300 hover:shadow-lg hover:scale-[1.01] bg-white dark:bg-slate-800/50 shadow-md mb-3">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center overflow-hidden shadow-inner">
-                          {article.imageUrl ? (
-                            <img src={article.imageUrl} alt={article.title} className="w-16 h-16 object-cover" />
-                          ) : (
-                            <FileText className="w-8 h-8 text-slate-600 dark:text-slate-400" />
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="font-medium text-slate-900 dark:text-white">{article.title}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{article.category} • {article.author}</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-500">
-                            {currentLanguage === 'ar' ? 'آخر تعديل:' : 'Modifié:'} {article.lastModified}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Badge variant={getStatusBadge(article.status).variant}>
-                          {getStatusBadge(article.status).label}
-                        </Badge>
-                        <Button variant="outline" size="sm" onClick={() => setPreviewId(article.id)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {article.status === 'submitted' && (
-                          <>
-                            <Button variant="outline" size="sm" onClick={() => approveArticle(article.id)}>
-                              {currentLanguage === 'ar' ? 'نشر' : 'Publier'}
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => rejectArticle(article.id)}>
-                              {currentLanguage === 'ar' ? 'رفض' : 'Rejeter'}
-                            </Button>
-                          </>
-                        )}
-                        <Button variant="outline" size="sm" onClick={() => openEdit(article)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setConfirmDeleteId(article.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        {article.status === 'rejected' && (
-                          <Badge variant="destructive">{currentLanguage === 'ar' ? 'مرفوض' : 'Rejeté'}</Badge>
-                        )}
-                        {article.status === 'published' && (
-                          <Badge>{currentLanguage === 'ar' ? 'منشور' : 'Publié'}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {/* Pagination controls */}
-                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''} pt-2`}>
-                    <div className="text-xs text-slate-500">
-                      {(() => {
-                        const start = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
-                        const end = Math.min(page * pageSize, totalCount);
-                        return currentLanguage === 'ar'
-                          ? `عرض ${start}–${end} من ${totalCount}`
-                          : `Affichage ${start}–${end} sur ${totalCount}`;
-                      })()}
-                    </div>
-                    <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={page <= 1 || loading}
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                      >
-                        {currentLanguage === 'ar' ? 'السابق' : 'Précédent'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={page * pageSize >= totalCount || loading}
-                        onClick={() => setPage(p => p + 1)}
-                      >
-                        {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Dialog open={!!editingId} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
+            {/* Create Article Dialog */}
+            <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); } }}>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>{currentLanguage === 'ar' ? 'تعديل المقال' : 'Modifier l\'article'}</DialogTitle>
+                  <DialogTitle>{currentLanguage === 'ar' ? 'مقال جديد' : 'Nouvel Article'}</DialogTitle>
+                  <DialogDescription>
+                    {currentLanguage === 'ar' ? 'أنشئ مقالك وانشره مباشرة' : 'Créez votre article et publiez-le immédiatement'}
+                  </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</label>
-                    <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}</label>
+                    <select
+                      value={newCategoryId ?? ''}
+                      onChange={(e) => setNewCategoryId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full border rounded-md p-2 bg-white"
+                    >
+                      <option value="">{currentLanguage === 'ar' ? 'اختر فئة' : 'Choisir une catégorie'}</option>
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.name_ar || c.name) : c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الصورة' : 'Image'}</label>
+                    <input type="file" accept="image/*" onChange={(e) => setNewImageFile(e.target.files?.[0] || null)} />
                   </div>
                   <div>
                     <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}</label>
-                    <textarea className="w-full h-60 p-3 border rounded-md" value={editContent} onChange={(e) => setEditContent(e.target.value)} />
+                    <div className="border rounded-md">
+                      <ReactQuill
+                        ref={newQuillRef as any}
+                        theme="snow"
+                        value={newContent}
+                        onChange={setNewContent}
+                        placeholder={currentLanguage === 'ar' ? 'اكتب المحتوى هنا...' : 'Écrivez le contenu ici...'}
+                        modules={newModules}
+                        className={isRTL ? 'rtl' : 'ltr'}
+                      />
+                    </div>
                   </div>
-                  {editError && <p className="text-sm text-red-600">{editError}</p>}
+                  {createError && <p className="text-sm text-red-600">{createError}</p>}
                   <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
-                    <Button variant="outline" onClick={() => setEditingId(null)}>{currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}</Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700" disabled={savingEdit} onClick={saveEdit}>
-                      {savingEdit ? (currentLanguage === 'ar' ? 'حفظ...' : 'Enregistrement...') : (currentLanguage === 'ar' ? 'حفظ' : 'Enregistrer')}
+                    <Button variant="outline" onClick={() => { setIsCreateOpen(false); }}>{currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}</Button>
+                    <Button className="bg-blue-600 hover:bg-blue-700" disabled={creating} onClick={handleCreate}>
+                      {creating ? (currentLanguage === 'ar' ? 'نشر...' : 'Publication...') : (currentLanguage === 'ar' ? 'نشر' : 'Publier')}
                     </Button>
                   </div>
                 </div>
@@ -641,6 +862,11 @@ const EditorDashboard: React.FC = () => {
                 </div>
               </DialogContent>
             </Dialog>
+          </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <AuthorProfileTab />
           </TabsContent>
 
           {/* Analytics Tab */}

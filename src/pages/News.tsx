@@ -262,7 +262,7 @@ const News = () => {
               <div className="space-y-3">
                 {(loadingNews ? [] : allNews.slice(3)).map((news) => (
                   <Link to={`/news/${news.id}`} key={news.id} className="block">
-                    <Card className={`p-2 sm:p-3 rounded-xl hover:shadow-[var(--shadow-hover)] transition-all bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/40`}>
+                    <Card className={`p-2 sm:p-3 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all bg-white dark:bg-[#0f1115] border border-slate-200/70 dark:border-slate-800/60`}>
                       <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <img
                           src={news.imageUrl}

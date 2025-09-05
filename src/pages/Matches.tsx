@@ -6,19 +6,17 @@ import LeagueSelector from "@/components/LeagueSelector";
 import MockAPIAlert from "@/components/MockAPIAlert";
 
 import Footer from "@/components/Footer";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, RefreshCw, QrCode } from "lucide-react";
+import { Clock, RefreshCw, PlayCircle } from "lucide-react";
 import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAPI";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
 import { getArabicTeamName } from '@/utils/teamNameMap';
 import MatchHeader from "@/components/MatchHeader";
-import MatchDetails from "@/components/MatchDetails";
 import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings } from "@/contexts/SettingsContext";
+import { useNavigate } from "react-router-dom";
 
 // Shared formatters to match TeamDetails.tsx, extended with timezone
 const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
@@ -57,6 +55,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
 
   // Date affichée sous le centre, alignée avec TeamDetails.tsx
   const { timezone, hourFormat } = useSettings();
+  const navigate = useNavigate();
   const getFormattedMatchDateTime = () => formatDisplayDate(match.date, currentLanguage, timezone);
 
   // Statut/heure
@@ -181,6 +180,11 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const isLiveState = ['LIVE','1H','2H','HT','ET'].includes(statusShort);
   const isFinishedState = ['FT','AET','PEN'].includes(statusShort);
   const isUpcomingState = !(isLiveState || isFinishedState);
+  const statusLabel = isLiveState
+    ? (currentLanguage === 'ar' ? 'مباشر' : 'En direct')
+    : isFinishedState
+      ? (currentLanguage === 'ar' ? 'انتهت المباراة' : 'Terminé')
+      : (currentLanguage === 'ar' ? 'موعد المباراة' : 'Heure du match');
   const matchDateObj = match.date ? new Date(match.date) : null;
   const upcomingArabicParts = (() => {
     if (!matchDateObj) return null;
@@ -193,21 +197,21 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   })();
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
-  const [showMatchDetails, setShowMatchDetails] = useState(false);
   // Use static mapping for Arabic UI; keep original for other languages
   const displayHomeName = currentLanguage === 'ar' ? getArabicTeamName(homeName) : homeName;
   const displayAwayName = currentLanguage === 'ar' ? getArabicTeamName(awayName) : awayName;
 
+  const navigate = useNavigate();
   return (
     <div
       dir={direction}
       className={`flex flex-row items-center justify-between my-1.5 sm:my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
-      onClick={() => setShowMatchDetails(true)}
+      onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
-      {/* Small left image card */}
+      {/* Left: play badge */}
       <div className={`shrink-0 me-2 hidden sm:block`}>
-        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-xl bg-[#eef2f7] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
-          <QrCode className="w-3.5 h-3.5 text-rose-400" />
+        <div className="w-8 h-8 rounded-xl bg-[#e9edf5] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
+          <PlayCircle className="w-5 h-5 text-blue-500" />
         </div>
       </div>
       <div className={`flex items-center gap-2 sm:gap-2.5 flex-1 basis-0 min-w-0 justify-end`}>
@@ -254,8 +258,9 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
       )}
     </div>
     
-    {/* Centre: score/time only, exactly centered */}
-  <div className="flex items-center justify-center w-[64px] min-w-[64px] sm:w-[120px] sm:min-w-[120px]">
+    {/* Centre: status label + score/time, stacked */}
+    <div className="flex flex-col items-center justify-center w-[90px] min-w-[90px] sm:w-[140px] sm:min-w-[140px]">
+      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 whitespace-nowrap">{statusLabel}</span>
       {(isLiveState || isFinishedState)
         ? (
           <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
@@ -311,68 +316,7 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
         </>
       )}
     </div>
-    {/* Modal pour les détails du match */}
-    {showMatchDetails && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-[#0f172a] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {currentLanguage === 'ar' ? 'تفاصيل المباراة' : 'Détails du match'}
-            </h2>
-            <button 
-              onClick={() => setShowMatchDetails(false)}
-              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl font-bold"
-            >
-              ×
-            </button>
-          </div>
-          <div className="p-4">
-            {(() => {
-              console.log('Match data being passed to MatchDetails:', match);
-              console.log('Match status:', match.status);
-              return null;
-            })()}
-            <MatchDetails 
-              match={{
-                id: match.id,
-                date: match.date,
-                time: new Intl.DateTimeFormat(
-                  currentLanguage === 'ar' ? 'ar' : 'fr-FR',
-                  { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: timezone }
-                ).format(new Date(match.date)),
-                status: match.status || 'scheduled', // Provide default status if undefined
-                venue: undefined,
-                referee: undefined,
-                league: {
-                  id: match.league.id,
-                  name: match.league.name,
-                  logo: match.league.logo,
-                  country: ''
-                },
-                teams: {
-                  home: {
-                    id: match.teams.home.id,
-                    name: match.teams.home.name,
-                    logo: match.teams.home.logo,
-                    score: match.goals?.home || undefined
-                  },
-                  away: {
-                    id: match.teams.away.id,
-                    name: match.teams.away.name,
-                    logo: match.teams.away.logo,
-                    score: match.goals?.away || undefined
-                  }
-                },
-                goals: [],
-                cards: [],
-                substitutions: []
-              }}
-              onClose={() => setShowMatchDetails(false)}
-            />
-          </div>
-        </div>
-      </div>
-    )}
+    {/* Modal removed: navigation is used instead */}
   </div>
 );
 };
@@ -380,9 +324,10 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
 const Matches = () => {
   const { currentLanguage, isRTL, direction } = useTranslation();
   const { timezone, hourFormat } = useSettings();
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedLeagues, setSelectedLeagues] = useState<number[]>([]);
-  const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
+  // const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [sortBy, setSortBy] = useState<'league'|'time'>('league');
   const [statusFilter, setStatusFilter] = useState<'all'|'upcoming'|'live'|'finished'>('all');
@@ -566,38 +511,22 @@ const Matches = () => {
     // Ajoute d'autres champs utiles si besoin
   };
 
-                    // Check if match is live or finished
-                    const isLive = ['LIVE', '1H', '2H', 'HT', 'ET'].includes(match.status || match.status?.short || '');
-                    const isFinished = ['FT','AET','PEN'].includes(match.status || match.status?.short || '');
-                    // Check if both scores are 0
+                    // Always render compact row style like the screenshot
                     const bothScoresZero = (match.goals?.home === 0 && match.goals?.away === 0);
-                    // Use MatchCard for live or finished (to show score). Use row only for upcoming/scheduled.
-                    if (!(isLive || isFinished)) {
-                      return (
-                        <TranslatedMatchRow
-                          key={match.id}
-                          match={{
-                            ...match,
-                            // If 0-0, override goals for display
-                            goals: bothScoresZero
-                              ? { 
-                                  home: '', 
-                                  away: '', 
-                                  displayDate: new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(match.date)) 
-                                }
-                              : match.goals
-                          }}
-                          currentLanguage={currentLanguage}
-                        />
-                      );
-                    }
-                    // Default: live match as card
                     return (
-                      <MatchCard
+                      <TranslatedMatchRow
                         key={match.id}
-                        match={match}
+                        match={{
+                          ...match,
+                          goals: bothScoresZero
+                            ? { 
+                                home: '', 
+                                away: '', 
+                                displayDate: new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(match.date)) 
+                              }
+                            : match.goals
+                        }}
                         currentLanguage={currentLanguage}
-                        onDetails={(selected) => setSelectedMatch(selected)}
                       />
                     );
                   })}
@@ -646,46 +575,7 @@ const Matches = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Global Match Details Modal */}
-      {selectedMatch && (
-        <MatchDetails
-          match={{
-            id: selectedMatch.id,
-            date: selectedMatch.date,
-            time: new Intl.DateTimeFormat(
-              currentLanguage === 'ar' ? 'ar' : 'fr-FR',
-              { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: timezone }
-            ).format(new Date(selectedMatch.date)),
-            status: selectedMatch.status || 'scheduled',
-            venue: undefined,
-            referee: undefined,
-            league: {
-              id: selectedMatch.league.id,
-              name: selectedMatch.league.name,
-              logo: selectedMatch.league.logo,
-              country: ''
-            },
-            teams: {
-              home: {
-                id: selectedMatch.teams.home.id,
-                name: selectedMatch.teams.home.name,
-                logo: selectedMatch.teams.home.logo,
-                score: selectedMatch.goals?.home || undefined
-              },
-              away: {
-                id: selectedMatch.teams.away.id,
-                name: selectedMatch.teams.away.name,
-                logo: selectedMatch.teams.away.logo,
-                score: selectedMatch.goals?.away || undefined
-              }
-            },
-            goals: [],
-            cards: [],
-            substitutions: []
-          }}
-          onClose={() => setSelectedMatch(null)}
-        />
-      )}
+      {/* Global modal removed, using page navigation */}
       <Footer />
     </div>
   );

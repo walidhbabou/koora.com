@@ -266,12 +266,7 @@ const Transfers = () => {
             <div className={`flex items-center justify-between gap-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} flex-wrap`}>
               <div className={`${isRTL ? 'text-right' : 'text-left'} min-w-[200px] flex-1`}
               >
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-sport-dark to-sport-green bg-clip-text text-transparent">
-                  {isRTL ? "الانتقالات" : "Transfers"}
-                </h1>
-                <p className="text-muted-foreground mt-0.5">
-                  {isRTL ? "آخر أخبار سوق الانتقالات والصفقات" : "Latest transfer market news and deals"}
-                </p>
+               
               </div>
               
               <div className="flex gap-2 overflow-x-auto md:overflow-visible py-1">

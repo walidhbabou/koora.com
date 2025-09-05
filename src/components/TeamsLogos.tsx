@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -106,17 +106,28 @@ const TeamsLogos = () => {
   };
 
   const [visibleTeams, setVisibleTeams] = useState(getVisibleTeams());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const nextSlide = () => {
-    setCurrentIndex((prev) => 
-      prev >= teams.length - visibleTeams ? 0 : prev + 1
-    );
+    // Desktop/tablet: scroll the row instead of index transform
+    if (visibleTeams > 4 && scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      const amount = Math.floor(el.clientWidth * 0.6);
+      el.scrollBy({ left: amount, behavior: 'smooth' });
+      return;
+    }
+    // Mobile: keep index-based dots behavior
+    setCurrentIndex((prev) => (prev >= teams.length - visibleTeams ? 0 : prev + 1));
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prev) => 
-      prev <= 0 ? teams.length - visibleTeams : prev - 1
-    );
+    if (visibleTeams > 4 && scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      const amount = Math.floor(el.clientWidth * 0.6);
+      el.scrollBy({ left: -amount, behavior: 'smooth' });
+      return;
+    }
+    setCurrentIndex((prev) => (prev <= 0 ? teams.length - visibleTeams : prev - 1));
   };
 
   // Handle window resize and keep listener in effect
@@ -165,7 +176,7 @@ const TeamsLogos = () => {
                 {teams.map((team) => (
                   <div key={team.id} className="flex-shrink-0 w-20">
                     <div
-                      className="group cursor-pointer w-20 h-20 bg-white dark:bg-[#181a20] rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 flex items-center justify-center border border-gray-100 dark:border-[#23262f]"
+                      className="group cursor-pointer w-20 h-20 bg-white dark:bg-[#181a20] rounded-2xl shadow hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center border border-gray-100 dark:border-[#23262f]"
                       onClick={() => navigate(`/team/${team.id}`, { state: { leagueId: (team as any).leagueId } })}
                     >
                       <img
@@ -182,31 +193,27 @@ const TeamsLogos = () => {
                 ))}
               </div>
             ) : (
-              /* Desktop / tablet carousel */
-              <div 
-                className="flex transition-transform duration-500 ease-in-out"
-                style={{ 
-                  transform: `translateX(-${currentIndex * (100 / visibleTeams)}%)`,
-                  width: `${(teams.length * 100) / visibleTeams}%`
-                }}
+              /* Desktop / tablet: horizontal scroll row with arrows */
+              <div
+                ref={scrollContainerRef}
+                className="flex gap-4 overflow-x-hidden py-2 px-6"
               >
-                {teams.map((team, index) => (
-                  <div
-                    key={team.id}
-                    className="flex-shrink-0"
-                    style={{ width: `${100 / teams.length}%` }}
-                  >
-                    <div 
+                {teams.map((team) => (
+                  <div key={team.id} className="flex-shrink-0">
+                    <div
                       className="group cursor-pointer"
-                      onClick={() => navigate(`/team/${team.id}`, { state: { leagueId: (team as any).leagueId } })}
+                      onClick={() =>
+                        navigate(`/team/${team.id}`, {
+                          state: { leagueId: (team as any).leagueId },
+                        })
+                      }
                     >
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto bg-white dark:bg-[#181a20] rounded-lg sm:rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 group-hover:scale-105 flex items-center justify-center border border-gray-100 dark:border-[#23262f]">
+                      <div className="w-16 h-16 md:w-20 md:h-20 lg:w-22 lg:h-22 xl:w-24 xl:h-24 mx-auto bg-white dark:bg-[#181a20] rounded-2xl shadow hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 group-hover:scale-105 flex items-center justify-center border border-gray-100 dark:border-[#23262f]">
                         <img
                           src={team.logo}
                           alt={team.name}
-                          className="w-8 h-8 sm:w-12 sm:h-12 object-contain"
+                          className="w-10 h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 object-contain"
                           onError={(e) => {
-                            // Fallback to placeholder if image fails to load
                             const target = e.target as HTMLImageElement;
                             target.src = "/placeholder.svg";
                           }}

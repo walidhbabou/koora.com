@@ -7,6 +7,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import Matches from "./pages/Matches";
+import MatchDetailsPage from "./pages/MatchDetailsPage";
 import News from "./pages/News";
 import NewsDetails from "./pages/NewsDetails";
 import Standings from "./pages/Standings";
@@ -42,6 +43,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/matches" element={<Matches />} />
+              <Route path="/match/:id" element={<MatchDetailsPage />} />
               <Route path="/news" element={<News />} />
               <Route path="/news/:id" element={<NewsDetails />} />
               <Route path="/standings" element={<Standings />} />
