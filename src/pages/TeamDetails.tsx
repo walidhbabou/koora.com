@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/hooks/useTranslation";
 import { footballAPI } from "@/config/api";
 import type { Fixture } from "@/config/api";
-import { getArabicTeamName } from "@/utils/teamNameMap";
+import { getTeamTranslation } from "@/utils/teamNameMap";
 
 interface TeamInfo {
   id: number;
@@ -294,7 +294,7 @@ const TeamDetails = () => {
 
   const teamLabel = (name?: string) => {
     if (!name) return '-';
-    return currentLanguage === 'ar' ? getArabicTeamName(name) : name;
+    return currentLanguage === 'ar' ? getTeamTranslation(name) : name;
   };
 
   return (

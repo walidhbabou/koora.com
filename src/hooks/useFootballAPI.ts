@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
-import { footballAPI, translateAPI, Fixture, Standing, Transfer } from "@/config/api";
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from '@/hooks/useTranslation';
+import { footballAPI, ApiResponse } from '@/config/api';
 
 // Extended types for translated content
 interface TranslatedTeam {
@@ -84,17 +85,17 @@ export const useLiveMatches = ({ translateContent = false, refreshInterval = 0 }
         for (const match of result.response) {
           // Traduire noms d'équipes
           if (match.teams?.home?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.home.name);
+            const translated = match.teams.home.name;
             (match.teams.home as TranslatedTeam).nameTranslated = { arabic: translated };
           }
           if (match.teams?.away?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.away.name);
+            const translated = match.teams.away.name;
             (match.teams.away as TranslatedTeam).nameTranslated = { arabic: translated };
           }
 
           // Traduire nom de ligue
           if (match.league?.name) {
-            const translated = await translateAPI.translateToArabic(match.league.name);
+            const translated = match.league.name;
             (match.league as TranslatedLeague).nameTranslated = { arabic: translated };
           }
         }
@@ -147,17 +148,17 @@ export const useTodayMatches = ({ translateContent = false, refreshInterval = 0 
         for (const match of result.response) {
           // Traduire noms d'équipes
           if (match.teams?.home?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.home.name);
+            const translated = match.teams.home.name;
             (match.teams.home as TranslatedTeam).nameTranslated = { arabic: translated };
           }
           if (match.teams?.away?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.away.name);
+            const translated = match.teams.away.name;
             (match.teams.away as TranslatedTeam).nameTranslated = { arabic: translated };
           }
 
           // Traduire nom de ligue
           if (match.league?.name) {
-            const translated = await translateAPI.translateToArabic(match.league.name);
+            const translated = match.league.name;
             (match.league as TranslatedLeague).nameTranslated = { arabic: translated };
           }
         }
@@ -225,17 +226,17 @@ export const useMatchesByDateAndLeague = ({
         for (const match of result.response) {
           // Traduire noms d'équipes
           if (match.teams?.home?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.home.name);
+            const translated = match.teams.home.name;
             (match.teams.home as TranslatedTeam).nameTranslated = { arabic: translated };
           }
           if (match.teams?.away?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.away.name);
+            const translated = match.teams.away.name;
             (match.teams.away as TranslatedTeam).nameTranslated = { arabic: translated };
           }
 
           // Traduire nom de ligue
           if (match.league?.name) {
-            const translated = await translateAPI.translateToArabic(match.league.name);
+            const translated = match.league.name;
             (match.league as TranslatedLeague).nameTranslated = { arabic: translated };
           }
         }
@@ -291,7 +292,7 @@ export const useStandings = ({ leagueId, season, translateContent = false }: {
           if (leagueData.league?.standings?.[0]) {
             for (const standing of leagueData.league.standings[0]) {
               if (standing.team?.name) {
-                const translated = await translateAPI.translateToArabic(standing.team.name);
+                const translated = standing.team.name;
                 (standing.team as TranslatedTeam).nameTranslated = { arabic: translated };
               }
             }
@@ -343,17 +344,17 @@ export const useTransfers = ({ teamId, translateContent = false }: {
         for (const transfer of result.response) {
           // Traduire nom du joueur
           if (transfer.player?.name) {
-            const translated = await translateAPI.translateToArabic(transfer.player.name);
+            const translated = transfer.player.name;
             transfer.player.nameTranslated = { arabic: translated };
           }
 
           // Traduire noms des équipes
           if (transfer.teams?.in?.name) {
-            const translated = await translateAPI.translateToArabic(transfer.teams.in.name);
+            const translated = transfer.teams.in.name;
             (transfer.teams.in as TranslatedTeam).nameTranslated = { arabic: translated };
           }
           if (transfer.teams?.out?.name) {
-            const translated = await translateAPI.translateToArabic(transfer.teams.out.name);
+            const translated = transfer.teams.out.name;
             (transfer.teams.out as TranslatedTeam).nameTranslated = { arabic: translated };
           }
         }
@@ -420,17 +421,17 @@ export const useFootballAPI = ({
         for (const match of result.response) {
           // Traduire noms d'équipes
           if (match.teams?.home?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.home.name);
+            const translated = match.teams.home.name;
             (match.teams.home as TranslatedTeam).nameTranslated = { arabic: translated };
           }
           if (match.teams?.away?.name) {
-            const translated = await translateAPI.translateToArabic(match.teams.away.name);
+            const translated = match.teams.away.name;
             (match.teams.away as TranslatedTeam).nameTranslated = { arabic: translated };
           }
 
           // Traduire nom de ligue
           if (match.league?.name) {
-            const translated = await translateAPI.translateToArabic(match.league.name);
+            const translated = match.league.name;
             (match.league as TranslatedLeague).nameTranslated = { arabic: translated };
           }
         }
@@ -521,16 +522,15 @@ export const useTopScorers = ({
       let result = await footballAPI.getTopScorers(leagueId, season);
       
       if (translateContent && result?.response) {
-        const translateAPI = (await import('@/config/api')).translateAPI;
         for (const item of result.response) {
           if (item.player?.name) {
             item.player.nameTranslated = {
-              arabic: await translateAPI.translateToArabic(item.player.name)
+              arabic: item.player.name
             };
           }
           if (item.statistics?.[0]?.team?.name) {
             item.statistics[0].team.nameTranslated = {
-              arabic: await translateAPI.translateToArabic(item.statistics[0].team.name)
+              arabic: item.statistics[0].team.name
             };
           }
         }
@@ -588,16 +588,15 @@ export const useTopAssists = ({
       let result = await footballAPI.getTopAssists(leagueId, season);
       
       if (translateContent && result?.response) {
-        const translateAPI = (await import('@/config/api')).translateAPI;
         for (const item of result.response) {
           if (item.player?.name) {
             item.player.nameTranslated = {
-              arabic: await translateAPI.translateToArabic(item.player.name)
+              arabic: item.player.name
             };
           }
           if (item.statistics?.[0]?.team?.name) {
             item.statistics[0].team.nameTranslated = {
-              arabic: await translateAPI.translateToArabic(item.statistics[0].team.name)
+              arabic: item.statistics[0].team.name
             };
           }
         }
@@ -629,4 +628,44 @@ export const useTopAssists = ({
     refetch: fetchData,
     lastUpdated
   };
+};
+
+// Hook pour les fixtures
+export const useFixtures = ({ leagueId, season, translateContent = false }: {
+  leagueId: number;
+  season: number;
+  translateContent?: boolean;
+}) => {
+  const { currentLanguage } = useTranslation();
+  const [data, setData] = useState<ApiResponse<any> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchFixtures = async () => {
+      try {
+        setLoading(true);
+        const res = await footballAPI.getFixtures({
+          league: leagueId,
+          season: season,
+          timezone: currentLanguage === 'ar' ? 'Africa/Casablanca' : 'Europe/Paris'
+        });
+
+        if (res?.response) {
+          setData(res);
+        }
+      } catch (err) {
+        setError('Failed to fetch fixtures');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (leagueId > 0) {
+      fetchFixtures();
+    }
+  }, [leagueId, season, currentLanguage]);
+
+  return { data, loading, error };
 };

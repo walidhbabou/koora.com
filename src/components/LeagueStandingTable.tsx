@@ -5,7 +5,7 @@ import { Trophy, TrendingUp, TrendingDown, Minus, Users } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import PlayerStats from "./PlayerStats";
 import type { Standing } from "@/config/api";
-import { getArabicTeamName } from "@/utils/teamNameMap";
+import { getTeamTranslation } from "@/utils/teamNameMap";
 
 // Helper function to get Arabic league names
 function getArabicLeagueName(leagueName: string): string {
@@ -184,7 +184,7 @@ const LeagueStandingTable = ({
                           className="w-10 h-10 sm:w-8 sm:h-8 object-contain flex-shrink-0"
                         />
                         <span className="font-semibold text-gray-800 dark:text-gray-200 truncate text-sm sm:text-base">
-                          {currentLanguage === 'ar' ? getArabicTeamName(team.team.name) : team.team.name}
+                          {currentLanguage === 'ar' ? getTeamTranslation(team.team.name) : team.team.name}
                         </span>
                       </div>
 

@@ -69,47 +69,21 @@ const AuthorDashboard: React.FC = () => {
   const editQuillRef = useRef<ReactQuill | null>(null);
   const writingQuillRef = useRef<ReactQuill | null>(null);
 
-  // Insert a simple HTML table via clipboard API
+  // Standard react-quill toolbar (icons from snow theme), no table button
   const buildModules = (ref: React.RefObject<ReactQuill>) => ({
     toolbar: {
       container: [
-        [{ header: [1, 2, 3, false] }],
+        [{ header: [1, 2, 3, false] }, { font: [] }, { size: [] }],
         ['bold', 'italic', 'underline', 'strike'],
         [{ color: [] }, { background: [] }],
         [{ script: 'sub' }, { script: 'super' }],
+        ['blockquote', 'code-block'],
         [{ list: 'ordered' }, { list: 'bullet' }],
         [{ indent: '-1' }, { indent: '+1' }],
-        [{ align: [] }, { direction: isRTL ? 'rtl' : 'ltr' }],
-        ['blockquote', 'code-block', 'link', 'image'],
-        ['clean', 'table'],
+        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
+        ['link', 'image'],
+        ['clean'],
       ],
-      handlers: {
-        table: () => {
-          const editor: any = ref.current?.getEditor?.();
-          if (!editor) return;
-          const range = editor.getSelection(true) || { index: editor.getLength(), length: 0 };
-          const rtlStyle = isRTL ? 'direction:rtl;text-align:right;' : '';
-          const tableHtml = `
-            <table border="1" style="border-collapse:collapse;width:100%;${rtlStyle}">
-              <thead>
-                <tr>
-                  <th>${currentLanguage === 'ar' ? 'عمود 1' : 'Col 1'}</th>
-                  <th>${currentLanguage === 'ar' ? 'عمود 2' : 'Col 2'}</th>
-                  <th>${currentLanguage === 'ar' ? 'عمود 3' : 'Col 3'}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>${currentLanguage === 'ar' ? 'نص' : 'Texte'}</td>
-                  <td>${currentLanguage === 'ar' ? 'نص' : 'Texte'}</td>
-                  <td>${currentLanguage === 'ar' ? 'نص' : 'Texte'}</td>
-                </tr>
-              </tbody>
-            </table>`;
-          editor.clipboard.dangerouslyPasteHTML(range.index, tableHtml);
-          editor.setSelection(range.index + 1, 0);
-        },
-      },
     },
   });
   const newModules = useMemo(() => buildModules(newQuillRef), [isRTL, currentLanguage]);
@@ -187,6 +161,16 @@ const AuthorDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openArticleUrl = async (id: string | number, title?: string) => {
+    const url = getPublicArticleUrl(String(id));
+    try { await navigator.clipboard.writeText(url); } catch {}
+    toast({
+      title: currentLanguage === 'ar' ? 'تم نسخ الرابط' : 'Lien copié',
+      description: url,
+    });
+    try { window.open(url, '_blank'); } catch {}
   };
 
   // Helpers for Writing tab actions
@@ -406,12 +390,10 @@ const AuthorDashboard: React.FC = () => {
   const shareArticle = async (article: Article) => {
     try {
       const now = new Date().toISOString();
-      const idValue: any = !isNaN(Number(article.id)) && String(article.id).trim() !== '' ? Number(article.id) : article.id;
       const category_id = (articles.find(a => a.id === article.id) as any)?.category_id
         ?? categories.find(c => c.name === article.category || c.name_ar === article.category)?.id
         ?? null;
-      const payload: any = {
-        id: idValue,
+      const basePayload: any = {
         title: (article as any).title_fr ?? article.title ?? '',
         title_ar: (article as any).title_ar ?? article.title ?? '',
         content: DOMPurify.sanitize(((article as any).content_fr ?? article.content ?? '')),
@@ -419,22 +401,37 @@ const AuthorDashboard: React.FC = () => {
         status: 'published',
         image_url: (article as any).imageUrl ?? (article as any).image_url ?? null,
         category_id,
-        // Do NOT send user_id to satisfy RLS WITH CHECK (user_id = auth.uid()) via column default
-        // Let database default set user_id = auth.uid()
+        user_id: user?.id || null,
         created_at: (article as any).created_at ?? now,
         updated_at: now,
       };
-      // Debug payload (without sensitive fields) to help diagnose RLS issues if any persist
-      console.debug('shareArticle upsert payload (no user_id):', { ...payload, user_id: undefined });
-      const { data, error: upsertErr } = await supabase
-        .from('news')
-        .upsert(payload, { onConflict: 'id' })
-        .select();
-      if (upsertErr) throw upsertErr;
-      if (!data || data.length === 0) {
-        throw new Error(currentLanguage === 'ar'
-          ? 'لم يتم إدراج السجل (قد تمنع سياسات RLS العملية)'
-          : "Aucun enregistrement renvoyé (les politiques RLS peuvent bloquer l'opération)");
+      let publishedId: number | string | null = null;
+      // Try insert with explicit id first (stable URL)
+      const idValue: any = !isNaN(Number(article.id)) && String(article.id).trim() !== '' ? Number(article.id) : article.id;
+      const tryPayloadWithId = { id: idValue, ...basePayload };
+      let err1 = null;
+      try {
+        const { error } = await supabase.from('news').insert(tryPayloadWithId);
+        if (error) throw error;
+        publishedId = idValue;
+      } catch (e1: any) {
+        err1 = e1;
+        // Retry without id (let DB assign)
+        const { error: e2 } = await supabase.from('news').insert(basePayload);
+        if (e2) throw e2;
+        // Fetch the id of the record we just inserted (should be readable if status='published')
+        try {
+          const { data: found } = await supabase
+            .from('news')
+            .select('id')
+            .eq('user_id', user?.id || '')
+            .eq('status', 'published')
+            .eq('title', basePayload.title)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (found?.id) publishedId = found.id;
+        } catch {}
       }
 
       // Optionally reflect status locally
@@ -442,22 +439,17 @@ const AuthorDashboard: React.FC = () => {
         try { await updateStatus(article.id, 'published'); } catch {}
       }
 
-      const url = getPublicArticleUrl(String(article.id));
-      if ((navigator as any).share) {
-        try { await (navigator as any).share({ title: article.title, url }); } catch {}
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast({ title: currentLanguage === 'ar' ? 'تم نسخ الرابط' : 'Lien copié', description: url });
-      }
+      const newId = publishedId ?? article.id; // fallback to submission id if we couldn't read the new id
+      const url = getPublicArticleUrl(String(newId));
+      try { await navigator.clipboard.writeText(url); } catch {}
       toast({
-        title: currentLanguage === 'ar' ? 'تم النشر والمشاركة' : 'Publication partagée',
-        description: url,
+        title: currentLanguage === 'ar' ? 'تم النشر' : 'Publication réussie',
       });
     } catch (e: any) {
       console.error('Share upsert error:', e);
       toast({
         title: currentLanguage === 'ar' ? 'فشل المشاركة' : 'Échec du partage',
-        description: `${e?.code ? `[${e.code}] ` : ''}${e?.message || (currentLanguage === 'ar' ? 'تحقق من الاتصال والصلاحيات' : 'Vérifiez la connexion et les permissions')}`,
+        description: `${e?.code ? `[${e.code}] ` : ''}${e?.message || (currentLanguage === 'ar' ? 'تحقق من الاتصال وصلاحيات RLS لجدول news (قد تطلب السياسة user_id = auth.uid() و id افتراضي)' : 'Vérifiez la connexion et les politiques RLS de la table news (souvent user_id = auth.uid() et id par défaut)')}`,
         variant: 'destructive',
       });
     }
@@ -806,7 +798,7 @@ const AuthorDashboard: React.FC = () => {
                     {currentLanguage === 'ar' ? 'مقال جديد' : 'Nouvel Article'}
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{currentLanguage === 'ar' ? 'إنشاء مقال' : 'Créer un article'}</DialogTitle>
                     <DialogDescription>
@@ -894,13 +886,23 @@ const AuthorDashboard: React.FC = () => {
                         <Badge variant={getStatusBadge(article.status).variant}>
                           {getStatusBadge(article.status).label}
                         </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => shareArticle(article)}
-                        >
-                          {currentLanguage === 'ar' ? 'مشاركة' : 'Partager'}
-                        </Button>
+                        {article.status !== 'published' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => shareArticle(article)}
+                          >
+                            {currentLanguage === 'ar' ? 'مشاركة' : 'Partager'}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openArticleUrl(article.id, article.title)}
+                          >
+                            {currentLanguage === 'ar' ? 'فتح الرابط' : 'Ouvrir'}
+                          </Button>
+                        )}
                         {article.status === 'draft' && (
                           <Button variant="outline" size="sm" onClick={() => updateStatus(article.id, 'submitted')}>
                             {currentLanguage === 'ar' ? 'إرسال' : 'Soumettre'}
@@ -916,9 +918,7 @@ const AuthorDashboard: React.FC = () => {
                             <Button variant="outline" size="sm" onClick={() => openEdit(article)}>
                               {currentLanguage === 'ar' ? 'تعديل' : 'Modifier'}
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => setConfirmDeleteId(article.id)}>
-                              {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
-                            </Button>
+                           
                           </>
                         )}
                       </div>
@@ -928,7 +928,7 @@ const AuthorDashboard: React.FC = () => {
               </CardContent>
             </Card>
             <Dialog open={!!editingId} onOpenChange={(open) => { if (!open) setEditingId(null); }}>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{currentLanguage === 'ar' ? 'تعديل المقال' : 'Modifier l\'article'}</DialogTitle>
                   <DialogDescription>
@@ -1063,7 +1063,7 @@ const AuthorDashboard: React.FC = () => {
 
               {/* Preview Dialog */}
               <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{currentLanguage === 'ar' ? 'معاينة المقال' : 'Aperçu de l\'article'}</DialogTitle>
                     <DialogDescription>

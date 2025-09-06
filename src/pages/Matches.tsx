@@ -11,7 +11,7 @@ import { Clock, RefreshCw, PlayCircle } from "lucide-react";
 import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAPI";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
-import { getArabicTeamName } from '@/utils/teamNameMap';
+import { getTeamTranslation } from "@/utils/teamNameMap.ts";
 import MatchHeader from "@/components/MatchHeader";
 import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -48,8 +48,8 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  const displayHomeName = currentLanguage === 'ar' ? getArabicTeamName(homeName) : homeName;
-  const displayAwayName = currentLanguage === 'ar' ? getArabicTeamName(awayName) : awayName;
+  const displayHomeName = currentLanguage === 'ar' ? getTeamTranslation(homeName) : homeName;
+  const displayAwayName = currentLanguage === 'ar' ? getTeamTranslation(awayName) : awayName;
   const homeScore = (match.goals?.home ?? match.score?.fulltime?.home ?? 0);
   const awayScore = (match.goals?.away ?? match.score?.fulltime?.away ?? 0);
 
@@ -198,8 +198,8 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
   // Use static mapping for Arabic UI; keep original for other languages
-  const displayHomeName = currentLanguage === 'ar' ? getArabicTeamName(homeName) : homeName;
-  const displayAwayName = currentLanguage === 'ar' ? getArabicTeamName(awayName) : awayName;
+  const displayHomeName = currentLanguage === 'ar' ? getTeamTranslation(homeName) : homeName;
+  const displayAwayName = currentLanguage === 'ar' ? getTeamTranslation(awayName) : awayName;
 
   const navigate = useNavigate();
   return (
@@ -325,7 +325,8 @@ const Matches = () => {
   const { currentLanguage, isRTL, direction } = useTranslation();
   const { timezone, hourFormat } = useSettings();
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  // Use local timezone date (YYYY-MM-DD) to avoid UTC off-by-one issues
+  const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [selectedLeagues, setSelectedLeagues] = useState<number[]>([]);
   // const [selectedMatch, setSelectedMatch] = useState<any | null>(null);
   const [showFilter, setShowFilter] = useState(false);
@@ -461,7 +462,7 @@ const Matches = () => {
               setCurrentPage(1);
             }}
             onReset={() => {
-              setSelectedDate(new Date().toISOString().split('T')[0]);
+              setSelectedDate(new Date().toLocaleDateString('en-CA'));
               setSelectedLeagues([]);
               setCurrentPage(1);
               setCurrentLivePage(1);

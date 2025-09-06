@@ -17,7 +17,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslation } from '../hooks/useTranslation';
 import { maybeTransliterateName } from '@/utils/transliterate';
 import { footballAPI, FixtureEventItem, FixtureStatisticItem, FixtureLineupItem } from '@/config/api';
-import { getArabicTeamName } from '@/utils/teamNameMap';
+import { getTeamTranslation } from "@/utils/teamNameMap";
+import { translateEventDetail, translateStatType } from '@/utils/footballTranslations';
 
 interface MatchDetailsProps {
   match: {
@@ -114,8 +115,8 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
   }, [activeTab, match?.id, currentLanguage]);
 
   // Team display names (Arabic mapping if needed)
-  const homeTeamName = currentLanguage === 'ar' ? getArabicTeamName(match.teams.home.name) : match.teams.home.name;
-  const awayTeamName = currentLanguage === 'ar' ? getArabicTeamName(match.teams.away.name) : match.teams.away.name;
+  const homeTeamName = currentLanguage === 'ar' ? getTeamTranslation(match.teams.home.name) : match.teams.home.name;
+  const awayTeamName = currentLanguage === 'ar' ? getTeamTranslation(match.teams.away.name) : match.teams.away.name;
 
   // Fetch stats when Stats tab becomes active
   useEffect(() => {
@@ -286,14 +287,14 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-6 rounded-t-xl">
+        <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 p-4 sm:p-6 rounded-t-xl">
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2 sm:space-x-4'}`}>
               <Button variant="ghost" size="sm" onClick={onClose} aria-label={currentLanguage === 'ar' ? 'رجوع' : 'Retour'}>
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               <div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                <h2 className="text-lg sm:text-2xl font-bold text-slate-900 dark:text-white">
                   {currentLanguage === 'ar' ? 'تفاصيل المباراة' : 'Détails du Match'}
                 </h2>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
@@ -312,8 +313,8 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
           </div>
         </div>
 
-        {/* Match Info (Minimalist Header) */}
-        <div className="p-6">
+        {/* Match Info */}
+        <div className="p-4 sm:p-6">
           {(() => {
             const homeScore = match.teams.home.score ?? 0;
             const awayScore = match.teams.away.score ?? 0;
@@ -330,18 +331,18 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
             const scoreClassHome = `text-3xl sm:text-4xl font-extrabold ${homeWin ? 'text-teal-600' : 'text-slate-900 dark:text-white'}`;
             const scoreClassAway = `text-3xl sm:text-4xl font-extrabold ${awayWin ? 'text-teal-600' : 'text-slate-900 dark:text-white'}`;
             return (
-              <div className="relative overflow-hidden rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-6 sm:p-8">
+              <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-4 sm:p-6 sm:p-8">
                 <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                   {/* Home side */}
                   <div className="flex-1 flex flex-col items-center">
-                    <div className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 mb-2 truncate max-w-[160px] text-center">{homeTeamName}</div>
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white/70 dark:bg-slate-900/60 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <img src={match.teams.home.logo} alt={homeTeamName} className="w-16 h-16 sm:w-20 sm:h-20 object-contain" />
+                    <div className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 mb-1 sm:mb-2 truncate max-w-[100px] sm:max-w-[160px] text-center">{homeTeamName}</div>
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-white/70 dark:bg-slate-900/60 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
+                      <img src={match.teams.home.logo} alt={homeTeamName} className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
                     </div>
                   </div>
 
                   {/* Center: score with status */}
-                  <div className="flex-1 min-w-[220px] sm:min-w-[260px] flex items-center justify-center px-2">
+                  <div className="flex-1 min-w-[120px] sm:min-w-[220px] flex items-center justify-center px-1 sm:px-2">
                     {isRTL ? (
                       <div className="flex items-center gap-2 sm:gap-3 text-center">
                         <span className={scoreClassAway}>{awayScore}</span>
@@ -359,9 +360,9 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
 
                   {/* Away side */}
                   <div className="flex-1 flex flex-col items-center">
-                    <div className="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-200 mb-2 truncate max-w-[160px] text-center">{awayTeamName}</div>
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden bg-white/70 dark:bg-slate-900/60 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <img src={match.teams.away.logo} alt={awayTeamName} className="w-16 h-16 sm:w-20 sm:h-20 object-contain" />
+                    <div className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 mb-1 sm:mb-2 truncate max-w-[100px] sm:max-w-[160px] text-center">{awayTeamName}</div>
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden bg-white/70 dark:bg-slate-900/60 flex items-center justify-center border border-slate-200 dark:border-slate-700 shadow-sm">
+                      <img src={match.teams.away.logo} alt={awayTeamName} className="w-12 h-12 sm:w-16 sm:h-16 object-contain" />
                     </div>
                   </div>
                 </div>
@@ -371,20 +372,20 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
         </div>
 
           {/* Tabs */}
-          <div className="mb-6">
-            <div className={`flex items-center justify-center ${isRTL ? 'flex-row-reverse' : ''} gap-3`}>
+          <div className="mb-4 sm:mb-6 px-2">
+            <div className={`flex items-center justify-center ${isRTL ? 'flex-row-reverse' : ''} gap-1 sm:gap-3 overflow-x-auto py-1`}>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 py-2 px-3 rounded-full text-sm font-medium transition-all ${
+                  className={`flex items-center gap-1 sm:gap-2 py-1 px-2 sm:py-2 sm:px-3 rounded-full text-xs sm:text-sm font-medium transition-all ${
                     activeTab === tab.id
                       ? 'bg-teal-50 text-teal-700 dark:bg-teal-900/20 dark:text-teal-300 shadow-sm'
                       : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                 >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
+                  <tab.icon className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="truncate max-w-[60px] sm:max-w-none">{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -461,7 +462,8 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                           const isCard = ev.type === 'Card';
                           const isGoal = ev.type === 'Goal' || ev.detail?.toLowerCase().includes('goal');
                           const badgeClass = isCard ? (ev.detail?.toLowerCase().includes('red') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-800') : (isGoal ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-700');
-                          const detailLabel = ev.detail || ev.type;
+                          const detailLabelRaw = ev.detail || ev.type;
+                          const detailLabel = currentLanguage === 'ar' ? translateEventDetail(detailLabelRaw, 'ar') : detailLabelRaw;
                           return (
                             <div key={idx} className={`flex items-start justify-between p-3 rounded-lg ${isCard ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-white dark:bg-slate-800'}`}>
                               <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -520,7 +522,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                                   <AvatarImage src={lu.team.logo} />
                                   <AvatarFallback>{lu.team.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                <div className="font-semibold text-slate-900 dark:text-white">{currentLanguage === 'ar' ? getArabicTeamName(lu.team.name) : lu.team.name}</div>
+                                <div className="font-semibold text-slate-900 dark:text-white">{currentLanguage === 'ar' ? getTeamTranslation(lu.team.name) : lu.team.name}</div>
                               </div>
                               <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                                 {(currentLanguage === 'ar' ? 'الخطة: ' : 'Formation: ') + (lu.formation || '-')}
@@ -582,12 +584,12 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                       </CardTitle>
                       <CardDescription>
                         {currentLanguage === 'ar' 
-                          ? getArabicTeamName(statsHome?.team?.name || match.teams.home.name)
+                          ? getTeamTranslation(statsHome?.team?.name || match.teams.home.name)
                           : (statsHome?.team?.name || match.teams.home.name)
                         } 
                         vs 
                         {currentLanguage === 'ar' 
-                          ? getArabicTeamName(statsAway?.team?.name || match.teams.away.name)
+                          ? getTeamTranslation(statsAway?.team?.name || match.teams.away.name)
                           : (statsAway?.team?.name || match.teams.away.name)
                         }
                       </CardDescription>
@@ -620,7 +622,7 @@ const MatchDetails: React.FC<MatchDetailsProps> = ({ match, onClose }) => {
                                 </div>
                               </div>
                               <div className="text-left font-semibold text-slate-900 dark:text-white">{typeof st.away === 'number' ? st.away : (st.away ?? '-')}</div>
-                              <div className="col-span-5 text-center text-sm text-slate-600 dark:text-slate-400 mt-1">{st.type}</div>
+                              <div className="col-span-5 text-center text-sm text-slate-600 dark:text-slate-400 mt-1">{currentLanguage === 'ar' ? translateStatType(st.type, 'ar') : st.type}</div>
                             </div>
                           ))}
                         </div>

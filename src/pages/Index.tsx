@@ -149,7 +149,8 @@ const Index = () => {
          
             
             {/* News Grid - Responsive layout */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 items-stretch gap-4 sm:gap-6 auto-rows-[1fr] animate-in fade-in-50">
+            {/* Note: remove forced equal row height on mobile to avoid large gaps between cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:auto-rows-[1fr] animate-in fade-in-50">
               {loading && (
                 <>
                   <Card className="sm:col-span-2 sm:row-span-2 h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
@@ -213,8 +214,8 @@ const Index = () => {
 <div className="hidden md:block md:w-72 lg:w-80 space-y-4 md:sticky md:top-24 lg:top-28">
 
   {/* Header (unified with mobile style) */}
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-white border-b">
+  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-b dark:border-slate-800">
       <div className="flex items-center gap-2">
         <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center">
           {/* Football icon (SVG) instead of emoji for consistent rendering) */}
@@ -223,14 +224,14 @@ const Index = () => {
             <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
           </svg>
         </div>
-        <div className="text-sm font-semibold text-slate-800">مباريات {weekday}</div>
+        <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">مباريات {weekday}</div>
       </div>
-      <div className="text-xs text-slate-500">{fullDate}</div>
+      <div className="text-xs text-slate-500 dark:text-slate-400">{fullDate}</div>
     </div>
   </div>
 
   {/* Matches List */}
-  <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-h-[650px] overflow-y-auto">
+  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[650px] overflow-y-auto">
     {(() => {
       if (loadingMatches) {
         return <div className="h-24 rounded-xl bg-slate-100/60 dark:bg-slate-800/40 animate-pulse m-4" />;
@@ -259,9 +260,9 @@ const Index = () => {
           {filteredGroups.map(({ league, fixtures }) => (
             <div key={league?.id}>
               {/* League Header */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b">
+              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
                 {league?.logo && <img src={league.logo} className="w-5 h-5 rounded-full" />}
-                <span className="text-sm font-semibold text-slate-800">
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   {league?.nameTranslated?.arabic || league?.name}
                 </span>
                 {league?.flag && <img src={league.flag} className="w-4 h-3 rounded-sm ml-auto" />}
@@ -279,11 +280,11 @@ const Index = () => {
                   const isScheduled = status === "NS";
 
                   return (
-                    <div key={fx.fixture?.id} className="px-4 py-3 hover:bg-slate-50">
+                    <div key={fx.fixture?.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40">
                       <div className="grid grid-cols-5 items-center gap-2">
                         {/* Home */}
                         <div className="flex justify-end items-center gap-2 col-span-2">
-                          <span className="text-sm text-slate-800 truncate">
+                          <span className="text-sm text-slate-800 dark:text-slate-100 truncate">
                             {fx.teams?.home?.nameTranslated?.arabic || fx.teams?.home?.name}
                           </span>
                           {fx.teams?.home?.logo && (
@@ -298,14 +299,14 @@ const Index = () => {
                               <div className="text-green-600 font-bold text-sm">
                                 {formatKickoffAr(fx.fixture?.date)}
                               </div>
-                              <div className="text-xs text-slate-500">لم تبدأ</div>
+                              <div className="text-xs text-slate-500 dark:text-slate-400">لم تبدأ</div>
                             </>
                           ) : (
                             <>
-                              <div className={`font-bold text-lg ${isLive ? "text-red-500" : "text-slate-800"}`}>
+                              <div className={`font-bold text-lg ${isLive ? "text-red-500" : "text-slate-800 dark:text-slate-100"}`}>
                                 {homeScore} - {awayScore}
                               </div>
-                              <div className={`text-xs ${isLive ? "text-red-500" : "text-slate-500"}`}>
+                              <div className={`text-xs ${isLive ? "text-red-500" : "text-slate-500 dark:text-slate-400"}`}>
                                 {isLive && elapsed ? `${elapsed}'` : isFinished ? "انتهت" : ""}
                               </div>
                             </>
@@ -317,7 +318,7 @@ const Index = () => {
                           {fx.teams?.away?.logo && (
                             <img src={fx.teams.away.logo} className="w-6 h-6 rounded-full" />
                           )}
-                          <span className="text-sm text-slate-800 truncate">
+                          <span className="text-sm text-slate-800 dark:text-slate-100 truncate">
                             {fx.teams?.away?.nameTranslated?.arabic || fx.teams?.away?.name}
                           </span>
                         </div>
@@ -339,7 +340,7 @@ const Index = () => {
 
       {/* Mobile Today Matches (visible on phones) */}
       <div className="px-4 pb-6 md:hidden">
-        <Card className="p-4 rounded-2xl shadow-sm">
+        <Card className="p-4 rounded-2xl shadow-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           <div className="flex items-center justify-between flex-row-reverse relative">
             <div className="font-semibold text-right">{weekday}</div>
             <div className="flex items-center gap-3 text-slate-600">
@@ -357,7 +358,7 @@ const Index = () => {
                   title="تحديد الدوريات"
                 />
                 {showLeagueFilter && (
-                  <div className="absolute left-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-50 p-3 text-right">
+                  <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-50 p-3 text-right">
                     <div className="flex items-center justify-between mb-2">
                       <div className="text-sm font-semibold">اختر الدوريات</div>
                       <button
@@ -368,7 +369,7 @@ const Index = () => {
                       </button>
                     </div>
                     <div className="max-h-56 overflow-auto pr-1">
-                      {loadingLeagues && <div className="text-xs text-slate-500">جارٍ التحميل…</div>}
+                      {loadingLeagues && <div className="text-xs text-slate-500 dark:text-slate-400">جارٍ التحميل…</div>}
                       {!loadingLeagues && leaguesData?.response
                         ?.filter((item) => SELECTED_LEAGUES.includes(item.league.id))
                         ?.sort((a, b) => SELECTED_LEAGUES.indexOf(a.league.id) - SELECTED_LEAGUES.indexOf(b.league.id))
@@ -393,21 +394,21 @@ const Index = () => {
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <button
-                        className="text-xs text-slate-600 hover:underline"
+                        className="text-xs text-slate-600 dark:text-slate-400 hover:underline"
                         onClick={() => { setMainLeaguesOnly(true); setSelectedLeagues(SELECTED_LEAGUES); }}
                       >
                         الدوريات الخمسة
                       </button>
                       <div className="flex items-center gap-2">
                         <button
-                          className="text-xs text-slate-600 hover:underline"
+                          className="text-xs text-slate-600 dark:text-slate-400 hover:underline"
                           onClick={() => { setMainLeaguesOnly(false); setShowLeagueFilter(false); }}
                           title="عرض كل الدوريات"
                         >
                           كل الدوريات
                         </button>
                         <button
-                          className="text-xs text-slate-600 hover:underline"
+                          className="text-xs text-slate-600 dark:text-slate-400 hover:underline"
                           onClick={() => setSelectedLeagues([])}
                         >
                           مسح
@@ -427,7 +428,7 @@ const Index = () => {
           </div>
           <div className="mt-3 flex items-center gap-2">
             <span
-              className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-1 text-xs font-medium whitespace-nowrap cursor-pointer select-none"
+              className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1 text-xs font-medium whitespace-nowrap cursor-pointer select-none"
               onClick={() => document.getElementById('home-date-picker-mobile')?.click()}
               title="Choisir la date"
             >
@@ -441,28 +442,28 @@ const Index = () => {
               {fullDate}
             </span>
             {mainLeaguesOnly ? (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-slate-200 text-slate-600 whitespace-nowrap">
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                 {selectedLeagues.length > 0 ? `دوريات مختارة (${selectedLeagues.length})` : 'الدوريات الرئيسية'}
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-slate-200 text-slate-600 whitespace-nowrap">كل الدوريات</span>
+              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">كل الدوريات</span>
             )}
           </div>
         </Card>
 
-        <Card className="mt-3 p-0 rounded-2xl shadow-sm overflow-hidden">
+        <Card className="mt-3 p-0 rounded-2xl shadow-sm overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
           {/* Mobile header unified with desktop */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-white border-b">
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-b dark:border-slate-800">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor" aria-hidden="true">
                   <circle cx="12" cy="12" r="10" opacity=".2"></circle>
-                  <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
+                  <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8 2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
                 </svg>
               </div>
               <div className="text-sm font-semibold">مباريات {weekday}</div>
             </div>
-            <div className="text-xs text-slate-500">{fullDate}</div>
+            <div className="text-xs text-slate-500 dark:text-slate-400">{fullDate}</div>
           </div>
 
           <div className="mt-3">
@@ -481,7 +482,7 @@ const Index = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-none shadow-sm border-0">
+              <div className="bg-white dark:bg-slate-900 rounded-none shadow-sm border-0">
                 {/* Matches list */}
                 <div className="max-h-[480px] overflow-y-auto">
                   {groupedByLeague
@@ -492,9 +493,9 @@ const Index = () => {
                     })
                     .map(({ league, fixtures }) => (
                       <div key={league?.id} className="divide-y">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 border-b">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
                         {league?.logo && <img src={league.logo} className="w-5 h-5 rounded-full" />}
-                        <span className="text-sm font-semibold text-slate-800">{league?.nameTranslated?.arabic || league?.name}</span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{league?.nameTranslated?.arabic || league?.name}</span>
                         {league?.flag && <img src={league.flag} className="w-4 h-3 rounded-sm ml-auto" />}
                       </div>
                       {fixtures.map((fx: any) => {
@@ -507,10 +508,10 @@ const Index = () => {
                         const isScheduled = status === "NS";
 
                         return (
-                          <div key={fx.fixture?.id} className="px-4 py-3 hover:bg-slate-50">
+                          <div key={fx.fixture?.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40">
                             <div className="grid grid-cols-5 items-center gap-2">
                               <div className="flex justify-end items-center gap-2 col-span-2">
-                                <span className="text-sm text-slate-800 truncate">{fx.teams?.home?.nameTranslated?.arabic || fx.teams?.home?.name}</span>
+                                <span className="text-sm text-slate-800 dark:text-slate-100 truncate">{fx.teams?.home?.nameTranslated?.arabic || fx.teams?.home?.name}</span>
                                 {fx.teams?.home?.logo && <img src={fx.teams.home.logo} className="w-6 h-6 rounded-full" />}
                               </div>
 
@@ -518,19 +519,19 @@ const Index = () => {
                                 {isScheduled ? (
                                   <>
                                     <div className="text-green-600 font-bold text-sm">{formatKickoffAr(fx.fixture?.date)}</div>
-                                    <div className="text-xs text-slate-500">لم تبدأ</div>
+                                    <div className="text-xs text-slate-500 dark:text-slate-400">لم تبدأ</div>
                                   </>
                                 ) : (
                                   <>
-                                    <div className={`font-bold text-lg ${isLive ? "text-red-500" : "text-slate-800"}`}>{homeScore} - {awayScore}</div>
-                                    <div className={`text-xs ${isLive ? "text-red-500" : "text-slate-500"}`}>{isLive && elapsed ? `${elapsed}'` : isFinished ? "انتهت" : ""}</div>
+                                    <div className={`font-bold text-lg ${isLive ? "text-red-500" : "text-slate-800 dark:text-slate-100"}`}>{homeScore} - {awayScore}</div>
+                                    <div className={`text-xs ${isLive ? "text-red-500" : "text-slate-500 dark:text-slate-400"}`}>{isLive && elapsed ? `${elapsed}'` : isFinished ? "انتهت" : ""}</div>
                                   </>
                                 )}
                               </div>
 
                               <div className="flex justify-start items-center gap-2 col-span-2">
                                 {fx.teams?.away?.logo && <img src={fx.teams.away.logo} className="w-6 h-6 rounded-full" />}
-                                <span className="text-sm text-slate-800 truncate">{fx.teams?.away?.nameTranslated?.arabic || fx.teams?.away?.name}</span>
+                                <span className="text-sm text-slate-800 dark:text-slate-100 truncate">{fx.teams?.away?.nameTranslated?.arabic || fx.teams?.away?.name}</span>
                               </div>
                             </div>
                           </div>

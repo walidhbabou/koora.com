@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTranslation } from '../hooks/useTranslation';
 import { maybeTransliterateName } from '@/utils/transliterate';
+import { getTeamTranslation } from "@/utils/teamTranslations";
 
 interface PlayerDetailsProps {
   player: {
@@ -171,7 +172,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player, onClose }) => {
                     <img src={player.team.logo} alt={player.team.name} className="w-16 h-16" />
                     <div>
                       <h5 className="font-medium text-slate-900 dark:text-white">
-                        {player.team.name}
+                        {currentLanguage === 'ar' ? getTeamTranslation(player.team.name) : player.team.name}
                       </h5>
                       <p className="text-sm text-slate-600 dark:text-slate-400">
                         {player.team.league}
@@ -360,7 +361,7 @@ const PlayerDetails: React.FC<PlayerDetailsProps> = ({ player, onClose }) => {
                               <img src={season.teamLogo} alt={season.team} className="w-12 h-12" />
                               <div>
                                 <h4 className="font-semibold text-slate-900 dark:text-white">
-                                  {season.team}
+                                  {currentLanguage === 'ar' ? getTeamTranslation(season.team) : season.team}
                                 </h4>
                                 <p className="text-sm text-slate-600 dark:text-slate-400">
                                   {season.season} • {season.league}

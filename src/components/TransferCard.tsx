@@ -2,7 +2,7 @@ import React from "react";
 import { TransferEnriched } from "@/hooks/useTransfers";
 import { useTranslation } from "@/hooks/useTranslation";
 import { maybeTransliterateName } from "@/utils/transliterate";
-import { getArabicTeamName } from "@/utils/teamNameMap";
+import { getTeamTranslation } from "@/utils/teamNameMap";
 
 type Props = {
   transfer: TransferEnriched;
@@ -22,8 +22,8 @@ const TransferCard: React.FC<Props> = ({ transfer }) => {
   const isLoan = String(transfer?.type || "").toLowerCase().includes("loan") || String(transfer?.type || "").includes("إعارة");
   const isFree = String(transfer?.type || "").toLowerCase().includes("free");
 
-  const fromName = isRTL ? getArabicTeamName(fromTeam?.name || '-') : (fromTeam?.name || '-');
-  const toName = isRTL ? getArabicTeamName(toTeam?.name || '-') : (toTeam?.name || '-');
+  const fromName = isRTL ? getTeamTranslation(fromTeam?.name || '-') : (fromTeam?.name || '-');
+  const toName = isRTL ? getTeamTranslation(toTeam?.name || '-') : (toTeam?.name || '-');
   const typeLabel = transfer?.type || (isRTL ? 'انتقال' : 'Transfer');
 
   // Directional arrow

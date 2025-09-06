@@ -11,6 +11,7 @@ import { Clock, ArrowRight, Flag } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
+import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
 
 interface NewsRow {
@@ -134,9 +135,11 @@ const NewsDetails: React.FC = () => {
                     <Badge variant="secondary">أخبار</Badge>
                   </div>
                   <h1 className="text-2xl md:text-3xl font-extrabold mb-4">{news.title}</h1>
-                  <div className="prose prose-slate dark:prose-invert max-w-none leading-relaxed whitespace-pre-wrap">
-                    {news.content}
-                  </div>
+                  <div
+                    className="prose prose-slate dark:prose-invert max-w-none leading-relaxed"
+                    dir="auto"
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content || '') }}
+                  />
                 </div>
               </Card>
 

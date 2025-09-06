@@ -56,6 +56,14 @@ interface Article {
   lastModified: string;
 }
 
+interface Last24NewsRow {
+  id: number | string;
+  title: string;
+  created_at: string;
+  status: string | null;
+  author?: string | null;
+}
+
 const EditorDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { currentLanguage, isRTL, direction } = useLanguage();
@@ -76,6 +84,9 @@ const EditorDashboard: React.FC = () => {
   const [editError, setEditError] = useState('');
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Last 24h published news
+  const [last24News, setLast24News] = useState<Last24NewsRow[]>([]);
+  const [loadingLast24, setLoadingLast24] = useState(false);
 
   // New Article (Editor) state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -155,14 +166,45 @@ const EditorDashboard: React.FC = () => {
     }
   };
 
+  const fetchLast24News = async () => {
+    setLoadingLast24(true);
+    try {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('news')
+        .select('id, title, created_at, status, users(name)')
+        .eq('status', 'published')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      const mapped: Last24NewsRow[] = (data || []).map((n: any) => ({
+        id: n.id,
+        title: n.title || '-',
+        created_at: n.created_at,
+        status: n.status || 'published',
+        author: n.users?.name || null,
+      }));
+      setLast24News(mapped);
+    } catch (e) {
+      console.error('Failed to load last 24h news:', e);
+      setLast24News([]);
+    } finally {
+      setLoadingLast24(false);
+    }
+  };
+
   useEffect(() => {
     fetchArticles();
+    fetchLast24News();
   }, []);
 
   // Refetch when page changes on Articles tab
   useEffect(() => {
     if (activeTab === 'articles') {
       fetchArticles();
+    }
+    if (activeTab === 'overview') {
+      fetchLast24News();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, activeTab]);
@@ -713,35 +755,92 @@ const EditorDashboard: React.FC = () => {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <EditorOverviewTab articles={articles} currentLanguage={currentLanguage} isRTL={isRTL} />
+            {/* Last 24 hours published news */}
+            <Card className="overflow-hidden">
+              <CardHeader>
+                <CardTitle>{currentLanguage === 'ar' ? 'الأخبار خلال آخر 24 ساعة' : 'Actus des dernières 24h'}</CardTitle>
+                <CardDescription>
+                  {currentLanguage === 'ar' ? 'قائمة المقالات المنشورة خلال 24 ساعة الماضية' : 'Articles publiés dans les dernières 24 heures'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingLast24 ? (
+                  <div className="text-sm text-muted-foreground">{currentLanguage === 'ar' ? 'جار التحميل…' : 'Chargement…'}</div>
+                ) : last24News.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">{currentLanguage === 'ar' ? 'لا توجد أخبار حديثة' : 'Aucune actualité récente'}</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="text-left border-b">
+                          <th className="py-2 px-3">ID</th>
+                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</th>
+                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'الكاتب' : 'Auteur'}</th>
+                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'التاريخ' : 'Date'}</th>
+                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'الحالة' : 'Statut'}</th>
+                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'إجراءات' : 'Actions'}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {last24News.map((n) => (
+                          <tr key={String(n.id)} className="border-b hover:bg-slate-50">
+                            <td className="py-2 px-3 whitespace-nowrap">{n.id}</td>
+                            <td className="py-2 px-3 min-w-[240px]">{n.title}</td>
+                            <td className="py-2 px-3 whitespace-nowrap">{n.author || '-'}</td>
+                            <td className="py-2 px-3 whitespace-nowrap">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</td>
+                            <td className="py-2 px-3 whitespace-nowrap">
+                              <Badge variant="secondary">{n.status || 'published'}</Badge>
+                            </td>
+                            <td className="py-2 px-3 whitespace-nowrap flex items-center gap-2">
+                              <Button variant="outline" size="sm" onClick={() => navigate(`/news/${n.id}`)}>
+                                {currentLanguage === 'ar' ? 'عرض' : 'Voir'}
+                              </Button>
+                              {(['moderator','admin'].includes(String((user as any)?.role || '')) ) && (
+                                <Button variant="destructive" size="sm" onClick={() => deletePublishedNews(n.id)}>
+                                  {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           {/* Preview Dialog */}
           <Dialog open={!!previewId} onOpenChange={(open) => { if (!open) setPreviewId(null); }}>
-            <DialogContent className="max-w-3xl">
-              <DialogHeader>
-                <DialogTitle>{currentLanguage === 'ar' ? 'معاينة المقال' : 'Aperçu de l\'article'}</DialogTitle>
+            <DialogContent className="w-[96vw] sm:w-[90vw] max-w-5xl p-0 overflow-hidden">
+              <DialogHeader className="px-4 sm:px-6 pt-4 pb-2 border-b">
+                <DialogTitle className="text-base sm:text-lg">{currentLanguage === 'ar' ? 'معاينة المقال' : 'Aperçu de l\'article'}</DialogTitle>
               </DialogHeader>
               {(() => {
                 const art = articles.find(a => a.id === previewId);
-                if (!art) return <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Aucun contenu'}</div>;
+                if (!art) return <div className="p-4 text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Aucun contenu'}</div>;
                 return (
-                  <div className="space-y-4">
-                    {art.imageUrl && (
-                      <img src={art.imageUrl} alt={art.title} className="w-full h-64 object-cover rounded" />
-                    )}
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h2 className="text-xl font-bold">{art.title}</h2>
-                        <div className="text-xs text-slate-500">{art.author} • {art.date}</div>
-                        {art.category && <div className="text-xs text-slate-500 mt-1">{art.category}</div>}
+                  <div className="flex flex-col max-h-[82vh]">
+                    {/* Scrollable content */}
+                    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4" dir={direction}>
+                      {art.imageUrl && (
+                        <img src={art.imageUrl} alt={art.title} className="w-full h-48 sm:h-64 md:h-72 object-cover rounded-md mb-4" />
+                      )}
+                      <div className={`flex items-start justify-between gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <div className={isRTL ? 'text-right' : 'text-left'}>
+                          <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold leading-snug mb-1">{art.title}</h2>
+                          <div className="text-[11px] sm:text-xs text-slate-500">{art.author} • {art.date}{art.category ? ` • ${art.category}` : ''}</div>
+                        </div>
+                        <Badge variant={getStatusBadge(art.status).variant}>{getStatusBadge(art.status).label}</Badge>
                       </div>
-                      <Badge variant={getStatusBadge(art.status).variant}>{getStatusBadge(art.status).label}</Badge>
+                      <div
+                        className="prose prose-slate dark:prose-invert max-w-none leading-7 sm:leading-8 mt-4 text-[0.95rem] sm:text-base"
+                        dir="auto"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(art.content) }}
+                      />
                     </div>
-                    <div
-                      className="prose max-w-none leading-7 text-slate-800 dark:text-slate-200"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(art.content) }}
-                    />
-                    <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
+                    {/* Sticky actions bar */}
+                    <div className={`border-t bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 sm:px-6 py-3 flex flex-wrap gap-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
                       {(['submitted','draft','review'] as const).includes(art.status as any) && (
                         <>
                           <Button className="bg-green-600 hover:bg-green-700" onClick={() => { setPreviewId(null); approveArticle(art.id); }}>
@@ -751,6 +850,11 @@ const EditorDashboard: React.FC = () => {
                             {currentLanguage === 'ar' ? 'رفض' : 'Rejeter'}
                           </Button>
                         </>
+                      )}
+                      {art.status === 'published' && (
+                        <Button variant="outline" onClick={() => { setPreviewId(null); navigate(`/news/${art.id}`); }}>
+                          {currentLanguage === 'ar' ? 'فتح الرابط' : 'Ouvrir'}
+                        </Button>
                       )}
                     </div>
                   </div>
@@ -944,83 +1048,9 @@ const EditorDashboard: React.FC = () => {
           <TabsContent value="profile" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Personal Information */}
-              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-blue-900/20 border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <span>{currentLanguage === 'ar' ? 'المعلومات الشخصية' : 'Informations Personnelles'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
-                        {user?.name?.charAt(0) || 'E'}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{user?.name || 'Éditeur'}</h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">{user?.email}</p>
-                        <Badge variant="outline" className="mt-1">{user?.role || 'editor'}</Badge>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <Mail className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">{user?.email || 'Non renseigné'}</span>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <Calendar className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {currentLanguage === 'ar' ? 'عضو منذ' : 'Membre depuis'} {new Date().getFullYear()}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800">
-                        <Edit className="w-4 h-4 text-slate-500" />
-                        <span className="text-sm text-slate-700 dark:text-slate-300">
-                          {currentLanguage === 'ar' ? 'مقالات معدلة' : 'Articles édités'}: {articles.length}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
+            
               {/* Editor Settings */}
-              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-indigo-50 dark:from-slate-800 dark:to-indigo-900/20 border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Settings className="w-5 h-5 text-indigo-600" />
-                    <span>{currentLanguage === 'ar' ? 'إعدادات المحرر' : 'Paramètres Éditeur'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
-                      <h4 className="font-medium text-slate-900 dark:text-white mb-2">
-                        {currentLanguage === 'ar' ? 'إحصائيات المحرر' : 'Statistiques Éditeur'}
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{articles.filter(a => a.status === 'published').length}</div>
-                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'منشور' : 'Publiés'}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-orange-600">{articles.filter(a => a.status === 'submitted').length}</div>
-                          <div className="text-xs text-slate-500">{currentLanguage === 'ar' ? 'قيد المراجعة' : 'En attente'}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <Button variant="outline" className="w-full">
-                      <Settings className="w-4 h-4 mr-2" />
-                      {currentLanguage === 'ar' ? 'تعديل الملف الشخصي' : 'Modifier le Profil'}
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      {currentLanguage === 'ar' ? 'إعدادات المراجعة' : 'Paramètres de Révision'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+             
             </div>
           </TabsContent>
         </Tabs>

@@ -4,6 +4,7 @@ import { Trophy, Target, Users, Clock, AlertTriangle } from "lucide-react";
 import { useTranslation } from "@/hooks/useTranslation";
 import { usePlayerStats } from "@/hooks/usePlayerStats";
 import { maybeTransliterateName } from "@/utils/transliterate";
+import { getTeamTranslation } from "@/utils/teamNameMap";
 
 interface PlayerStatsProps {
   leagueName: string;
@@ -12,29 +13,6 @@ interface PlayerStatsProps {
 }
 
 
-// Helper function to get Arabic team names
-function getArabicTeamNameForPlayer(teamName: string): string {
-  const teamTranslations: { [key: string]: string } = {
-    'Manchester City': 'مانشستر سيتي',
-    'Arsenal': 'أرسنال',
-    'Liverpool': 'ليفربول',
-    'Chelsea': 'تشيلسي',
-    'Manchester United': 'مانشستر يونايتد',
-    'Tottenham': 'توتنهام',
-    'Real Madrid': 'ريال مدريد',
-    'Barcelona': 'برشلونة',
-    'Atletico Madrid': 'أتلتيكو مدريد',
-    'Bayern Munich': 'بايرن ميونخ',
-    'Borussia Dortmund': 'بوروسيا دورتموند',
-    'Paris Saint-Germain': 'باريس سان جيرمان',
-    'Juventus': 'يوفنتوس',
-    'Inter Milan': 'إنتر ميلان',
-    'AC Milan': 'ميلان',
-    'Napoli': 'نابولي'
-  };
-  
-  return teamTranslations[teamName] || teamName;
-}
 
 const PlayerStats = ({ leagueName, leagueId, loading = false }: PlayerStatsProps) => {
   const { currentLanguage } = useTranslation();
@@ -159,7 +137,7 @@ const PlayerStats = ({ leagueName, leagueId, loading = false }: PlayerStatsProps
                 />
                 <span className="truncate">
                   {currentLanguage === 'ar' 
-                    ? getArabicTeamNameForPlayer(player.team.name)
+                    ? getTeamTranslation(player.team.name)
                     : player.team.name
                   }
                 </span>

@@ -30,6 +30,19 @@ const News = () => {
     category: string;
   };
 
+  interface Category {
+    id: string;
+    name: string;
+    name_ar: string;
+  }
+
+  interface DisplayCategory {
+    id: string | null;
+    name: string;
+    count: number;
+    active: boolean;
+  }
+
   const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
   const [page, setPage] = useState(1);
@@ -41,32 +54,116 @@ const News = () => {
   const { user, isAuthenticated } = useAuth();
   const [reportOpenId, setReportOpenId] = useState<string | null>(null);
   const [reportDesc, setReportDesc] = useState('');
+  const [categories, setCategories] = useState<DisplayCategory[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  // Fetch categories from Supabase
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        // Get all categories
+        const { data: categoriesData, error: categoriesError } = await supabase
+          .from('categories')
+          .select('id, name, name_ar');
+        
+        if (categoriesError) throw categoriesError;
+        
+        // Get total count for all news
+        const { count: totalCount, error: totalCountError } = await supabase
+          .from('news')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'published');
+        
+        if (totalCountError) throw totalCountError;
+        
+        // Get counts per category
+        const categoriesWithCounts = await Promise.all(
+          (categoriesData || []).map(async (cat) => {
+            const { count, error: countError } = await supabase
+              .from('news')
+              .select('*', { count: 'exact', head: true })
+              .eq('status', 'published')
+              .eq('category_id', cat.id);
+            
+            if (countError) throw countError;
+            return {
+              id: cat.id,
+              name: currentLanguage === 'ar' ? cat.name_ar : cat.name,
+              count: count || 0,
+              active: selectedCategory === cat.id
+            };
+          })
+        );
+        
+        setCategories([
+          {
+            id: null,
+            name: currentLanguage === 'ar' ? 'جميع الأخبار' : 'Toutes les actualités',
+            count: totalCount || 0,
+            active: !selectedCategory
+          },
+          ...categoriesWithCounts
+        ]);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        toast({
+          title: currentLanguage === 'ar' ? 'خطأ' : 'Error',
+          description: currentLanguage === 'ar' 
+            ? 'تعذر تحميل الفئات' 
+            : 'Could not load categories',
+          variant: 'destructive'
+        });
+      }
+    };
+    
+    fetchCategories();
+  }, [currentLanguage, selectedCategory]);
 
   const fetchNews = async (nextPage: number, append: boolean = false) => {
     setLoadingNews(true);
     try {
-      const from = (nextPage - 1) * pageSize;
-      const to = nextPage * pageSize - 1;
-      const { data, error } = await supabase
+      let query = supabase
         .from('news')
-        .select('id, title, content, created_at, image_url, status')
+        .select('*', { count: 'exact' })
         .eq('status', 'published')
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .range((nextPage - 1) * pageSize, nextPage * pageSize - 1);
+      
+      if (selectedCategory) {
+        query = query.eq('category_id', selectedCategory);
+      }
+      
+      const { data, count, error } = await query;
+      
       if (error) throw error;
+      
+      if (data) {
+        const stripHtml = (html: string) =>
+          html
+            .replace(/<[^>]*>/g, ' ')               // remove tags
+            .replace(/&nbsp;/gi, ' ')               // decode common entities
+            .replace(/&amp;/gi, '&')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/\s+/g, ' ')                  // collapse spaces
+            .trim();
 
-      const mapped: NewsCardItem[] = (data || []).map((n: any) => ({
-        id: String(n.id),
-        title: n.title ?? '-',
-        summary: (n.content ?? '').toString().replace(/\s+/g, ' ').slice(0, 160) + ((n?.content && n.content.length > 160) ? '…' : ''),
-        imageUrl: n.image_url || '/placeholder.svg',
-        publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
-        category: 'أخبار',
-      }));
+        const mapped: NewsCardItem[] = (data || []).map((n: any) => {
+          const plain = stripHtml((n.content ?? '').toString());
+          return {
+            id: String(n.id),
+            title: n.title ?? '-',
+            summary: plain.slice(0, 160) + (plain.length > 160 ? '…' : ''),
+            imageUrl: n.image_url || '/placeholder.svg',
+            publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
+            category: 'أخبار',
+          };
+        });
 
-      setAllNews(prev => append ? [...prev, ...mapped] : mapped);
-      setHasMore(mapped.length === pageSize);
-      if (!append) setPage(nextPage);
+        setAllNews(prev => append ? [...prev, ...mapped] : mapped);
+        setHasMore(mapped.length === pageSize);
+        if (!append) setPage(nextPage);
+      }
     } catch (e) {
       console.error('Failed to load news', e);
       if (!append) setAllNews([]);
@@ -125,14 +222,12 @@ const News = () => {
     setPage(next);
   };
 
-  const categories = [
-    { name: "جميع الأخبار", count: 245, active: true },
-    { name: "الانتقالات", count: 67, active: false },
-    { name: "البطولات", count: 45, active: false },
-    { name: "إصابات", count: 23, active: false },
-    { name: "تصريحات", count: 38, active: false },
-    { name: "إنجازات", count: 29, active: false }
-  ];
+  const handleCategoryClick = (categoryId: string | null) => {
+    setSelectedCategory(categoryId);
+    setPage(1);
+    setAllNews([]);
+    fetchNews(1);
+  };
 
   // Trending topics derived from latest news titles
   const trendingTopics = allNews.slice(0, 5).map(n => n.title);
@@ -222,6 +317,7 @@ const News = () => {
                       ? "bg-sport-green text-white" 
                       : "hover:bg-sport-green/10"
                   }`}
+                  onClick={() => handleCategoryClick(category.id)}
                 >
                   {category.name} ({category.count})
                 </Badge>

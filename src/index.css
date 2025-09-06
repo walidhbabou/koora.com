@@ -232,6 +232,34 @@
 }
 
 /* RTL Support for Arabic - Enhanced */
+[dir="rtl"] .ql-toolbar {
+  direction: rtl;
+}
+
+/* Quill toolbar visibility fixes */
+.ql-toolbar.ql-snow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.ql-toolbar .ql-formats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 6px;
+}
+.ql-container.ql-snow {
+  min-height: 220px; /* keep editor tall enough so toolbar not overlapping */
+}
+.ql-editor {
+  min-height: 180px;
+}
+
+/* Quill alignment helpers for rendered content */
+.ql-align-right { text-align: right; }
+.ql-align-center { text-align: center; }
+.ql-align-justify { text-align: justify; }
 [dir="rtl"] {
   text-align: right;
 }

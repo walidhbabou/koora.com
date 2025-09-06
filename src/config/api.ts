@@ -435,6 +435,15 @@ export class FootballAPI {
     return this.makeRequest('/transfers', query);
   }
   
+  // Nouvelle méthode ajoutée
+  async getFixtures(params: {
+    league: number;
+    season: number;
+    timezone: string;
+  }): Promise<ApiResponse<any>> {
+    return this.makeRequest('/fixtures', params);
+  }
+  
 }
 
 // API types for events/statistics
@@ -1155,4 +1164,16 @@ export interface MultilingualContent {
   french: string;
   arabic: string;
   original?: string;
+}
+
+export interface ApiResponse<T> {
+  get: string;
+  parameters: Record<string, unknown>;
+  errors: string[];
+  results: number;
+  paging: {
+    current: number;
+    total: number;
+  };
+  response: T;
 }

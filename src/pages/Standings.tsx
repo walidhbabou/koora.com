@@ -6,21 +6,32 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useAllLeagueStandings, useMockStandings } from "@/hooks/useStandings";
 import { useTranslation } from "@/hooks/useTranslation";
 import { maybeTransliterateName } from "@/utils/transliterate";
-import { useTopScorers, useTopAssists } from "@/hooks/useFootballAPI";
+import { useTopScorers, useTopAssists, useFixtures } from "@/hooks/useFootballAPI";
 import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
-import { getArabicTeamName } from "@/utils/teamNameMap";
+import { getTeamTranslation } from "@/utils/teamNameMap";
 
 const Standings = () => {
   const { currentLanguage, t, isRTL, direction } = useTranslation();
+
+  // Fonction pour obtenir le nom de l'équipe dans la langue appropriée
+  const getTeamName = (team: any) => {
+    if (!team) return '';
+    // Si c'est une chaîne, on la traite directement
+    if (typeof team === 'string') {
+      return currentLanguage === 'ar' ? getTeamTranslation(team) : team;
+    }
+    // Si c'est un objet avec une propriété name
+    return currentLanguage === 'ar' ? getTeamTranslation(team.name) : team.name;
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
   const [showLeagueDetail, setShowLeagueDetail] = useState(false);
-  const [activeTab, setActiveTab] = useState<'teams' | 'players'>('teams');
+  const [activeTab, setActiveTab] = useState<'teams' | 'players' | 'fixtures'>('teams');
   const [playersTab, setPlayersTab] = useState<'topscorers' | 'topassists'>('topscorers');
   
   // Récupérer les classements de toutes les ligues
@@ -42,6 +53,12 @@ const Standings = () => {
   });
   
   const { data: topAssistsData, loading: loadingAssists } = useTopAssists({
+    leagueId: selectedLeague || 0,
+    season: seasonYear,
+    translateContent: true
+  });
+
+  const { data: fixturesData, loading: loadingFixtures } = useFixtures({
     leagueId: selectedLeague || 0,
     season: seasonYear,
     translateContent: true
@@ -310,6 +327,14 @@ const Standings = () => {
                 >
                   {currentLanguage === 'ar' ? 'اللاعبون' : 'Joueurs'}
                 </button>
+                <button
+                  onClick={() => setActiveTab('fixtures')}
+                  className={`py-2 text-sm font-semibold border-b-2 transition-colors ${
+                    activeTab === 'fixtures' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {currentLanguage === 'ar' ? 'المباريات' : 'Calendrier'}
+                </button>
               </div>
             </Card>
 
@@ -409,18 +434,20 @@ const Standings = () => {
                                   <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                     <img 
                                       src={item.statistics?.[0]?.team?.logo} 
-                                      alt={item.statistics?.[0]?.team?.name}
+                                      alt={getTeamName(item.statistics?.[0]?.team)}
                                       className="w-4 h-4"
                                     />
-                                    {currentLanguage === 'ar' 
-                                      ? getArabicTeamName(item.statistics?.[0]?.team?.name)
-                                      : item.statistics?.[0]?.team?.name}
+                                    {getTeamName(item.statistics?.[0]?.team)}
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-xl font-bold text-green-600">{item.statistics?.[0]?.goals?.total || 0}</div>
-                                <div className="text-xs text-gray-500">هدف</div>
+                              <div className="text-right min-w-[40px]">
+                                <div className="text-xl font-bold text-green-600">
+                                  {item.statistics?.[0]?.goals?.total || 0}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {currentLanguage === 'ar' ? 'هدف' : 'Buts'}
+                                </div>
                               </div>
                             </div>
                           ))}
@@ -466,12 +493,10 @@ const Standings = () => {
                                   <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                     <img 
                                       src={item.statistics?.[0]?.team?.logo} 
-                                      alt={item.statistics?.[0]?.team?.name}
+                                      alt={getTeamName(item.statistics?.[0]?.team)}
                                       className="w-4 h-4"
                                     />
-                                    {currentLanguage === 'ar' 
-                                      ? getArabicTeamName(item.statistics?.[0]?.team?.name)
-                                      : item.statistics?.[0]?.team?.name}
+                                    {getTeamName(item.statistics?.[0]?.team)}
                                   </div>
                                 </div>
                               </div>
@@ -486,6 +511,101 @@ const Standings = () => {
                         <div className="text-center py-8 text-gray-500">لا توجد بيانات تمريرات متاحة</div>
                       )}
                     </>
+                  )}
+                </Card>
+              )}
+              {activeTab === 'fixtures' && (
+                <Card className="p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Calendar className="w-6 h-6 text-purple-500" />
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                      {currentLanguage === 'ar' ? 'جدول المباريات' : 'Calendrier des matchs'}
+                    </h2>
+                  </div>
+                  
+                  {loadingFixtures ? (
+                    <div className="space-y-3">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
+                          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : fixturesData?.response?.length > 0 ? (
+                    <div className="space-y-4">
+                      {fixturesData.response.map((fixture: any) => {
+                        const homeTeam = fixture.teams.home;
+                        const awayTeam = fixture.teams.away;
+                        const date = new Date(fixture.fixture.date);
+                        
+                        // Fonction utilitaire pour formater la date
+                        const formatDate = (dateString: string) => {
+                          const date = new Date(dateString);
+                          return date.toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          });
+                        };
+
+
+                        return (
+                          <div key={fixture.fixture.id} className="p-4 rounded-lg border border-gray-200 dark:border-[#23262f]">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded">
+                                  {fixture.league?.round?.split(' - ').pop() || 'Journée'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm text-gray-500">
+                                  {formatDate(fixture.fixture.date)}
+                                </span>
+                                <span className="text-sm font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded">
+                                  {date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 flex items-center justify-end gap-3 text-right">
+                                <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis">
+                                  {getTeamName(homeTeam)}
+                                </span>
+                                <img 
+                                  src={homeTeam.logo} 
+                                  alt={getTeamName(homeTeam)} 
+                                  className="w-8 h-8 flex-shrink-0"
+                                />
+                              </div>
+                              
+                              <div className="px-3 py-1 bg-gray-100 dark:bg-[#23262f] rounded-md font-semibold min-w-[60px] text-center">
+                                {fixture.fixture.status.short === 'NS' ? 'VS' : `${fixture.goals.home} - ${fixture.goals.away}`}
+                              </div>
+                              
+                              <div className="flex-1 flex items-center gap-3">
+                                <img 
+                                  src={awayTeam.logo} 
+                                  alt={getTeamName(awayTeam)} 
+                                  className="w-8 h-8 flex-shrink-0"
+                                />
+                                <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis">
+                                  {getTeamName(awayTeam)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      {currentLanguage === 'ar' ? 'لا توجد مباريات متاحة' : 'Aucun match disponible'}
+                    </div>
                   )}
                 </Card>
               )}
