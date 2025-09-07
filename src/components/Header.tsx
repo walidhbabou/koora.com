@@ -184,7 +184,7 @@ const Header = () => {
                   <img 
                     src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="w-16 h-16 sm:w-18 sm:h-18 object-contain dark:hidden neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="h-13 sm:h-10 w-auto object-contain dark:hidden neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -193,7 +193,7 @@ const Header = () => {
                   <img 
                     src="/kooralogo.png" 
                     alt="Koora Logo" 
-                    className="w-16 h-16 sm:w-18 sm:h-18 object-contain hidden dark:block neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="h-13 sm:h-10 w-auto object-contain hidden dark:block neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';

@@ -42,6 +42,25 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+// Write 'koora_user' to localStorage defensively to avoid QUOTA_EXCEEDED_ERR
+function safelyPersistUserToLocalStorage(user: AppUser) {
+  try {
+    localStorage.setItem('koora_user', JSON.stringify(user));
+  } catch (_e) {
+    // Attempt to free space by removing known heavy cache namespaces, then retry once
+    try {
+      const keys = Object.keys(localStorage);
+      for (const key of keys) {
+        if (key.startsWith('api-cache:') || key.startsWith('koora_cache_')) {
+          try { localStorage.removeItem(key); } catch {}
+        }
+      }
+      // Retry once after cleanup
+      try { localStorage.setItem('koora_user', JSON.stringify(user)); } catch {}
+    } catch {}
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -100,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: (prof?.status as any) || 'active',
       };
       setUser(baseUser);
-      localStorage.setItem('koora_user', JSON.stringify(baseUser));
+      safelyPersistUserToLocalStorage(baseUser);
       setRoleLoaded(true);
       setIsAuthLoading(false);
       return;
@@ -185,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: (prof?.status as any) || 'active',
       };
       setUser(baseUser);
-      localStorage.setItem('koora_user', JSON.stringify(baseUser));
+      safelyPersistUserToLocalStorage(baseUser);
       setRoleLoaded(true);
     } catch (e: any) {
       return { error: e?.message ?? 'Erreur de connexion' };
@@ -226,7 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setUser(baseUser);
       setRoleLoaded(true);
-      localStorage.setItem('koora_user', JSON.stringify(baseUser));
+      safelyPersistUserToLocalStorage(baseUser);
     } catch (e: any) {
       return { error: e?.message ?? 'Registration failed' };
     }
@@ -290,7 +309,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(prev => {
       if (!prev) return prev;
       const merged = { ...prev, ...patch } as AppUser;
-      try { localStorage.setItem('koora_user', JSON.stringify(merged)); } catch {}
+      safelyPersistUserToLocalStorage(merged);
       return merged;
     });
   }, []);
