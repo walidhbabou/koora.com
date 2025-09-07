@@ -296,8 +296,8 @@ const Transfers = () => {
             {/* Latest Confirmed Transfers */}
             <div className="space-y-4">
               <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                <TrendingUp className="w-5 h-5 text-sport-green" />
-                <h2 className="text-xl font-bold text-sport-dark">
+                <TrendingUp className="w-5 h-5 text-green-600" />
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                   {isRTL ? `انتقالات ${selectedSeason}/${selectedSeason + 1}` : `Transfers ${selectedSeason}/${selectedSeason + 1}`}
                 </h2>
               </div>
@@ -320,22 +320,22 @@ const Transfers = () => {
 
               {/* Sélecteur de ligue (pills) */}
               <div className="w-full overflow-x-auto pb-2">
-                <div className={`flex items-center gap-2 min-w-max ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-2 sm:gap-3 min-w-max ${isRTL ? 'flex-row-reverse' : ''}`}>
                   {[{
-                    id: MAIN_LEAGUES.PREMIER_LEAGUE, label: isRTL ? 'الدوري الإنجليزي' : 'Premier League'
+                    id: MAIN_LEAGUES.PREMIER_LEAGUE, label: isRTL ? 'الإنجليزي' : 'Premier League'
                   }, {
-                    id: MAIN_LEAGUES.LA_LIGA, label: isRTL ? 'الدوري الإسباني' : 'La Liga'
+                    id: MAIN_LEAGUES.LA_LIGA, label: isRTL ? 'الإسباني' : 'La Liga'
                   }, {
-                    id: MAIN_LEAGUES.BUNDESLIGA, label: isRTL ? 'الدوري الألماني' : 'Bundesliga'
+                    id: MAIN_LEAGUES.BUNDESLIGA, label: isRTL ? 'الألماني' : 'Bundesliga'
                   }, {
-                    id: MAIN_LEAGUES.SERIE_A, label: isRTL ? 'الدوري الإيطالي' : 'Serie A'
+                    id: MAIN_LEAGUES.SERIE_A, label: isRTL ? 'الإيطالي' : 'Serie A'
                   }, {
-                    id: MAIN_LEAGUES.LIGUE_1, label: isRTL ? 'الدوري الفرنسي' : 'Ligue 1'
+                    id: MAIN_LEAGUES.LIGUE_1, label: isRTL ? 'الفرنسي' : 'Ligue 1'
                   }].map(l => (
                     <button
                       key={l.id}
                       onClick={() => { setSelectedLeagueId(prev => prev === l.id ? null : l.id); setPage(1); }}
-                      className={`px-4 h-9 rounded-full border text-sm whitespace-nowrap transition-colors ${selectedLeagueId === l.id ? 'bg-sport-green text-white border-sport-green' : 'bg-[hsl(var(--input))] text-slate-700 dark:text-slate-200 border-transparent hover:border-sport-green/40'}`}
+                      className={`px-3 sm:px-4 h-8 sm:h-9 rounded-full border text-xs sm:text-sm whitespace-nowrap transition-all font-medium ${selectedLeagueId === l.id ? 'bg-green-600 text-white border-green-600 shadow-lg' : 'bg-white dark:bg-[#181a20] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-[#23262f] hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 hover:shadow-md'}`}
                     >
                       {l.label}
                     </button>
@@ -344,7 +344,7 @@ const Transfers = () => {
               </div>
 
               {paginatedTransfers.length > 0 ? (
-                <div className={`flex flex-col gap-4`}>
+                <div className="space-y-4 sm:space-y-3">
                   {paginatedTransfers.map((transfer, index) => {
                     const t = transfer as Record<string, unknown>;
                     const player = t['player'] as Record<string, unknown> | undefined;
@@ -356,8 +356,11 @@ const Transfers = () => {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
-                  {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  <div className="text-6xl mb-4">⚽</div>
+                  <div className="text-lg font-medium">
+                    {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}
+                  </div>
                 </div>
               )}
 

@@ -12,6 +12,7 @@ import { useLiveMatches, useMatchesByDateAndLeague } from "@/hooks/useFootballAP
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
 import { getTeamTranslation } from "@/utils/teamNameMap.ts";
+import { useTeamListTranslation } from "@/hooks/useTeamTranslation";
 import MatchHeader from "@/components/MatchHeader";
 import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,7 +24,17 @@ const formatDisplayDate = (dateString: string, currentLanguage: string, tz: stri
   if (!dateString) return '';
   const date = new Date(dateString);
   if (currentLanguage === 'ar') {
-    return date.toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric', timeZone: tz });
+    // Utiliser le format arabe avec les noms de mois arabes
+    const day = date.getDate();
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    const arabicMonths = [
+      'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+    ];
+    
+    return `${day} ${arabicMonths[month]} ${year}`;
   }
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: tz });
 };
@@ -48,8 +59,18 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  const displayHomeName = currentLanguage === 'ar' ? getTeamTranslation(homeName) : homeName;
-  const displayAwayName = currentLanguage === 'ar' ? getTeamTranslation(awayName) : awayName;
+  
+  // Utiliser la traduction automatique pour les noms d'équipes
+  const teamNames = [homeName, awayName].filter(name => name.trim() !== '');
+  const { translatedNames, isInitialized } = useTeamListTranslation(teamNames);
+  
+  // Toujours afficher en arabe si la langue est arabe, sinon en français/anglais
+  const displayHomeName = currentLanguage === 'ar' 
+    ? (isInitialized ? (translatedNames[0] || homeName) : homeName)
+    : homeName;
+  const displayAwayName = currentLanguage === 'ar' 
+    ? (isInitialized ? (translatedNames[1] || awayName) : awayName)
+    : awayName;
   const homeScore = (match.goals?.home ?? match.score?.fulltime?.home ?? 0);
   const awayScore = (match.goals?.away ?? match.score?.fulltime?.away ?? 0);
 
@@ -157,6 +178,10 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
+  
+  // Utiliser la traduction automatique pour les noms d'équipes
+  const teamNames = [homeName, awayName].filter(name => name.trim() !== '');
+  const { translatedNames, isInitialized } = useTeamListTranslation(teamNames);
   // Formatage du temps de début du match
   const getMatchTime = () => {
     if (!match.date) return '';
@@ -197,126 +222,95 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   })();
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
-  // Use static mapping for Arabic UI; keep original for other languages
-  const displayHomeName = currentLanguage === 'ar' ? getTeamTranslation(homeName) : homeName;
-  const displayAwayName = currentLanguage === 'ar' ? getTeamTranslation(awayName) : awayName;
+  // Use automatic translation for Arabic UI; keep original for other languages
+  const displayHomeName = currentLanguage === 'ar' 
+    ? (isInitialized ? (translatedNames[0] || homeName) : homeName)
+    : homeName;
+  const displayAwayName = currentLanguage === 'ar' 
+    ? (isInitialized ? (translatedNames[1] || awayName) : awayName)
+    : awayName;
 
   const navigate = useNavigate();
   return (
     <div
       dir={direction}
-      className={`flex flex-row items-center justify-between my-1.5 sm:my-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-white dark:bg-[#0f172a] rounded-2xl shadow-sm border border-[#eef0f4] dark:border-[#334155] ${isRTL ? 'rtl' : 'ltr'} hover:shadow-md transition-shadow`}
+      className={`flex flex-row items-center justify-between py-3 px-2 border-b border-gray-100 dark:border-[#23262f] last:border-b-0 bg-white dark:bg-[#0f172a] ${isRTL ? 'rtl' : 'ltr'} hover:bg-gray-50 dark:hover:bg-[#1f2937] transition-colors cursor-pointer`}
       onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
-      {/* Left: play badge */}
-      <div className={`shrink-0 me-2 hidden sm:block`}>
-        <div className="w-8 h-8 rounded-xl bg-[#e9edf5] dark:bg-[#1f2937] border border-[#e5e9f0] dark:border-[#334155] flex items-center justify-center">
-          <PlayCircle className="w-5 h-5 text-blue-500" />
+      {/* Date et heure */}
+      <div className="flex flex-col items-start min-w-[80px] sm:min-w-[100px]">
+        <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+          {getFormattedMatchDateTime()}
+        </span>
+        <span className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200">
+          {time}
+        </span>
+      </div>
+      
+      {/* Équipes */}
+      <div className="flex-1 flex items-center justify-between mx-3 sm:mx-4">
+        {/* Équipe domicile */}
+        <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+          <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
+            {displayHomeName}
+          </span>
+          {homeLogo ? (
+            <img
+              src={homeLogo}
+              alt={displayHomeName}
+              className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 object-contain"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold">H</div>
+          )}
+        </div>
+        
+        {/* Score ou VS */}
+        <div className="px-2 sm:px-3 text-center min-w-[40px] sm:min-w-[50px]">
+          <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+            {(isLiveState || isFinishedState)
+              ? (isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`)
+              : '-'}
+          </span>
+        </div>
+        
+        {/* Équipe extérieure */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {awayLogo ? (
+            <img
+              src={awayLogo}
+              alt={displayAwayName}
+              className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0 object-contain"
+              loading="lazy"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+              }}
+            />
+          ) : (
+            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">A</div>
+          )}
+          <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
+            {displayAwayName}
+          </span>
         </div>
       </div>
-      <div className={`flex items-center gap-2 sm:gap-2.5 flex-1 basis-0 min-w-0 justify-end`}>
-      {isRTL ? (
-        <>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
-          {awayLogo ? (
-            <img
-              src={awayLogo}
-              alt={displayAwayName}
-              className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const sib = target.nextElementSibling as HTMLElement | null;
-                if (sib) sib.classList.remove('hidden');
-              }}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
-            />
-          ) : null}
-          <div className={`w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold ${awayLogo ? 'hidden' : ''}`}>A</div>
-        </>
-      ) : (
-        <>
-          {awayLogo ? (
-            <img
-              src={awayLogo}
-              alt={displayAwayName}
-              className="w-7 h-7 object-contain"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const sib = target.nextElementSibling as HTMLElement | null;
-                if (sib) sib.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-          <div className={`w-7 h-7 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold ${awayLogo ? 'hidden' : ''}`}>A</div>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
-        </>
-      )}
-    </div>
-    
-    {/* Centre: status label + score/time, stacked */}
-    <div className="flex flex-col items-center justify-center w-[90px] min-w-[90px] sm:w-[140px] sm:min-w-[140px]">
-      <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 whitespace-nowrap">{statusLabel}</span>
-      {(isLiveState || isFinishedState)
-        ? (
-          <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
-            {isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}
-          </span>
+      
+      {/* Statut du match */}
+      <div className="flex flex-col items-end min-w-[60px] sm:min-w-[80px]">
+        {isLiveState ? (
+          <span className="text-xs font-medium text-red-600">LIVE</span>
+        ) : isFinishedState ? (
+          <span className="text-xs text-gray-500">Terminé</span>
         ) : (
-          <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-sm sm:text-base">{time}</span>
-        )
-      }
-    </div>
-    
-    {/* Home team (left) - right side of row, take equal space */}
-  <div className={`flex items-center gap-2 flex-1 basis-0 min-w-0 justify-start`}>
-      {isRTL ? (
-        <>
-          {homeLogo ? (
-            <img
-              src={homeLogo}
-              alt={displayHomeName}
-              className="w-6 h-6 sm:w-7 sm:h-7 object-contain"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const sib = target.nextElementSibling as HTMLElement | null;
-                if (sib) sib.classList.remove('hidden');
-              }}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
-            />
-          ) : null}
-          <div className={`w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-[10px] sm:text-xs font-bold ${homeLogo ? 'hidden' : ''}`}>H</div>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
-        </>
-      ) : (
-        <>
-          <span className={`font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base whitespace-nowrap truncate max-w-[120px] sm:max-w-[200px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
-          {homeLogo ? (
-            <img
-              src={homeLogo}
-              alt={displayHomeName}
-              className="w-7 h-7 object-contain"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-                const sib = target.nextElementSibling as HTMLElement | null;
-                if (sib) sib.classList.remove('hidden');
-              }}
-            />
-          ) : null}
-          <div className={`w-7 h-7 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold ${homeLogo ? 'hidden' : ''}`}>H</div>
-        </>
-      )}
-    </div>
-    {/* Modal removed: navigation is used instead */}
+          <span className="text-xs text-gray-500">À venir</span>
+        )}
+      </div>
   </div>
 );
 };

@@ -14,6 +14,7 @@ import { useTopScorers, useTopAssists, useFixtures } from "@/hooks/useFootballAP
 import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
 import { getTeamTranslation } from "@/utils/teamNameMap";
+import { useSingleTeamTranslation } from "@/hooks/useTeamTranslation";
 
 const Standings = () => {
   const { currentLanguage, t, isRTL, direction } = useTranslation();
@@ -27,6 +28,19 @@ const Standings = () => {
     }
     // Si c'est un objet avec une propriété name
     return currentLanguage === 'ar' ? getTeamTranslation(team.name) : team.name;
+  };
+
+  // Composant pour afficher un nom d'équipe avec traduction automatique
+  const TeamNameWithTranslation = ({ team }: { team: any }) => {
+    const teamName = typeof team === 'string' ? team : team?.name || '';
+    const { translatedName, isInitialized } = useSingleTeamTranslation(teamName);
+    
+    // Toujours afficher en arabe si la langue est arabe
+    if (currentLanguage === 'ar') {
+      return <span>{isInitialized ? translatedName : teamName}</span>;
+    }
+    
+    return <span>{teamName}</span>;
   };
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
@@ -139,6 +153,65 @@ const Standings = () => {
     setSelectedLeague(null);
   };
 
+  // Fonction pour formater les dates en arabe
+  const formatDateArabic = (dateString: string) => {
+    const date = new Date(dateString);
+    if (currentLanguage === 'ar') {
+      // Utiliser le format arabe avec les noms de mois arabes
+      const day = date.getDate();
+      const month = date.getMonth();
+      const year = date.getFullYear();
+      
+      const arabicMonths = [
+        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+      ];
+      
+      return `${day} ${arabicMonths[month]} ${year}`;
+    }
+    return date.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  // Fonction pour traduire les mots français
+  const translateText = (text: string) => {
+    if (currentLanguage === 'ar') {
+      const translations: { [key: string]: string } = {
+        'Round': 'الجولة',
+        'Regular Season': 'الموسم العادي',
+        'À venir': 'قريباً',
+        'LIVE': 'مباشر',
+        'Terminé': 'انتهى',
+        'Aucun match disponible': 'لا توجد مباريات متاحة',
+        'Classement': 'الترتيب',
+        'Résultats': 'النتائج',
+        'Joueurs': 'اللاعبون',
+        'Statistiques': 'الإحصائيات',
+        'Prochains matchs': 'المباريات القادمة',
+        'Matchs précédents': 'المباريات السابقة',
+        'Points': 'النقاط',
+        'J': 'م',
+        'V': 'ف',
+        'N': 'ت',
+        'D': 'خ',
+        'BP': 'له',
+        'BC': 'عليه',
+        'Diff': 'فرق'
+      };
+      
+      // Gérer les cas spéciaux comme "Regular Season - 24"
+      if (text.includes('Regular Season')) {
+        return text.replace('Regular Season', 'الموسم العادي');
+      }
+      
+      return translations[text] || text;
+    }
+    return text;
+  };
+
   // Obtenir les données de classement pour la ligue sélectionnée
   const getSelectedLeagueData = () => {
     if (!selectedLeague) return null;
@@ -182,68 +255,68 @@ const Standings = () => {
     <div className={`min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419] ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       <Header />
       <TeamsLogos />
-      <div className="container mx-auto px-4 py-6 max-w-7xl">
+      <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">
         
         {/* Vue liste des ligues */}
         {!showLeagueDetail && (
           <>
             {/* En-tête de la page */}
-            <div className={`flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 ${isRTL ? 'md:flex-row-reverse' : ''}`}>
-              <div className={`${isRTL ? 'text-right' : 'text-left'}`}> 
-                <h1 className="text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-2 tracking-tight">
+            <div className={`flex flex-col gap-4 mb-6 sm:mb-8 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div> 
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-2 tracking-tight">
                   {currentLanguage === 'ar' ? 'كوورة - ترتيب البطولات' : 'koora - Classement des tournois'}
                 </h1>
-                <p className="text-gray-700 dark:text-gray-300 text-base md:text-lg font-medium">
+                <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base md:text-lg font-medium">
                   {currentLanguage === 'ar' ? 'اختر البطولة لعرض الترتيب' : 'Sélectionnez un tournoi pour voir le classement'}
                 </p>
               </div>
               
               {/* Barre de recherche */}
-              <div className="relative">
+              <div className="relative w-full sm:w-auto">
                 <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
                   placeholder={t('searchTournament')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className={`${isRTL ? 'pr-10' : 'pl-10'} bg-white dark:bg-[#181a20] border-gray-200 dark:border-[#23262f] focus:border-blue-500 w-64`}
+                  className={`${isRTL ? 'pr-10' : 'pl-10'} bg-white dark:bg-[#181a20] border-gray-200 dark:border-[#23262f] focus:border-blue-500 w-full sm:w-64`}
                 />
               </div>
             </div>
 
             {/* Liste des ligues (style simple comme la maquette) */}
-            <div className="max-w-2xl mx-auto">
-              <h2 className={`mb-4 text-base font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <div className="w-full max-w-2xl mx-auto">
+              <h2 className={`mb-3 sm:mb-4 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
                 {currentLanguage === 'ar' ? 'البطولات' : 'Tournois'}
               </h2>
 
-              <ul className="space-y-3">
+              <ul className="space-y-2 sm:space-y-3">
                 {filteredLeagues.map((league) => (
                   <li key={league.id}>
                     <div
                       onClick={() => handleLeagueClick(league.id)}
-                      className={`flex items-center justify-between rounded-2xl bg-white dark:bg-[#181a20] border border-gray-100 dark:border-[#23262f] px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
+                      className={`flex items-center justify-between rounded-xl sm:rounded-2xl bg-white dark:bg-[#181a20] border border-gray-100 dark:border-[#23262f] px-3 sm:px-4 py-2.5 sm:py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''}`}
                     >
                       {/* Chevron */}
                       <div className={`shrink-0 text-gray-400`}>
                         {isRTL ? (
-                          <ChevronRight className="w-4 h-4" />
+                          <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
                         ) : (
-                          <ChevronLeft className="w-4 h-4" />
+                          <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
                         )}
                       </div>
                       {/* League name and country */}
-                      <div className={`flex-1 px-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                        <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm sm:text-base">
+                      <div className={`flex-1 px-2 sm:px-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        <span className="text-gray-900 dark:text-gray-100 font-semibold text-xs sm:text-sm md:text-base block truncate">
                           {league.name}
                         </span>
-                        <span className="block text-xs text-gray-500 dark:text-gray-400">{league.country} {league.flag}</span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400 truncate">{league.country} {league.flag}</span>
                       </div>
                       {/* Logo */}
                       <div className="shrink-0">
                         <img
                           src={league.logo}
                           alt={league.name}
-                          className="w-9 h-9 sm:w-11 sm:h-11 object-contain bg-white rounded-xl p-1"
+                          className="w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 object-contain bg-white rounded-lg sm:rounded-xl p-0.5 sm:p-1"
                         />
                       </div>
                     </div>
@@ -278,18 +351,18 @@ const Standings = () => {
         {showLeagueDetail && selectedLeague && (
           <>
             {/* Header Card + Tabs (match mockup style) */}
-            <Card className="mb-6 border-0 shadow-lg overflow-hidden">
-              <div className={`flex items-center justify-between p-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Card className="mb-4 sm:mb-6 border-0 shadow-lg overflow-hidden">
+              <div className={`flex items-center justify-between p-3 sm:p-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 {/* League info */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                   {/* Logo */}
                   <img
                     src={getSelectedLeagueData()?.leagueLogo || 'https://via.placeholder.com/48'}
                     alt={getSelectedLeagueData()?.leagueName || 'League'}
-                    className="w-12 h-12 object-contain rounded-xl bg-white"
+                    className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-lg sm:rounded-xl bg-white flex-shrink-0"
                   />
-                  <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
-                    <div className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                  <div className={`min-w-0 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className="text-lg sm:text-xl font-extrabold text-gray-800 dark:text-gray-100 truncate">
                       {currentLanguage === 'ar' ? (getSelectedLeagueData()?.leagueName || 'البطولة') : (getSelectedLeagueData()?.leagueName || 'League')}
                     </div>
                     <div className="text-xs text-gray-500">
@@ -303,17 +376,17 @@ const Standings = () => {
                   onClick={handleBackToList}
                   variant="outline"
                   size="sm"
-                  className="shrink-0"
+                  className="shrink-0 text-xs sm:text-sm px-2 sm:px-3"
                 >
                   {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
                 </Button>
               </div>
 
               {/* Tabs */}
-              <div className={`flex gap-6 px-4 pb-2 border-t border-gray-100 dark:border-[#23262f] ${isRTL ? 'justify-start' : 'justify-end'}`}>
+              <div className={`flex gap-3 sm:gap-6 px-3 sm:px-4 pb-2 border-t border-gray-100 dark:border-[#23262f] ${isRTL ? 'justify-start' : 'justify-end'}`}>
                 <button
                   onClick={() => setActiveTab('teams')}
-                  className={`py-2 text-sm font-semibold border-b-2 transition-colors ${
+                  className={`py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${
                     activeTab === 'teams' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -321,7 +394,7 @@ const Standings = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('players')}
-                  className={`py-2 text-sm font-semibold border-b-2 transition-colors ${
+                  className={`py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${
                     activeTab === 'players' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -329,7 +402,7 @@ const Standings = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab('fixtures')}
-                  className={`py-2 text-sm font-semibold border-b-2 transition-colors ${
+                  className={`py-2 text-xs sm:text-sm font-semibold border-b-2 transition-colors ${
                     activeTab === 'fixtures' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -373,13 +446,13 @@ const Standings = () => {
               })()}
               {/* Players Tab */}
               {activeTab === 'players' && (
-                <Card className="p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
+                <Card className="p-3 sm:p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
                   {/* Sub toggle */}
-                  <div className={`mb-4 flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`mb-3 sm:mb-4 flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
                     <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-[#23262f] rounded-xl">
                       <button
                         onClick={() => setPlayersTab('topscorers')}
-                        className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
                           playersTab === 'topscorers' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
@@ -387,7 +460,7 @@ const Standings = () => {
                       </button>
                       <button
                         onClick={() => setPlayersTab('topassists')}
-                        className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
                           playersTab === 'topassists' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
@@ -399,50 +472,52 @@ const Standings = () => {
                   {/* Content */}
                   {playersTab === 'topscorers' ? (
                     <>
-                      <div className="flex items-center gap-3 mb-6">
-                        <Trophy className="w-6 h-6 text-yellow-500" />
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">الهدافون</h2>
+                      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                        <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">الهدافون</h2>
                       </div>
                       {loadingScorers ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                           {[...Array(10)].map((_, i) => (
-                            <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
-                              <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                            <div key={i} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 animate-pulse">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
                               <div className="flex-1 space-y-2">
-                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                                <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                <div className="h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
                               </div>
-                              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
                             </div>
                           ))}
                         </div>
                       ) : topScorersData?.response?.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1 sm:space-y-2">
                           {topScorersData.response.map((item: any, index: number) => (
-                            <div key={item.player?.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors">
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="text-lg font-bold text-gray-500 w-6 text-center">{index + 1}</div>
+                            <div key={item.player?.id} className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                                <div className="text-sm sm:text-lg font-bold text-gray-500 w-4 sm:w-6 text-center flex-shrink-0">{index + 1}</div>
                                 <img 
                                   src={item.player?.photo || '/placeholder.svg'} 
                                   alt={item.player?.name}
-                                  className="w-12 h-12 rounded-full object-cover"
+                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover flex-shrink-0"
                                 />
-                                <div className="flex-1">
-                                  <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                                     {maybeTransliterateName(item.player?.name, currentLanguage)}
                                   </div>
-                                  <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 sm:gap-2">
                                     <img 
                                       src={item.statistics?.[0]?.team?.logo} 
                                       alt={getTeamName(item.statistics?.[0]?.team)}
-                                      className="w-4 h-4"
+                                      className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0"
                                     />
-                                    {getTeamName(item.statistics?.[0]?.team)}
+                                    <span className="truncate">
+                                      <TeamNameWithTranslation team={item.statistics?.[0]?.team} />
+                                    </span>
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right min-w-[40px]">
-                                <div className="text-xl font-bold text-green-600">
+                              <div className="text-right min-w-[35px] sm:min-w-[40px] flex-shrink-0">
+                                <div className="text-lg sm:text-xl font-bold text-green-600">
                                   {item.statistics?.[0]?.goals?.total || 0}
                                 </div>
                                 <div className="text-xs text-gray-500">
@@ -453,72 +528,74 @@ const Standings = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-gray-500">لا توجد بيانات هدافين متاحة</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا توجد بيانات هدافين متاحة</div>
                       )}
                     </>
                   ) : (
                     <>
-                      <div className="flex items-center gap-3 mb-6">
-                        <Award className="w-6 h-6 text-blue-500" />
-                        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">أفضل الممررين</h2>
+                      <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                        <Award className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">أفضل الممررين</h2>
                       </div>
                       {loadingAssists ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                           {[...Array(10)].map((_, i) => (
-                            <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
-                              <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                            <div key={i} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 animate-pulse">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
                               <div className="flex-1 space-y-2">
-                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                                <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                                <div className="h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
                               </div>
-                              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded"></div>
                             </div>
                           ))}
                         </div>
                       ) : topAssistsData?.response?.length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1 sm:space-y-2">
                           {topAssistsData.response.map((item: any, index: number) => (
-                            <div key={item.player?.id} className="flex items-center gap-4 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors">
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="text-lg font-bold text-gray-500 w-6 text-center">{index + 1}</div>
+                            <div key={item.player?.id} className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-[#23262f] transition-colors">
+                              <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                                <div className="text-sm sm:text-lg font-bold text-gray-500 w-4 sm:w-6 text-center flex-shrink-0">{index + 1}</div>
                                 <img 
                                   src={item.player?.photo || '/placeholder.svg'} 
                                   alt={item.player?.name}
-                                  className="w-12 h-12 rounded-full object-cover"
+                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover flex-shrink-0"
                                 />
-                                <div className="flex-1">
-                                  <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                                     {maybeTransliterateName(item.player?.name, currentLanguage)}
                                   </div>
-                                  <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                  <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 sm:gap-2">
                                     <img 
                                       src={item.statistics?.[0]?.team?.logo} 
                                       alt={getTeamName(item.statistics?.[0]?.team)}
-                                      className="w-4 h-4"
+                                      className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0"
                                     />
-                                    {getTeamName(item.statistics?.[0]?.team)}
+                                    <span className="truncate">
+                                      <TeamNameWithTranslation team={item.statistics?.[0]?.team} />
+                                    </span>
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="text-xl font-bold text-blue-600">{item.statistics?.[0]?.goals?.assists || 0}</div>
+                              <div className="text-right min-w-[35px] sm:min-w-[40px] flex-shrink-0">
+                                <div className="text-lg sm:text-xl font-bold text-blue-600">{item.statistics?.[0]?.goals?.assists || 0}</div>
                                 <div className="text-xs text-gray-500">تمريرة</div>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-8 text-gray-500">لا توجد بيانات تمريرات متاحة</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا توجد بيانات تمريرات متاحة</div>
                       )}
                     </>
                   )}
                 </Card>
               )}
               {activeTab === 'fixtures' && (
-                <Card className="p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Calendar className="w-6 h-6 text-purple-500" />
-                    <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
+                <Card className="p-3 sm:p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">
                       {currentLanguage === 'ar' ? 'جدول المباريات' : 'Calendrier des matchs'}
                     </h2>
                   </div>
@@ -526,84 +603,108 @@ const Standings = () => {
                   {loadingFixtures ? (
                     <div className="space-y-3">
                       {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-center gap-4 p-3 animate-pulse">
-                          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                        <div key={i} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 animate-pulse">
+                          <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
                           <div className="flex-1 space-y-2">
-                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                            <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                            <div className="h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : fixturesData?.response?.length > 0 ? (
-                    <div className="space-y-4">
-                      {fixturesData.response.map((fixture: any) => {
+                    <div className="space-y-3 sm:space-y-4">
+                      {(() => {
+                        // Grouper les matchs par round
+                        const groupedFixtures = fixturesData.response.reduce((acc: any, fixture: any) => {
+                          const round = fixture.league?.round || 'Round';
+                          if (!acc[round]) {
+                            acc[round] = [];
+                          }
+                          acc[round].push(fixture);
+                          return acc;
+                        }, {});
+
+                        return Object.entries(groupedFixtures).map(([round, fixtures]: [string, any]) => (
+                          <div key={round}>
+                            {/* En-tête du round */}
+                            <div className="sticky top-0 bg-white dark:bg-[#0f172a] py-2 px-2 border-b-2 border-gray-200 dark:border-[#23262f] mb-2">
+                              <h3 className="text-sm sm:text-base font-bold text-gray-800 dark:text-white uppercase">
+                                {translateText(round)}
+                              </h3>
+                            </div>
+                            
+                            {/* Matchs du round */}
+                            {fixtures.map((fixture: any) => {
                         const homeTeam = fixture.teams.home;
                         const awayTeam = fixture.teams.away;
                         const date = new Date(fixture.fixture.date);
-                        
-                        // Fonction utilitaire pour formater la date
-                        const formatDate = (dateString: string) => {
-                          const date = new Date(dateString);
-                          return date.toLocaleDateString(currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric'
-                          });
-                        };
-
 
                         return (
-                          <div key={fixture.fixture.id} className="p-4 rounded-lg border border-gray-200 dark:border-[#23262f]">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded">
-                                  {fixture.league?.round?.split(' - ').pop() || 'Journée'}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <span className="text-sm text-gray-500">
-                                  {formatDate(fixture.fixture.date)}
-                                </span>
-                                <span className="text-sm font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2 py-1 rounded">
-                                  {date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
-                                </span>
-                              </div>
+                          <div key={fixture.fixture.id} className="flex items-center justify-between py-3 px-2 border-b border-gray-100 dark:border-[#23262f] last:border-b-0">
+                            {/* Date et heure */}
+                            <div className="flex flex-col items-start min-w-[80px] sm:min-w-[100px]">
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                                {formatDateArabic(fixture.fixture.date)}
+                              </span>
+                              <span className="text-xs sm:text-sm font-medium text-gray-800 dark:text-gray-200">
+                                {date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                              </span>
                             </div>
                             
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex-1 flex items-center justify-end gap-3 text-right">
-                                <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis">
-                                  {getTeamName(homeTeam)}
+                            {/* Équipes */}
+                            <div className="flex-1 flex items-center justify-between mx-3 sm:mx-4">
+                              {/* Équipe domicile */}
+                              <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
+                                <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
+                                  <TeamNameWithTranslation team={homeTeam} />
                                 </span>
                                 <img 
                                   src={homeTeam.logo} 
                                   alt={getTeamName(homeTeam)} 
-                                  className="w-8 h-8 flex-shrink-0"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
                                 />
                               </div>
                               
-                              <div className="px-3 py-1 bg-gray-100 dark:bg-[#23262f] rounded-md font-semibold min-w-[60px] text-center">
-                                {fixture.fixture.status.short === 'NS' ? 'VS' : `${fixture.goals.home} - ${fixture.goals.away}`}
+                              {/* Score ou VS */}
+                              <div className="px-2 sm:px-3 text-center min-w-[40px] sm:min-w-[50px]">
+                                <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">
+                                  {fixture.fixture.status.short === 'NS' ? '-' : `${fixture.goals.home} - ${fixture.goals.away}`}
+                                </span>
                               </div>
                               
-                              <div className="flex-1 flex items-center gap-3">
+                              {/* Équipe extérieure */}
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <img 
                                   src={awayTeam.logo} 
                                   alt={getTeamName(awayTeam)} 
-                                  className="w-8 h-8 flex-shrink-0"
+                                  className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
                                 />
-                                <span className="font-medium text-gray-900 dark:text-white whitespace-nowrap overflow-hidden text-ellipsis">
-                                  {getTeamName(awayTeam)}
+                                <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
+                                  <TeamNameWithTranslation team={awayTeam} />
                                 </span>
                               </div>
                             </div>
+                            
+                            {/* Statut du match */}
+                            <div className="flex flex-col items-end min-w-[60px] sm:min-w-[80px]">
+                              {fixture.fixture.status.short === 'NS' ? (
+                                <span className="text-xs text-gray-500">{translateText('À venir')}</span>
+                              ) : fixture.fixture.status.short === 'LIVE' ? (
+                                <span className="text-xs font-medium text-red-600">{translateText('LIVE')}</span>
+                              ) : (
+                                <span className="text-xs text-gray-500">{translateText('Terminé')}</span>
+                              )}
+                            </div>
                           </div>
                         );
-                      })}
+                            })}
+                          </div>
+                        ));
+                      })()}
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
                       {currentLanguage === 'ar' ? 'لا توجد مباريات متاحة' : 'Aucun match disponible'}
                     </div>
                   )}

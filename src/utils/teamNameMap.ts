@@ -1,3 +1,5 @@
+import { footballTranslationService } from '@/services/translationService';
+
 // teamTranslations.ts
 export const teamTranslations: Record<string, string> = {
 
@@ -141,7 +143,211 @@ export const teamTranslations: Record<string, string> = {
   
   };
   
+// Cache pour les traductions automatiques
+const autoTranslationCache = new Map<string, string>();
+
+// Fonction pour vérifier si un nom d'équipe est déjà en arabe
+const isArabicText = (text: string): boolean => {
+  // Vérifier si le texte contient des caractères arabes
+  const arabicRegex = /[\u0600-\u06FF]/;
+  return arabicRegex.test(text);
+};
+
+// Fonction pour obtenir la traduction d'une équipe (statique ou automatique)
   export const getTeamTranslation = (teamName: string): string => {
-    return teamTranslations[teamName] || teamName;
+  // Si le nom est vide ou null, retourner tel quel
+  if (!teamName || teamName.trim() === '') {
+    return teamName;
+  }
+
+  // Si le nom est déjà en arabe, le retourner tel quel
+  if (isArabicText(teamName)) {
+    return teamName;
+  }
+
+  // Vérifier d'abord dans le mapping statique
+  if (teamTranslations[teamName]) {
+    return teamTranslations[teamName];
+  }
+
+  // Vérifier dans le cache des traductions automatiques
+  if (autoTranslationCache.has(teamName)) {
+    return autoTranslationCache.get(teamName)!;
+  }
+
+  // Si pas trouvé, déclencher la traduction automatique immédiatement
+  // et retourner le nom original temporairement
+  translateTeamNameAsync(teamName).catch(error => {
+    console.error(`Erreur lors de la traduction automatique de "${teamName}":`, error);
+  });
+  
+  return teamName;
+};
+
+// Fonction pour traduire automatiquement un nom d'équipe
+export const translateTeamNameAsync = async (teamName: string): Promise<string> => {
+  // Si le nom est vide ou null, retourner tel quel
+  if (!teamName || teamName.trim() === '') {
+    return teamName;
+  }
+
+  // Si le nom est déjà en arabe, le retourner tel quel
+  if (isArabicText(teamName)) {
+    return teamName;
+  }
+
+  // Vérifier d'abord dans le mapping statique
+  if (teamTranslations[teamName]) {
+    return teamTranslations[teamName];
+  }
+
+  // Vérifier dans le cache des traductions automatiques
+  if (autoTranslationCache.has(teamName)) {
+    return autoTranslationCache.get(teamName)!;
+  }
+
+  try {
+    // Utiliser le service de traduction automatique
+    const translation = await footballTranslationService.quickTranslateToArabic(teamName);
+    
+    // Mettre en cache la traduction
+    autoTranslationCache.set(teamName, translation);
+    
+    return translation;
+  } catch (error) {
+    console.error(`Erreur lors de la traduction de "${teamName}":`, error);
+    // En cas d'erreur, retourner le nom original
+    return teamName;
+  }
+};
+
+// Fonction pour traduire plusieurs noms d'équipes en lot
+export const translateTeamNamesBatch = async (teamNames: string[]): Promise<string[]> => {
+  const results: string[] = [];
+  const toTranslate: string[] = [];
+
+  // Première passe : vérifier le mapping statique et le cache
+  for (const teamName of teamNames) {
+    if (!teamName || teamName.trim() === '') {
+      results.push(teamName);
+    } else if (isArabicText(teamName)) {
+      results.push(teamName);
+    } else if (teamTranslations[teamName]) {
+      results.push(teamTranslations[teamName]);
+    } else if (autoTranslationCache.has(teamName)) {
+      results.push(autoTranslationCache.get(teamName)!);
+    } else {
+      results.push(''); // Placeholder pour les noms à traduire
+      toTranslate.push(teamName);
+    }
+  }
+
+  // Deuxième passe : traduire les noms manquants
+  if (toTranslate.length > 0) {
+    try {
+      const translations = await footballTranslationService.translateBatchToArabic(toTranslate);
+      
+      // Mettre à jour les résultats et le cache
+      let translateIndex = 0;
+      for (let i = 0; i < results.length; i++) {
+        if (results[i] === '') {
+          const translation = translations[translateIndex];
+          results[i] = translation;
+          autoTranslationCache.set(teamNames[i], translation);
+          translateIndex++;
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la traduction en lot:', error);
+      // En cas d'erreur, remplacer les placeholders par les noms originaux
+      for (let i = 0; i < results.length; i++) {
+        if (results[i] === '') {
+          results[i] = teamNames[i];
+        }
+      }
+    }
+  }
+
+  return results;
+};
+
+// Fonction pour vider le cache des traductions automatiques
+export const clearAutoTranslationCache = (): void => {
+  autoTranslationCache.clear();
+};
+
+// Fonction pour obtenir la taille du cache
+export const getAutoTranslationCacheSize = (): number => {
+  return autoTranslationCache.size;
+};
+
+// Fonction pour ajouter manuellement une traduction au cache
+export const addTeamTranslation = (originalName: string, arabicName: string): void => {
+  autoTranslationCache.set(originalName, arabicName);
+};
+
+// Fonction pour forcer la traduction automatique de tous les noms d'équipes
+export const forceTranslateAllTeams = async (teamNames: string[]): Promise<void> => {
+  const uniqueTeamNames = [...new Set(teamNames.filter(name => 
+    name && name.trim() !== '' && !isArabicText(name) && !teamTranslations[name] && !autoTranslationCache.has(name)
+  ))];
+
+  if (uniqueTeamNames.length > 0) {
+    try {
+      // Traduire par petits lots pour éviter de bloquer l'interface
+      const batchSize = 5;
+      for (let i = 0; i < uniqueTeamNames.length; i += batchSize) {
+        const batch = uniqueTeamNames.slice(i, i + batchSize);
+        const translations = await footballTranslationService.translateBatchToArabic(batch);
+        
+        // Mettre en cache les traductions
+        batch.forEach((name, index) => {
+          if (translations[index]) {
+            autoTranslationCache.set(name, translations[index]);
+          }
+        });
+        
+        // Petite pause pour ne pas bloquer l'interface
+        if (i + batchSize < uniqueTeamNames.length) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la traduction forcée:', error);
+    }
+  }
+};
+
+// Fonction pour obtenir la traduction avec mise à jour automatique du cache
+export const getTeamTranslationWithAutoUpdate = async (teamName: string): Promise<string> => {
+  // Si le nom est vide ou null, retourner tel quel
+  if (!teamName || teamName.trim() === '') {
+    return teamName;
+  }
+
+  // Si le nom est déjà en arabe, le retourner tel quel
+  if (isArabicText(teamName)) {
+    return teamName;
+  }
+
+  // Vérifier d'abord dans le mapping statique
+  if (teamTranslations[teamName]) {
+    return teamTranslations[teamName];
+  }
+
+  // Vérifier dans le cache des traductions automatiques
+  if (autoTranslationCache.has(teamName)) {
+    return autoTranslationCache.get(teamName)!;
+  }
+
+  // Si pas trouvé, traduire automatiquement et mettre en cache
+  try {
+    const translation = await footballTranslationService.quickTranslateToArabic(teamName);
+    autoTranslationCache.set(teamName, translation);
+    return translation;
+  } catch (error) {
+    console.error(`Erreur lors de la traduction de "${teamName}":`, error);
+    return teamName;
+  }
   };
   
