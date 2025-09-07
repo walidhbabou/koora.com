@@ -210,7 +210,16 @@ export const useMainLeaguesTransfers = (season?: number): UseTransfersResult => 
         try {
           const resAny = await footballAPI.getLeagueTeamsTransfersAnySeason();
           allTransfers = flattenResponse(resAny);
-        } catch {}
+        } catch (error) {
+          // Gestion spécifique des erreurs CORS
+          if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            console.warn('🚫 CORS Error in transfers API. Using fallback data.');
+            // Utiliser des données de fallback ou vides
+            allTransfers = [];
+          } else {
+            console.error('Erreur lors de la récupération des transferts:', error);
+          }
+        }
       }
 
       setData({ response: allTransfers });

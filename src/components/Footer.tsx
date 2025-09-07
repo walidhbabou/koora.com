@@ -1,8 +1,20 @@
 import { useTranslation } from "@/hooks/useTranslation";
+import { useNavigate } from "react-router-dom";
 import "../styles/rtl.css";
 
 const Footer = () => {
   const { currentLanguage, isRTL, direction } = useTranslation();
+  const navigate = useNavigate();
+
+  // Équipes populaires avec navigation dynamique
+  const popularTeams = [
+    { id: 541, name: currentLanguage === 'ar' ? 'ريال مدريد' : 'Real Madrid', leagueId: 140 },
+    { id: 529, name: currentLanguage === 'ar' ? 'برشلونة' : 'Barcelona', leagueId: 140 },
+    { id: 33, name: currentLanguage === 'ar' ? 'مانشستر يونايتد' : 'Manchester United', leagueId: 39 },
+    { id: 40, name: currentLanguage === 'ar' ? 'ليفربول' : 'Liverpool', leagueId: 39 },
+    { id: 968, name: currentLanguage === 'ar' ? 'الوداد الرياضي' : 'Wydad Casablanca', leagueId: 564 },
+    { id: 976, name: currentLanguage === 'ar' ? 'الرجاء الرياضي' : 'Raja Casablanca', leagueId: 564 }
+  ];
 
   const links = {
     liens: [
@@ -27,24 +39,14 @@ const Footer = () => {
         href: '#'
       }
     ],
-    clubs: [
-      {
-        title: currentLanguage === 'ar' ? 'ريال مدريد' : 'Real Madrid',
-        href: '#'
-      },
-      {
-        title: currentLanguage === 'ar' ? 'برشلونة' : 'Barcelone',
-        href: '#'
-      },
-      {
-        title: currentLanguage === 'ar' ? 'ليفربول' : 'Liverpool',
-        href: '#'
-      },
-      {
-        title: currentLanguage === 'ar' ? 'مانشستر سيتي' : 'Manchester City',
-        href: '#'
+    clubs: popularTeams.slice(0, 4).map(team => ({
+      title: team.name,
+      href: '#',
+      onClick: (e: React.MouseEvent) => {
+        e.preventDefault();
+        navigate(`/team/${team.id}`, { state: { leagueId: team.leagueId } });
       }
-    ],
+    })),
     championnats: [
       {
         title: currentLanguage === 'ar' ? 'الدوري الإنجليزي' : 'Premier League',
@@ -139,7 +141,11 @@ const Footer = () => {
             <ul className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               {links.clubs.map((club, index) => (
                 <li key={index}>
-                  <a href={club.href} className={`text-xs text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+                  <a 
+                    href={club.href} 
+                    onClick={club.onClick}
+                    className={`text-xs text-gray-600 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors cursor-pointer ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
+                  >
                     {club.title}
                   </a>
                 </li>

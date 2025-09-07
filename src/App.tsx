@@ -27,6 +27,9 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import DarkModeToggle from "./components/DarkModeToggle";
 import ResetPassword from "./pages/ResetPassword";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
 
 
 const queryClient = new QueryClient();
@@ -75,7 +78,9 @@ const App = () => (
                   <ModeratorDashboard />
                 </ProtectedRoute>
               } />
-              
+                <Route path="/about" element={<About />} />
+  <Route path="/contact" element={<Contact />} />
+  <Route path="/privacy" element={<Privacy />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -37,30 +37,7 @@ interface TeamStats {
 
 // Données statiques pour les équipes principales (fallback)
 const getStaticTeamData = (currentLanguage: string): { [key: string]: TeamInfo } => ({
-  "33": {
-    id: 33,
-    name: currentLanguage === 'ar' ? "مانشستر يونايتد" : "Manchester United",
-    logo: "https://media.api-sports.io/football/teams/33.png",
-    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
-    founded: 1878,
-    venue: {
-      name: "Old Trafford",
-      capacity: 74310,
-      city: currentLanguage === 'ar' ? "مانشستر" : "Manchester"
-    }
-  },
-  "40": {
-    id: 40,
-    name: currentLanguage === 'ar' ? "ليفربول" : "Liverpool",
-    logo: "https://media.api-sports.io/football/teams/40.png",
-    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
-    founded: 1892,
-    venue: {
-      name: "Anfield",
-      capacity: 53394,
-      city: currentLanguage === 'ar' ? "ليفربول" : "Liverpool"
-    }
-  },
+  // La Liga
   "541": {
     id: 541,
     name: currentLanguage === 'ar' ? "ريال مدريد" : "Real Madrid",
@@ -83,6 +60,167 @@ const getStaticTeamData = (currentLanguage: string): { [key: string]: TeamInfo }
       name: "Camp Nou",
       capacity: 99354,
       city: currentLanguage === 'ar' ? "برشلونة" : "Barcelona"
+    }
+  },
+  // Premier League
+  "33": {
+    id: 33,
+    name: currentLanguage === 'ar' ? "مانشستر يونايتد" : "Manchester United",
+    logo: "https://media.api-sports.io/football/teams/33.png",
+    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
+    founded: 1878,
+    venue: {
+      name: "Old Trafford",
+      capacity: 74310,
+      city: currentLanguage === 'ar' ? "مانشستر" : "Manchester"
+    }
+  },
+  "49": {
+    id: 49,
+    name: currentLanguage === 'ar' ? "تشيلسي" : "Chelsea",
+    logo: "https://media.api-sports.io/football/teams/49.png",
+    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
+    founded: 1905,
+    venue: {
+      name: "Stamford Bridge",
+      capacity: 40341,
+      city: currentLanguage === 'ar' ? "لندن" : "London"
+    }
+  },
+  "40": {
+    id: 40,
+    name: currentLanguage === 'ar' ? "ليفربول" : "Liverpool",
+    logo: "https://media.api-sports.io/football/teams/40.png",
+    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
+    founded: 1892,
+    venue: {
+      name: "Anfield",
+      capacity: 53394,
+      city: currentLanguage === 'ar' ? "ليفربول" : "Liverpool"
+    }
+  },
+  "42": {
+    id: 42,
+    name: currentLanguage === 'ar' ? "أرسنال" : "Arsenal",
+    logo: "https://media.api-sports.io/football/teams/42.png",
+    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
+    founded: 1886,
+    venue: {
+      name: "Emirates Stadium",
+      capacity: 60260,
+      city: currentLanguage === 'ar' ? "لندن" : "London"
+    }
+  },
+  "50": {
+    id: 50,
+    name: currentLanguage === 'ar' ? "مانشستر سيتي" : "Manchester City",
+    logo: "https://media.api-sports.io/football/teams/50.png",
+    country: currentLanguage === 'ar' ? "إنجلترا" : "England",
+    founded: 1880,
+    venue: {
+      name: "Etihad Stadium",
+      capacity: 53400,
+      city: currentLanguage === 'ar' ? "مانشستر" : "Manchester"
+    }
+  },
+  // Bundesliga
+  "157": {
+    id: 157,
+    name: currentLanguage === 'ar' ? "بايرن ميونخ" : "Bayern Munich",
+    logo: "https://media.api-sports.io/football/teams/157.png",
+    country: currentLanguage === 'ar' ? "ألمانيا" : "Germany",
+    founded: 1900,
+    venue: {
+      name: "Allianz Arena",
+      capacity: 75000,
+      city: currentLanguage === 'ar' ? "ميونخ" : "Munich"
+    }
+  },
+  // Ligue 1
+  "85": {
+    id: 85,
+    name: currentLanguage === 'ar' ? "باريس سان جيرمان" : "Paris Saint-Germain",
+    logo: "https://media.api-sports.io/football/teams/85.png",
+    country: currentLanguage === 'ar' ? "فرنسا" : "France",
+    founded: 1970,
+    venue: {
+      name: "Parc des Princes",
+      capacity: 47929,
+      city: currentLanguage === 'ar' ? "باريس" : "Paris"
+    }
+  },
+  // Serie A
+  "496": {
+    id: 496,
+    name: currentLanguage === 'ar' ? "يوفنتوس" : "Juventus",
+    logo: "https://media.api-sports.io/football/teams/496.png",
+    country: currentLanguage === 'ar' ? "إيطاليا" : "Italy",
+    founded: 1897,
+    venue: {
+      name: "Allianz Stadium",
+      capacity: 41507,
+      city: currentLanguage === 'ar' ? "تورينو" : "Turin"
+    }
+  },
+  "489": {
+    id: 489,
+    name: currentLanguage === 'ar' ? "إيه سي ميلان" : "AC Milan",
+    logo: "https://media.api-sports.io/football/teams/489.png",
+    country: currentLanguage === 'ar' ? "إيطاليا" : "Italy",
+    founded: 1899,
+    venue: {
+      name: "San Siro",
+      capacity: 75923,
+      city: currentLanguage === 'ar' ? "ميلانو" : "Milan"
+    }
+  },
+  "505": {
+    id: 505,
+    name: currentLanguage === 'ar' ? "إنتر ميلان" : "Inter Milan",
+    logo: "https://media.api-sports.io/football/teams/505.png",
+    country: currentLanguage === 'ar' ? "إيطاليا" : "Italy",
+    founded: 1908,
+    venue: {
+      name: "San Siro",
+      capacity: 75923,
+      city: currentLanguage === 'ar' ? "ميلانو" : "Milan"
+    }
+  },
+  // Équipes africaines
+  "1023": {
+    id: 1023,
+    name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly",
+    logo: "https://media.api-sports.io/football/teams/1023.png",
+    country: currentLanguage === 'ar' ? "مصر" : "Egypt",
+    founded: 1907,
+    venue: {
+      name: "Cairo International Stadium",
+      capacity: 75000,
+      city: currentLanguage === 'ar' ? "القاهرة" : "Cairo"
+    }
+  },
+  "968": {
+    id: 968,
+    name: currentLanguage === 'ar' ? "الوداد الرياضي" : "Wydad Casablanca",
+    logo: "https://media.api-sports.io/football/teams/968.png",
+    country: currentLanguage === 'ar' ? "المغرب" : "Morocco",
+    founded: 1937,
+    venue: {
+      name: "Stade Mohammed V",
+      capacity: 45000,
+      city: currentLanguage === 'ar' ? "الدار البيضاء" : "Casablanca"
+    }
+  },
+  "976": {
+    id: 976,
+    name: currentLanguage === 'ar' ? "الرجاء الرياضي" : "Raja Casablanca",
+    logo: "https://media.api-sports.io/football/teams/976.png",
+    country: currentLanguage === 'ar' ? "المغرب" : "Morocco",
+    founded: 1949,
+    venue: {
+      name: "Stade Mohammed V",
+      capacity: 45000,
+      city: currentLanguage === 'ar' ? "الدار البيضاء" : "Casablanca"
     }
   }
 });
@@ -113,14 +251,39 @@ const TeamDetails = () => {
         const staticTeam = staticTeamData[teamId];
         if (staticTeam) setTeamInfo(staticTeam);
 
-        // 2) Charger les infos d'équipe via API
+        // 2) Charger les infos d'équipe via API avec gestion CORS
         const [infoRes, statsRes, lastRes, nextRes] = await Promise.allSettled([
-          footballAPI.getTeamInfo(parseInt(teamId)),
-          leagueIdFromState
+          footballAPI.getTeamInfo(parseInt(teamId)).catch(error => {
+            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+              console.warn('🚫 CORS Error for team info. Using static data.');
+              return { response: [] };
+            }
+            throw error;
+          }),
+          (leagueIdFromState
             ? footballAPI.getTeamStatistics(leagueIdFromState, selectedSeason, parseInt(teamId))
-            : footballAPI.getTeamStatisticsAuto(parseInt(teamId), selectedSeason),
-          footballAPI.getTeamLastFixtures(parseInt(teamId), 5),
-          footballAPI.getTeamNextFixtures(parseInt(teamId), 5)
+            : footballAPI.getTeamStatisticsAuto(parseInt(teamId), selectedSeason)
+          ).catch(error => {
+            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+              console.warn('🚫 CORS Error for team statistics. Using fallback.');
+              return { response: null };
+            }
+            throw error;
+          }),
+          footballAPI.getTeamLastFixtures(parseInt(teamId), 5).catch(error => {
+            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+              console.warn('🚫 CORS Error for last fixtures. Using empty data.');
+              return { response: [] };
+            }
+            throw error;
+          }),
+          footballAPI.getTeamNextFixtures(parseInt(teamId), 5).catch(error => {
+            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+              console.warn('🚫 CORS Error for next fixtures. Using empty data.');
+              return { response: [] };
+            }
+            throw error;
+          })
         ]);
 
         // Team info
@@ -660,84 +823,202 @@ const TeamDetails = () => {
         )}
 
         {/* Matchs récents et à venir */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Matchs récents */}
-          <Card className="p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
               {currentLanguage === 'ar' ? 'المباريات الأخيرة' : 'Matchs récents'}
             </h2>
             
             <div className="space-y-3">
-              {recentMatches.map((match) => (
+              {recentMatches.length > 0 ? recentMatches.map((match) => (
                 <div
                   key={match.id}
-                  dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}
-                  className={`flex items-center justify-between px-4 py-3 bg-white dark:bg-[#181a20] rounded-full shadow-sm border border-gray-100 dark:border-[#23262f] ${currentLanguage === 'ar' ? 'flex-row-reverse' : ''}`}
+                  className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-[#23262f] dark:to-[#1a1d24] rounded-xl p-4 hover:shadow-md transition-all duration-300 border border-gray-200 dark:border-[#2a2d35]"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <img src={match.teams.home.logo} alt={match.teams.home.name} className="w-6 h-6 sm:w-8 sm:h-8" />
-                    <span className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] sm:max-w-[180px]">
-                      {teamLabel(match.teams.home.name)}
+                  {/* League info */}
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-[#181a20] rounded-full shadow-sm">
+                      {match.league.logo && (
+                        <img src={match.league.logo} alt={match.league.name} className="w-4 h-4" />
+                      )}
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {match.league.name}
                     </span>
+                    </div>
                   </div>
 
-                  <div className="text-center min-w-[100px]">
-                    <div className="font-bold text-base sm:text-lg text-gray-800 dark:text-gray-200">
+                  {/* Match content */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    {/* Home team */}
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white dark:bg-[#181a20] rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-[#2a2d35] flex-shrink-0">
+                        <img 
+                          src={match.teams.home.logo} 
+                          alt={match.teams.home.name} 
+                          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 truncate">
+                          {teamLabel(match.teams.home.name)}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          {currentLanguage === 'ar' ? 'منزل' : 'Domicile'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Score */}
+                    <div className="flex flex-col items-center mx-2 sm:mx-4 flex-shrink-0">
+                      <div className="bg-white dark:bg-[#181a20] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm border border-gray-200 dark:border-[#2a2d35]">
+                        <div className="text-sm sm:text-lg md:text-xl font-bold text-gray-800 dark:text-gray-200">
                       {match.goals.home} - {match.goals.away}
                     </div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
                       {formatDisplayDate(match.date)}
                     </div>
+                      {match.status && (
+                        <Badge variant="secondary" className="text-[10px] sm:text-xs mt-1">
+                          {match.status}
+                        </Badge>
+                      )}
                   </div>
 
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] sm:max-w-[180px] text-right">
+                    {/* Away team */}
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                      <div className="min-w-0 flex-1 text-right">
+                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 truncate">
                       {teamLabel(match.teams.away.name)}
-                    </span>
-                    <img src={match.teams.away.logo} alt={match.teams.away.name} className="w-6 h-6 sm:w-8 sm:h-8" />
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          {currentLanguage === 'ar' ? 'خارج' : 'Extérieur'}
+                        </p>
+                  </div>
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white dark:bg-[#181a20] rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-[#2a2d35] flex-shrink-0">
+                        <img 
+                          src={match.teams.away.logo} 
+                          alt={match.teams.away.name} 
+                          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                </div>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <p>{currentLanguage === 'ar' ? 'لا توجد مباريات حديثة' : 'Aucun match récent'}</p>
+                </div>
+              )}
             </div>
           </Card>
 
           {/* Matchs à venir */}
-          <Card className="p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
-            <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+          <Card className="p-4 sm:p-6 bg-white dark:bg-[#181a20] border-0 shadow-lg">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200 mb-4 flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               {currentLanguage === 'ar' ? 'المباريات القادمة' : 'Prochains matchs'}
             </h2>
             
             <div className="space-y-3">
-              {upcomingMatches.map((match) => (
+              {upcomingMatches.length > 0 ? upcomingMatches.map((match) => (
                 <div
                   key={match.id}
-                  dir={currentLanguage === 'ar' ? 'rtl' : 'ltr'}
-                  className={`flex items-center justify-between px-4 py-3 bg-white dark:bg-[#181a20] rounded-full shadow-sm border border-gray-100 dark:border-[#23262f] ${currentLanguage === 'ar' ? 'flex-row-reverse' : ''}`}
+                  className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-[#1e3a5f] dark:to-[#1a2d4a] rounded-xl p-4 hover:shadow-md transition-all duration-300 border border-blue-200 dark:border-[#2a4a6b]"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <img src={match.teams.home.logo} alt={match.teams.home.name} className="w-6 h-6 sm:w-8 sm:h-8" />
-                    <span className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] sm:max-w-[180px]">
-                      {teamLabel(match.teams.home.name)}
+                  {/* League info */}
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white dark:bg-[#181a20] rounded-full shadow-sm">
+                      {match.league.logo && (
+                        <img src={match.league.logo} alt={match.league.name} className="w-4 h-4" />
+                      )}
+                      <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                        {match.league.name}
                     </span>
+                    </div>
                   </div>
 
-                  <div className="text-center min-w-[100px]">
-                    <div className="font-bold text-base sm:text-lg text-gray-800 dark:text-gray-200">
+                  {/* Match content */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+                    {/* Home team */}
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white dark:bg-[#181a20] rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-[#2a2d35] flex-shrink-0">
+                        <img 
+                          src={match.teams.home.logo} 
+                          alt={match.teams.home.name} 
+                          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 truncate">
+                          {teamLabel(match.teams.home.name)}
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          {currentLanguage === 'ar' ? 'منزل' : 'Domicile'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Time */}
+                    <div className="flex flex-col items-center mx-2 sm:mx-4 flex-shrink-0">
+                      <div className="bg-white dark:bg-[#181a20] rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm border border-gray-200 dark:border-[#2a2d35]">
+                        <div className="text-sm sm:text-lg md:text-xl font-bold text-blue-600 dark:text-blue-400">
                       {formatTime(match.date)}
                     </div>
-                    <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                      </div>
+                      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
                       {formatDisplayDate(match.date)}
                     </div>
+                      {match.status && (
+                        <Badge variant="outline" className="text-[10px] sm:text-xs mt-1 border-blue-300 text-blue-600">
+                          {match.status}
+                        </Badge>
+                      )}
                   </div>
 
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-200 truncate max-w-[120px] sm:max-w-[180px] text-right">
+                    {/* Away team */}
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 w-full sm:w-auto">
+                      <div className="min-w-0 flex-1 text-right">
+                        <p className="text-xs sm:text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200 truncate">
                       {teamLabel(match.teams.away.name)}
-                    </span>
-                    <img src={match.teams.away.logo} alt={match.teams.away.name} className="w-6 h-6 sm:w-8 sm:h-8" />
+                        </p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          {currentLanguage === 'ar' ? 'خارج' : 'Extérieur'}
+                        </p>
+                  </div>
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white dark:bg-[#181a20] rounded-full flex items-center justify-center shadow-sm border border-gray-200 dark:border-[#2a2d35] flex-shrink-0">
+                        <img 
+                          src={match.teams.away.logo} 
+                          alt={match.teams.away.name} 
+                          className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                </div>
+                    </div>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <p>{currentLanguage === 'ar' ? 'لا توجد مباريات قادمة' : 'Aucun match à venir'}</p>
+                </div>
+              )}
             </div>
           </Card>
         </div>

@@ -14,7 +14,9 @@ export const API_CONFIG = {
     'Content-Type': 'application/json'
   },
   // Forcer l'utilisation de l'API réelle au lieu des données mock
-  DEV_MODE: false
+  DEV_MODE: false,
+  // Désactiver les appels API problématiques en mode développement
+  DISABLE_PROBLEMATIC_APIS: import.meta.env.VITE_DISABLE_PROBLEMATIC_APIS === 'true'
 };
 
 // Configuration Google Translate API non officielle (gratuite)
@@ -171,6 +173,20 @@ export class FootballAPI {
       return data;
     } catch (error) {
       console.error('❌ API Request failed:', error);
+      
+      // Gestion spéciale pour les erreurs CORS
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.warn('🚫 CORS Error detected. This might be due to API restrictions.');
+        // Retourner des données vides au lieu de lancer une erreur
+        return { response: [], results: 0 };
+      }
+      
+      // Gestion des erreurs de réseau
+      if (error instanceof TypeError && (error.message.includes('NetworkError') || error.message.includes('ERR_NETWORK'))) {
+        console.warn('🌐 Network Error detected. Check your internet connection.');
+        return { response: [], results: 0 };
+      }
+      
       throw error;
     }
   }
@@ -245,6 +261,12 @@ export class FootballAPI {
   
   // Page transferts - Transferts récents
   async getRecentTransfers(teamId?: number, season?: number) {
+    // Éviter les appels API problématiques en mode développement
+    if (API_CONFIG.DISABLE_PROBLEMATIC_APIS) {
+      console.warn('🚫 API calls disabled for problematic endpoints. Returning empty data.');
+      return { response: [], results: 0 };
+    }
+    
     const params: Record<string, unknown> = {};
     if (teamId) params.team = teamId;
     if (season) params.season = season;
@@ -368,7 +390,12 @@ export class FootballAPI {
               aggregated.push(...(trRes as any).response);
             }
           } catch (teamErr) {
-            console.error(`Erreur transferts (toutes saisons) pour l'équipe ${teamId} (league ${leagueId}):`, teamErr);
+            // Gestion spécifique des erreurs CORS
+            if (teamErr instanceof TypeError && teamErr.message.includes('Failed to fetch')) {
+              console.warn(`🚫 CORS Error for team ${teamId} (league ${leagueId}). Skipping.`);
+            } else {
+              console.error(`Erreur transferts (toutes saisons) pour l'équipe ${teamId} (league ${leagueId}):`, teamErr);
+            }
           }
         }
       } catch (err) {
@@ -507,7 +534,14 @@ export class GoogleTranslateAPI {
   
   // Générer une clé de cache
   private getCacheKey(text: string, from: string, to: string): string {
-    return `${from}-${to}-${btoa(text).substring(0, 50)}`;
+    try {
+      // Utiliser encodeURIComponent pour éviter les erreurs avec les caractères non-Latin1
+      const encodedText = encodeURIComponent(text).substring(0, 50);
+      return `${from}-${to}-${encodedText}`;
+    } catch (error) {
+      // Fallback simple si l'encodage échoue
+      return `${from}-${to}-${text.substring(0, 20)}`;
+    }
   }
   
   // Vérifier si les données en cache sont encore valides

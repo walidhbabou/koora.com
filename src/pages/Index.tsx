@@ -29,7 +29,18 @@ const Index = () => {
   // Matches (dynamic by date + filter)
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [mainLeaguesOnly, setMainLeaguesOnly] = useState<boolean>(true);
-  const [selectedLeagues, setSelectedLeagues] = useState<number[]>(SELECTED_LEAGUES);
+  // Ligues spécifiques à afficher selon l'image
+  const SPECIFIC_LEAGUES = [
+    { id: 2, name: 'UEFA Champions League', nameAr: 'دوري أبطال أوروبا', country: 'EU أوروبا' },
+    { id: 39, name: 'Premier League', nameAr: 'الدوري الإنجليزي الممتاز', country: 'إنجلترا' },
+    { id: 140, name: 'La Liga', nameAr: 'الدوري الإسباني الممتاز', country: 'ES إسبانيا' },
+    { id: 135, name: 'Serie A', nameAr: 'الدوري الإيطالي الممتاز', country: 'IT إيطاليا' },
+    { id: 78, name: 'Bundesliga', nameAr: 'الدوري الألماني الممتاز', country: 'DE ألمانيا' },
+    { id: 61, name: 'Ligue 1', nameAr: 'الدوري الفرنسي الممتاز', country: 'FR فرنسا' },
+    { id: 564, name: 'Botola Pro', nameAr: 'البطولة المغربية - البطولة برو', country: 'MA المغرب' }
+  ];
+  
+  const [selectedLeagues, setSelectedLeagues] = useState<number[]>(SPECIFIC_LEAGUES.map(l => l.id));
   const [showLeagueFilter, setShowLeagueFilter] = useState<boolean>(false);
   const { data: leaguesData, loading: loadingLeagues } = useLeagues();
   const { data: matchesData, loading: loadingMatches } = useMatchesByDateAndLeague({
@@ -41,6 +52,13 @@ const Index = () => {
   const weekday = displayDate.toLocaleDateString('ar-EG', { weekday: 'long' });
   const fullDate = displayDate.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
   const fullDateFr = displayDate.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+  
+  // Format de date amélioré : الاثنين 08 سبتمبر 2025
+  const dayName = displayDate.toLocaleDateString('ar-EG', { weekday: 'long' });
+  const dayNumber = displayDate.getDate().toString().padStart(2, '0');
+  const monthName = displayDate.toLocaleDateString('ar-EG', { month: 'long' });
+  const year = displayDate.getFullYear();
+  const formattedDate = `${dayName} ${dayNumber} ${monthName} ${year}`;
 
   // Helpers to format time and status
   const formatKickoffAr = (isoDate?: string) => {
@@ -225,8 +243,8 @@ const Index = () => {
           </svg>
         </div>
         <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">مباريات {weekday}</div>
+        <div className="text-xs text-slate-500 dark:text-slate-400">{formattedDate}</div>
       </div>
-      <div className="text-xs text-slate-500 dark:text-slate-400">{fullDate}</div>
     </div>
   </div>
 
@@ -340,10 +358,51 @@ const Index = () => {
 
       {/* Mobile Today Matches (visible on phones) */}
       <div className="px-4 pb-6 md:hidden">
+        {/* Section des ligues selon le style demandé */}
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">البطولات</h2>
+          <div className="space-y-2">
+            {SPECIFIC_LEAGUES.map((league) => (
+              <div key={league.id} className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                      {league.name.split(' ').map(word => word[0]).join('').slice(0, 2)}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{league.nameAr}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">{league.country}</div>
+                  </div>
+                </div>
+                <div className="text-slate-400 dark:text-slate-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Section des mises à jour */}
         <Card className="p-4 rounded-2xl shadow-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between flex-row-reverse relative">
-            <div className="font-semibold text-right">{weekday}</div>
-            <div className="flex items-center gap-3 text-slate-600">
+          {/* Header amélioré avec logo et date */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sport-green to-emerald-600 flex items-center justify-center shadow-lg">
+                <svg viewBox="0 0 24 24" className="w-6 h-6 text-white" fill="currentColor" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" opacity=".2"></circle>
+                  <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">مباريات اليوم</h2>
+                <p className="text-sm text-slate-600 dark:text-slate-400">{formattedDate}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
               <input
                 type="date"
                 value={selectedDate}
@@ -353,68 +412,66 @@ const Index = () => {
               />
               <div className="relative">
                 <Filter
-                  className={`w-5 h-5 cursor-pointer ${mainLeaguesOnly ? 'text-sport-green' : ''}`}
+                  className={`w-5 h-5 cursor-pointer transition-colors ${mainLeaguesOnly ? 'text-sport-green' : 'text-slate-500 hover:text-sport-green'}`}
                   onClick={() => setShowLeagueFilter((s) => !s)}
-                  title="تحديد الدوريات"
                 />
                 {showLeagueFilter && (
-                  <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-lg z-50 p-3 text-right">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm font-semibold">اختر الدوريات</div>
+                  <div className="absolute left-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-4 text-right">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">اختر الدوريات</div>
                       <button
-                        className="text-xs text-sport-green hover:underline"
-                        onClick={() => setSelectedLeagues(SELECTED_LEAGUES)}
+                        className="text-xs text-sport-green hover:underline font-medium"
+                        onClick={() => setSelectedLeagues(SPECIFIC_LEAGUES.map(l => l.id))}
                       >
                         المفضلة
                       </button>
                     </div>
                     <div className="max-h-56 overflow-auto pr-1">
                       {loadingLeagues && <div className="text-xs text-slate-500 dark:text-slate-400">جارٍ التحميل…</div>}
-                      {!loadingLeagues && leaguesData?.response
-                        ?.filter((item) => SELECTED_LEAGUES.includes(item.league.id))
-                        ?.sort((a, b) => SELECTED_LEAGUES.indexOf(a.league.id) - SELECTED_LEAGUES.indexOf(b.league.id))
-                        ?.map((item) => {
-                          const id = item.league.id;
-                          const name = item.league.name;
-                          const checked = selectedLeagues.includes(id);
-                          return (
-                            <label key={id} className="flex items-center gap-2 py-1 cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={(e) => {
-                                  setMainLeaguesOnly(true);
-                                  setSelectedLeagues((prev) => e.target.checked ? [...prev, id] : prev.filter((x) => x !== id));
-                                }}
-                              />
-                              <span className="text-xs">{name}</span>
-                            </label>
-                          );
-                        })}
+                      {!loadingLeagues && SPECIFIC_LEAGUES.map((league) => {
+                        const checked = selectedLeagues.includes(league.id);
+                        return (
+                          <label key={league.id} className="flex items-center gap-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg px-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                setMainLeaguesOnly(true);
+                                setSelectedLeagues((prev) => e.target.checked ? [...prev, league.id] : prev.filter((x) => x !== league.id));
+                              }}
+                              className="w-4 h-4 text-sport-green rounded border-slate-300"
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">{league.nameAr}</span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">{league.country}</span>
+                            </div>
+                          </label>
+                        );
+                      })}
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-4 flex items-center justify-between">
                       <button
-                        className="text-xs text-slate-600 dark:text-slate-400 hover:underline"
-                        onClick={() => { setMainLeaguesOnly(true); setSelectedLeagues(SELECTED_LEAGUES); }}
+                        className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
+                        onClick={() => { setMainLeaguesOnly(true); setSelectedLeagues(SPECIFIC_LEAGUES.map(l => l.id)); }}
                       >
-                        الدوريات الخمسة
+                        الدوريات المختارة
                       </button>
                       <div className="flex items-center gap-2">
                         <button
-                          className="text-xs text-slate-600 dark:text-slate-400 hover:underline"
+                          className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
                           onClick={() => { setMainLeaguesOnly(false); setShowLeagueFilter(false); }}
                           title="عرض كل الدوريات"
                         >
                           كل الدوريات
                         </button>
                         <button
-                          className="text-xs text-slate-600 dark:text-slate-400 hover:underline"
+                          className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
                           onClick={() => setSelectedLeagues([])}
                         >
                           مسح
                         </button>
                         <button
-                          className="text-xs bg-sport-green text-white px-2 py-1 rounded"
+                          className="text-xs bg-sport-green text-white px-3 py-1.5 rounded-lg font-medium hover:bg-emerald-600 transition-colors"
                           onClick={() => setShowLeagueFilter(false)}
                         >
                           تم
@@ -426,27 +483,29 @@ const Index = () => {
               </div>
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2">
+          
+          {/* Filtres améliorés */}
+          <div className="flex flex-wrap items-center gap-2">
             <span
-              className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1 text-xs font-medium whitespace-nowrap cursor-pointer select-none"
+              className="inline-flex items-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 text-xs font-medium whitespace-nowrap cursor-pointer select-none hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               onClick={() => document.getElementById('home-date-picker-mobile')?.click()}
               title="Choisir la date"
             >
               {fullDateFr}
             </span>
             <span
-              className="inline-flex items-center rounded-full bg-sport-green/10 text-sport-green px-3 py-1 text-xs font-medium whitespace-nowrap cursor-pointer select-none"
+              className="inline-flex items-center rounded-full bg-sport-green/10 text-sport-green px-3 py-1.5 text-xs font-medium whitespace-nowrap cursor-pointer select-none hover:bg-sport-green/20 transition-colors"
               onClick={() => document.getElementById('home-date-picker-mobile')?.click()}
               title="اختيار التاريخ"
             >
-              {fullDate}
+              {formattedDate}
             </span>
             {mainLeaguesOnly ? (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">
+              <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap bg-slate-50 dark:bg-slate-800">
                 {selectedLeagues.length > 0 ? `دوريات مختارة (${selectedLeagues.length})` : 'الدوريات الرئيسية'}
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap">كل الدوريات</span>
+              <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap bg-slate-50 dark:bg-slate-800">كل الدوريات</span>
             )}
           </div>
         </Card>
@@ -461,9 +520,11 @@ const Index = () => {
                   <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8 2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
                 </svg>
               </div>
-              <div className="text-sm font-semibold">مباريات {weekday}</div>
+              <div>
+                <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">مباريات {weekday}</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{formattedDate}</div>
+              </div>
             </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400">{fullDate}</div>
           </div>
 
           <div className="mt-3">

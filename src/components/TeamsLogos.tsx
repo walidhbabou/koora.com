@@ -11,10 +11,33 @@ const TeamsLogos = () => {
   
   // Équipes principales avec vrais logos et IDs API
   const teams = [
+    // La Liga
+    { 
+      id: 541, 
+      name: currentLanguage === 'ar' ? "ريال مدريد" : "Real Madrid", 
+      logo: "https://media.api-sports.io/football/teams/541.png",
+      league: "La Liga",
+      leagueId: 140
+    },
+    { 
+      id: 529, 
+      name: currentLanguage === 'ar' ? "برشلونة" : "Barcelona", 
+      logo: "https://media.api-sports.io/football/teams/529.png",
+      league: "La Liga",
+      leagueId: 140
+    },
+    // Premier League
     { 
       id: 33, 
       name: currentLanguage === 'ar' ? "مانشستر يونايتد" : "Manchester United", 
       logo: "https://media.api-sports.io/football/teams/33.png",
+      league: "Premier League",
+      leagueId: 39
+    },
+    { 
+      id: 49, 
+      name: currentLanguage === 'ar' ? "تشيلسي" : "Chelsea", 
+      logo: "https://media.api-sports.io/football/teams/49.png",
       league: "Premier League",
       leagueId: 39
     },
@@ -39,27 +62,7 @@ const TeamsLogos = () => {
       league: "Premier League",
       leagueId: 39
     },
-    { 
-      id: 49, 
-      name: currentLanguage === 'ar' ? "تشيلسي" : "Chelsea", 
-      logo: "https://media.api-sports.io/football/teams/49.png",
-      league: "Premier League",
-      leagueId: 39
-    },
-    { 
-      id: 541, 
-      name: currentLanguage === 'ar' ? "ريال مدريد" : "Real Madrid", 
-      logo: "https://media.api-sports.io/football/teams/541.png",
-      league: "La Liga",
-      leagueId: 140
-    },
-    { 
-      id: 529, 
-      name: currentLanguage === 'ar' ? "برشلونة" : "Barcelona", 
-      logo: "https://media.api-sports.io/football/teams/529.png",
-      league: "La Liga",
-      leagueId: 140
-    },
+    // Bundesliga
     { 
       id: 157, 
       name: currentLanguage === 'ar' ? "بايرن ميونخ" : "Bayern Munich", 
@@ -67,6 +70,15 @@ const TeamsLogos = () => {
       league: "Bundesliga",
       leagueId: 78
     },
+    // Ligue 1
+    { 
+      id: 85, 
+      name: currentLanguage === 'ar' ? "باريس سان جيرمان" : "Paris Saint-Germain", 
+      logo: "https://media.api-sports.io/football/teams/85.png",
+      league: "Ligue 1",
+      leagueId: 61
+    },
+    // Serie A
     { 
       id: 496, 
       name: currentLanguage === 'ar' ? "يوفنتوس" : "Juventus", 
@@ -76,32 +88,50 @@ const TeamsLogos = () => {
     },
     { 
       id: 489, 
-      name: currentLanguage === 'ar' ? "إنتر ميلان" : "Inter Milan", 
+      name: currentLanguage === 'ar' ? "إيه سي ميلان" : "AC Milan", 
       logo: "https://media.api-sports.io/football/teams/489.png",
       league: "Serie A",
       leagueId: 135
     },
     { 
-      id: 511, 
-      name: currentLanguage === 'ar' ? "إيه سي ميلان" : "AC Milan", 
-      logo: "https://media.api-sports.io/football/teams/511.png",
+      id: 505, 
+      name: currentLanguage === 'ar' ? "إنتر ميلان" : "Inter Milan", 
+      logo: "https://media.api-sports.io/football/teams/505.png",
       league: "Serie A",
       leagueId: 135
     },
+    // Équipes africaines
     { 
-      id: 85, 
-      name: currentLanguage === 'ar' ? "باريس سان جيرمان" : "Paris Saint-Germain", 
-      logo: "https://media.api-sports.io/football/teams/85.png",
-      league: "Ligue 1",
-      leagueId: 61
+      id: 1023, 
+      name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly", 
+      logo: "https://media.api-sports.io/football/teams/1023.png",
+      league: "Egyptian Premier League",
+      leagueId: 307
+    },
+    { 
+      id: 968, 
+      name: currentLanguage === 'ar' ? "الوداد الرياضي" : "Wydad Casablanca", 
+      logo: "https://media.api-sports.io/football/teams/968.png",
+      league: "Botola Pro",
+      leagueId: 564
+    },
+    { 
+      id: 976, 
+      name: currentLanguage === 'ar' ? "الرجاء الرياضي" : "Raja Casablanca", 
+      logo: "https://media.api-sports.io/football/teams/976.png",
+      league: "Botola Pro",
+      leagueId: 564
     }
   ];
 
   // Responsive number of visible teams
   const getVisibleTeams = () => {
-    if (typeof window === 'undefined') return 8;
+    if (typeof window === 'undefined') return 6;
+    if (window.innerWidth < 480) return 3; // Small mobile
     if (window.innerWidth < 640) return 4; // Mobile
+    if (window.innerWidth < 768) return 5; // Small tablet
     if (window.innerWidth < 1024) return 6; // Tablet
+    if (window.innerWidth < 1280) return 8; // Large tablet
     return 10; // Desktop
   };
 
