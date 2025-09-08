@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import SEO from "@/components/SEO";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -13,6 +14,7 @@ import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
+import { Helmet } from 'react-helmet-async';
 
 interface NewsRow {
   id: number;
@@ -102,6 +104,29 @@ const NewsDetails: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
+      <SEO
+        title={news?.title ? `${news.title} | كورة` : 'خبر | كورة'}
+        description={news?.content ? String(news.content).replace(/<[^>]*>/g, '').slice(0, 150) : 'تفاصيل الخبر'}
+        image={news?.image_url || undefined}
+        type="article"
+      >
+        {news?.created_at && (
+          <meta property="article:published_time" content={new Date(news.created_at).toISOString()} />
+        )}
+        {news && (
+          <script type="application/ld+json">
+            {JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'NewsArticle',
+              headline: news.title,
+              datePublished: new Date(news.created_at).toISOString(),
+              image: news.image_url || undefined,
+              author: { '@type': 'Organization', name: 'Koora' },
+              publisher: { '@type': 'Organization', name: 'Koora' }
+            })}
+          </script>
+        )}
+      </SEO>
       <Header />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">

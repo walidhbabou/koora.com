@@ -106,13 +106,17 @@ const AuthorDashboard: React.FC = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
   const [categories, setCategories] = useState<{id:number,name:string,name_ar:string}[]>([]);
+  const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
   const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [newChampionId, setNewChampionId] = useState<number | null>(null);
+  const [editChampionId, setEditChampionId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   // Writing tab state
   const [writingTitle, setWritingTitle] = useState('');
   const [writingContent, setWritingContent] = useState('');
   const [writingCategoryId, setWritingCategoryId] = useState<number | null>(null);
+  const [writingChampionId, setWritingChampionId] = useState<number | null>(null);
   const [writingImageFile, setWritingImageFile] = useState<File | null>(null);
   const [writingError, setWritingError] = useState('');
   const [submittingWriting, setSubmittingWriting] = useState(false);
@@ -190,6 +194,7 @@ const AuthorDashboard: React.FC = () => {
     setWritingTitle('');
     setWritingContent('');
     setWritingCategoryId(null);
+    setWritingChampionId(null);
     setWritingImageFile(null);
     setWritingError('');
   };
@@ -215,6 +220,7 @@ const AuthorDashboard: React.FC = () => {
         status: 'draft',
         image_url: imageUrl ?? null,
         category_id: writingCategoryId,
+        champion_id: writingChampionId,
       });
       if (error) throw error;
       resetWritingForm();
@@ -249,6 +255,7 @@ const AuthorDashboard: React.FC = () => {
         status: 'submitted',
         image_url: imageUrl ?? null,
         category_id: writingCategoryId,
+        champion_id: writingChampionId,
       });
       if (error) throw error;
       resetWritingForm();
@@ -270,9 +277,18 @@ const AuthorDashboard: React.FC = () => {
     } catch(e) { console.error('load categories failed', e); }
   };
 
+  const fetchChampions = async () => {
+    try {
+      const { data, error } = await supabase.from('champions').select('id, nom, nom_ar').order('id');
+      if (error) throw error;
+      setChampions(data || []);
+    } catch(e) { console.error('load champions failed', e); }
+  };
+
   useEffect(() => {
     fetchArticles();
     fetchCategories();
+    fetchChampions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -362,6 +378,7 @@ const AuthorDashboard: React.FC = () => {
         status: 'draft',
         image_url: imageUrl ?? null,
         category_id: newCategoryId,
+        champion_id: newChampionId,
       });
       if (error) throw error;
       setIsCreateOpen(false);
@@ -369,6 +386,7 @@ const AuthorDashboard: React.FC = () => {
       setNewContent('');
       setNewImageFile(null);
       setNewCategoryId(null);
+      setNewChampionId(null);
       await fetchArticles();
       setActiveTab('articles');
     } catch (e: any) {
@@ -401,6 +419,8 @@ const AuthorDashboard: React.FC = () => {
         status: 'published',
         image_url: (article as any).imageUrl ?? (article as any).image_url ?? null,
         category_id,
+        champion_id: (article as any).champion_id ?? null, // Ajoutez cette ligne
+
         user_id: user?.id || null,
         created_at: (article as any).created_at ?? now,
         updated_at: now,
@@ -465,12 +485,13 @@ const AuthorDashboard: React.FC = () => {
       try {
         const { data } = await supabase
           .from('news_submissions')
-          .select('category_id')
+          .select('category_id, champion_id')
           .eq('id', Number(a.id))
           .eq('user_id', user?.id || '')
           .single();
         setEditCategoryId(data?.category_id ?? null);
-      } catch { setEditCategoryId(null); }
+        setEditChampionId(data?.champion_id ?? null);
+      } catch { setEditCategoryId(null); setEditChampionId(null); }
     })();
   };
 
@@ -489,7 +510,7 @@ const AuthorDashboard: React.FC = () => {
     try {
       const { error } = await supabase
         .from('news_submissions')
-        .update({ title: editTitle, content: editContent, category_id: editCategoryId })
+        .update({ title: editTitle, content: editContent, category_id: editCategoryId, champion_id: editChampionId })
         .eq('id', Number(editingId))
         .eq('user_id', user.id);
       if (error) throw error;
@@ -834,6 +855,15 @@ const AuthorDashboard: React.FC = () => {
                       </select>
                     </div>
                     <div>
+                      <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}</label>
+                      <select className="w-full border rounded-md h-10 px-2" value={newChampionId ?? ''} onChange={(e) => setNewChampionId(e.target.value ? Number(e.target.value) : null)}>
+                        <option value="">{currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'}</option>
+                        {champions.map(c => (
+                          <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.nom_ar || c.nom) : c.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الصورة' : 'Image'}</label>
                       <Input type="file" accept="image/*" onChange={(e) => setNewImageFile(e.target.files?.[0] ?? null)} />
                       {!newImageFile && (
@@ -963,6 +993,15 @@ const AuthorDashboard: React.FC = () => {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}</label>
+                    <select className="w-full border rounded-md h-10 px-2" value={editChampionId ?? ''} onChange={(e) => setEditChampionId(e.target.value ? Number(e.target.value) : null)}>
+                      <option value="">{currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'}</option>
+                      {champions.map(c => (
+                        <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.nom_ar || c.nom) : c.nom}</option>
+                      ))}
+                    </select>
+                  </div>
                   {editError && <p className="text-sm text-red-600">{editError}</p>}
                   <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
                     <Button variant="outline" onClick={() => setEditingId(null)}>{currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}</Button>
@@ -1032,6 +1071,19 @@ const AuthorDashboard: React.FC = () => {
                         <option value="">{currentLanguage === 'ar' ? 'اختر الفئة' : 'Choisir une catégorie'}</option>
                         {categories.map(c => (
                           <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.name_ar || c.name) : c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}</label>
+                      <select
+                        className="w-full border rounded-md h-10 px-2"
+                        value={writingChampionId ?? ''}
+                        onChange={(e) => setWritingChampionId(e.target.value ? Number(e.target.value) : null)}
+                      >
+                        <option value="">{currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'}</option>
+                        {champions.map(c => (
+                          <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.nom_ar || c.nom) : c.nom}</option>
                         ))}
                       </select>
                     </div>

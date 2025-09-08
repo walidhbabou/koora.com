@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
@@ -154,55 +155,64 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
+      <SEO
+        title="كورة | الرئيسية - آخر الأخبار والمباريات اليوم"
+        description={`تابع نتائج ومباريات اليوم - ${formattedDate}. أحدث الأخبار من الدوريات الأوروبية والعربية.`}
+        canonical="/"
+      />
       <Header />
       <TeamsLogos />
       
       <div className="container mx-auto px-4 py-4 sm:py-8">
-        <div className="flex flex-col lg:flex-row gap-5 lg:gap-10 items-start">
-          {/* Sidebar - Hidden on mobile, visible on large screens */}
-       
-          
+        <div className="flex flex-col lg:flex-row xl:flex-row gap-5 lg:gap-8 xl:gap-10 items-start">
           {/* Main Content */}
           <div className="flex-1 space-y-6 lg:space-y-8">
          
             
             {/* News Grid - Responsive layout */}
-            {/* Note: remove forced equal row height on mobile to avoid large gaps between cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:auto-rows-[1fr] animate-in fade-in-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 animate-in fade-in-50">
               {loading && (
                 <>
-                  <Card className="sm:col-span-2 sm:row-span-2 h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
-                  <Card className="h-48 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
-                  <Card className="h-48 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
-                  <Card className="h-36 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
-                  <Card className="h-36 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                  <Card className="sm:col-span-2 lg:col-span-2 h-80 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                  <Card className="h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                  <Card className="h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                  <Card className="h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                  <Card className="h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
                 </>
               )}
               {!loading && newsItems[0] && (
-                <div className="sm:col-span-2 lg:col-span-2 h-full">
-                  <Link to={`/news/${newsItems[0].id}`} className="block h-full">
-                    <div className="h-full"><NewsCard news={newsItems[0]} size="large" /></div>
+                <div className="sm:col-span-2 md:col-span-2 lg:col-span-2 xl:col-span-2">
+                  <Link to={`/news/${newsItems[0].id}`} className="block">
+                    <NewsCard news={newsItems[0]} size="large" />
                   </Link>
                 </div>
               )}
               {!loading && newsItems[1] && (
-                <div className="h-full">
-                  <Link to={`/news/${newsItems[1].id}`} className="block h-full"><NewsCard news={newsItems[1]} size="medium" /></Link>
+                <div>
+                  <Link to={`/news/${newsItems[1].id}`} className="block">
+                    <NewsCard news={newsItems[1]} size="medium" />
+                  </Link>
                 </div>
               )}
               {!loading && newsItems[2] && (
-                <div className="h-full">
-                  <Link to={`/news/${newsItems[2].id}`} className="block h-full"><NewsCard news={newsItems[2]} size="medium" /></Link>
+                <div>
+                  <Link to={`/news/${newsItems[2].id}`} className="block">
+                    <NewsCard news={newsItems[2]} size="medium" />
+                  </Link>
                 </div>
               )}
               {!loading && newsItems[3] && (
-                <div className="h-full">
-                  <Link to={`/news/${newsItems[3].id}`} className="block h-full"><NewsCard news={newsItems[3]} size="small" /></Link>
+                <div>
+                  <Link to={`/news/${newsItems[3].id}`} className="block">
+                    <NewsCard news={newsItems[3]} size="medium" />
+                  </Link>
                 </div>
               )}
               {!loading && newsItems[4] && (
-                <div className="h-full">
-                  <Link to={`/news/${newsItems[4].id}`} className="block h-full"><NewsCard news={newsItems[4]} size="small" /></Link>
+                <div>
+                  <Link to={`/news/${newsItems[4].id}`} className="block">
+                    <NewsCard news={newsItems[4]} size="medium" />
+                  </Link>
                 </div>
               )}
             </div>
@@ -216,10 +226,10 @@ const Index = () => {
             {newsItems.length > 5 && (
               <div className="mt-8 lg:mt-12">
                 <h2 className="text-lg sm:text-xl font-bold text-sport-dark mb-4 lg:mb-6">المزيد من الأخبار</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-stretch gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
                   {newsItems.slice(5).map((news) => (
-                    <Link key={news.id} to={`/news/${news.id}`} className="block h-full">
-                      <div className="h-full"><NewsCard news={news} size="small" /></div>
+                    <Link key={news.id} to={`/news/${news.id}`} className="block">
+                      <NewsCard news={news} size="medium" />
                     </Link>
                   ))}
                 </div>
@@ -228,51 +238,178 @@ const Index = () => {
           </div>
 
           {/* Right Sidebar (Today Matches) */}
-          {/* Right Sidebar (Today Matches) */}
-<div className="hidden md:block md:w-72 lg:w-80 space-y-4 md:sticky md:top-24 lg:top-28">
+          <div className="hidden md:block md:w-80 lg:w-80 xl:w-96 space-y-4 md:sticky md:top-24 lg:top-24 xl:top-28">
 
-  {/* Header (unified with mobile style) */}
+  {/* Header Card */}
   <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-    <div className="flex items-center justify-between p-3 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-b dark:border-slate-800">
-      <div className="flex items-center gap-2">
-        <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center">
-          {/* Football icon (SVG) instead of emoji for consistent rendering) */}
-          <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" opacity=".2"></circle>
-            <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
-          </svg>
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" opacity=".2"></circle>
+              <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">مباريات اليوم</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{formattedDate}</p>
+          </div>
         </div>
-        <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">مباريات {weekday}</div>
-        <div className="text-xs text-slate-500 dark:text-slate-400">{formattedDate}</div>
+        
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="sr-only"
+            id="home-date-picker-desktop"
+          />
+          <Filter
+            className="w-5 h-5 text-green-500 cursor-pointer transition-colors hover:text-green-600"
+            onClick={() => setShowLeagueFilter((s) => !s)}
+          />
+        </div>
+      </div>
+      
+      {/* Filter chips */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-1.5 text-xs font-medium whitespace-nowrap cursor-pointer select-none hover:bg-slate-200 transition-colors"
+          onClick={() => document.getElementById('home-date-picker-desktop')?.click()}
+          title="Choisir la date"
+        >
+          {fullDateFr}
+        </span>
+        <span
+          className="inline-flex items-center rounded-full bg-green-100 text-green-700 px-3 py-1.5 text-xs font-medium whitespace-nowrap cursor-pointer select-none hover:bg-green-200 transition-colors"
+          onClick={() => document.getElementById('home-date-picker-desktop')?.click()}
+          title="اختيار التاريخ"
+        >
+          {formattedDate}
+        </span>
+        {mainLeaguesOnly ? (
+          <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap bg-slate-50 dark:bg-slate-800">
+            {selectedLeagues.length > 0 ? `دوريات مختارة (${selectedLeagues.length})` : 'الدوريات الرئيسية'}
+          </span>
+        ) : (
+          <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap bg-slate-50 dark:bg-slate-800">كل الدوريات</span>
+        )}
       </div>
     </div>
   </div>
 
-  {/* Matches List */}
-  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[650px] overflow-y-auto">
-    {(() => {
-      if (loadingMatches) {
-        return <div className="h-24 rounded-xl bg-slate-100/60 dark:bg-slate-800/40 animate-pulse m-4" />;
-      }
-      const filteredGroups = mainLeaguesOnly
-        ? groupedByLeague.filter(({ league }) => selectedLeagues.includes(league?.id))
-        : groupedByLeague;
-      const hasAny = filteredGroups.length > 0 && filteredGroups.some(g => (g.fixtures?.length || 0) > 0);
-      if (!hasAny) {
-        return (
-          <div className="rounded-2xl border border-slate-100 dark:border-slate-800 p-6 text-center bg-white dark:bg-slate-900 shadow-sm m-4">
-            <div className="py-6">
+  {/* Filter Dropdown */}
+  {showLeagueFilter && (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 z-40" 
+        onClick={() => setShowLeagueFilter(false)}
+      />
+      <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-4 text-right">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">اختر الدوريات</div>
+        <button
+          className="text-xs text-green-500 hover:underline font-medium"
+          onClick={() => setSelectedLeagues(SPECIFIC_LEAGUES.map(l => l.id))}
+        >
+          المفضلة
+        </button>
+      </div>
+      <div className="max-h-56 overflow-auto pr-1">
+        {loadingLeagues && <div className="text-xs text-slate-500 dark:text-slate-400">جارٍ التحميل…</div>}
+        {!loadingLeagues && SPECIFIC_LEAGUES.map((league) => {
+          const checked = selectedLeagues.includes(league.id);
+          return (
+            <label key={league.id} className="flex items-center gap-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg px-2">
+              <input
+                type="checkbox"
+                checked={checked}
+                onChange={(e) => {
+                  setMainLeaguesOnly(true);
+                  setSelectedLeagues((prev) => e.target.checked ? [...prev, league.id] : prev.filter((x) => x !== league.id));
+                }}
+                className="w-4 h-4 text-blue-500 rounded border-slate-300"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">{league.nameAr}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">{league.country}</span>
+              </div>
+            </label>
+          );
+        })}
+      </div>
+      <div className="mt-4 flex items-center justify-between">
+        <button
+          className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
+          onClick={() => { setMainLeaguesOnly(true); setSelectedLeagues(SPECIFIC_LEAGUES.map(l => l.id)); }}
+        >
+          الدوريات المختارة
+        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
+            onClick={() => { setMainLeaguesOnly(false); setShowLeagueFilter(false); }}
+            title="عرض كل الدوريات"
+          >
+            كل الدوريات
+          </button>
+          <button
+            className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
+            onClick={() => setSelectedLeagues([])}
+          >
+            مسح
+          </button>
+          <button
+            className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600 transition-colors"
+            onClick={() => setShowLeagueFilter(false)}
+          >
+            تم
+          </button>
+        </div>
+      </div>
+    </div>
+    </>
+  )}
+
+  {/* Matches List Card */}
+  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div className="p-4">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" opacity=".2"></circle>
+            <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">مباريات {weekday}</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{formattedDate}</p>
+        </div>
+      </div>
+      
+      {(() => {
+        if (loadingMatches) {
+          return <div className="h-24 rounded-xl bg-slate-100/60 dark:bg-slate-800/40 animate-pulse" />;
+        }
+        const filteredGroups = mainLeaguesOnly
+          ? groupedByLeague.filter(({ league }) => selectedLeagues.includes(league?.id))
+          : groupedByLeague;
+        const hasAny = filteredGroups.length > 0 && filteredGroups.some(g => (g.fixtures?.length || 0) > 0);
+        if (!hasAny) {
+          return (
+            <div className="text-center py-6">
               <div className="text-slate-500 dark:text-slate-400 mb-4">لا توجد مباريات لهذا اليوم ضمن الدوريات المختارة</div>
               <button
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-md bg-sport-green text-white hover:opacity-95"
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors"
                 onClick={() => setMainLeaguesOnly(false)}
               >
                 عرض كل المباريات لهذا اليوم
               </button>
             </div>
-          </div>
-        );
-      }
+          );
+        }
       return (
         <>
           {filteredGroups.map(({ league, fixtures }) => (
@@ -350,6 +487,7 @@ const Index = () => {
         </>
       );
     })()}
+    </div>
   </div>
 </div>
 
@@ -358,32 +496,7 @@ const Index = () => {
 
       {/* Mobile Today Matches (visible on phones) */}
       <div className="px-4 pb-6 md:hidden">
-        {/* Section des ligues selon le style demandé */}
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">البطولات</h2>
-          <div className="space-y-2">
-            {SPECIFIC_LEAGUES.map((league) => (
-              <div key={league.id} className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                      {league.name.split(' ').map(word => word[0]).join('').slice(0, 2)}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{league.nameAr}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">{league.country}</div>
-                  </div>
-                </div>
-                <div className="text-slate-400 dark:text-slate-500">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+       
 
         {/* Section des mises à jour */}
         <Card className="p-4 rounded-2xl shadow-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">

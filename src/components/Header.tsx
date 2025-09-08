@@ -62,17 +62,17 @@ const Header = () => {
                 tabIndex={0}
                 aria-label="Rafraîchir la page"
               >
-                <div className="flex items-center space-x-2 transition-all duration-300 group-hover:opacity-90 group-hover:scale-[1.01]">
+                <div className="flex items-center space-x-2 transition-all duration-300 group-hover:opacity-90 group-hover:scale-[1.02]">
                 
                   <img 
                     src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain dark:hidden neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain dark:hidden filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
                   />
                   <img 
                     src="/kooralogo.png" 
                     alt="Koora Logo" 
-                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain hidden dark:block neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain hidden dark:block filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
                   />
                 </div>
               </div>
@@ -99,33 +99,7 @@ const Header = () => {
                   }`}></span>
                 </Link>
               ))}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="text-emerald-600 dark:text-emerald-400 transition-all p-3 rounded-lg hover:bg-slate-100/70 dark:hover:bg-gray-800 hover:scale-105">
-                    <span className="text-lg">•••</span>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align={isRTL ? "end" : "start"}
-                  className={`rounded-xl border-slate-200 shadow-lg p-1 ${isRTL ? 'text-right' : 'text-left'}`}
-                >
-                  <Link to="/about">
-                    <DropdownMenuItem className="cursor-pointer rounded-lg py-2 px-3 text-[15px] font-semibold hover:bg-slate-100">
-                      من نحن
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link to="/contact">
-                    <DropdownMenuItem className="cursor-pointer rounded-lg py-2 px-3 text-[15px] font-semibold hover:bg-slate-100">
-                      اتصل بنا
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link to="/privacy">
-                    <DropdownMenuItem className="cursor-pointer rounded-lg py-2 px-3 text-[15px] font-semibold hover:bg-slate-100">
-                      سياسة الخصوصية
-                    </DropdownMenuItem>
-                  </Link>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              
             </nav>
 
             {/* Actions */}
@@ -149,6 +123,9 @@ const Header = () => {
               >
                 <Search className="w-4 h-4" />
               </Button>
+              
+              {/* Spacer between search and settings */}
+              <div className="w-2"></div>
               
               {/* Admin Button */}
               <AdminButton isAdmin={isAdmin} />
@@ -184,7 +161,7 @@ const Header = () => {
                   <img 
                     src="/black koora.png" 
                     alt="Koora Logo" 
-                    className="h-13 sm:h-10 w-auto object-contain dark:hidden neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="h-13 sm:h-10 w-auto object-contain dark:hidden filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -193,7 +170,7 @@ const Header = () => {
                   <img 
                     src="/kooralogo.png" 
                     alt="Koora Logo" 
-                    className="h-13 sm:h-10 w-auto object-contain hidden dark:block neon-glow group-hover:drop-shadow-[0_4px_12px_rgba(16,185,129,0.35)]"
+                    className="h-13 sm:h-10 w-auto object-contain hidden dark:block filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';

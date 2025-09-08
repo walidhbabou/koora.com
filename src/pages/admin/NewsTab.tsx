@@ -9,6 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Filter, Edit, Trash2, Eye, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 export interface CategoryRow {
   id: number;
@@ -16,6 +18,12 @@ export interface CategoryRow {
   name_ar?: string | null;
   description?: string | null;
   created_at?: string | null;
+}
+
+export interface ChampionRow {
+  id: number;
+  nom: string;
+  nom_ar?: string | null;
 }
 
 export interface NewsItem {
@@ -33,7 +41,7 @@ export interface CommentRow {
   id: number;
   content: string;
   user_id: string | null;
-  news_id: string | null;
+  news_id: number | null;
   created_at?: string | null;
 }
 
@@ -53,9 +61,12 @@ interface NewsTabProps {
   setNewNewsContent: (v: string) => void;
   newNewsCategoryId: number | null;
   setNewNewsCategoryId: (v: number | null) => void;
+  newNewsChampionId: number | null;
+  setNewNewsChampionId: (v: number | null) => void;
   newNewsImageFile: File | null;
   setNewNewsImageFile: (f: File | null) => void;
   categories: CategoryRow[];
+  champions: ChampionRow[];
 
   // create form status/messages
   creatingNews: boolean;
@@ -87,14 +98,34 @@ interface NewsTabProps {
 
 const NewsTab: React.FC<NewsTabProps> = (props) => {
   const { t, currentLanguage, isRTL } = useLanguage();
+  
+  // ReactQuill modules
+  const quillModules = {
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ script: 'sub' }, { script: 'super' }],
+        ['blockquote', 'code-block'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
+        ['link', 'image'],
+        ['clean'],
+      ],
+    },
+  };
+  
   const {
     searchTerm, onSearchTermChange,
     isCreateNewsOpen, onChangeCreateNewsOpen,
     newNewsTitle, setNewNewsTitle,
     newNewsContent, setNewNewsContent,
     newNewsCategoryId, setNewNewsCategoryId,
+    newNewsChampionId, setNewNewsChampionId,
     newNewsImageFile, setNewNewsImageFile,
-    categories,
+    categories, champions,
     creatingNews, createNewsError, createNewsInfo, onCreateNewsSubmit,
     news, loadingNews, newsPage, newsTotal, pageSize, onPrevPage, onNextPage,
     onEditNews, onDeleteNews, onOpenDetails,
@@ -123,67 +154,164 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
               {currentLanguage === 'ar' ? 'إنشاء خبر جديد' : 'Créer une News'}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{currentLanguage === 'ar' ? 'إنشاء خبر جديد' : 'Créer une nouvelle news'}</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] xl:w-[60vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+            <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-slate-800 dark:to-slate-700">
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                {currentLanguage === 'ar' ? 'إنشاء خبر جديد' : 'Créer une nouvelle news'}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
                 {currentLanguage === 'ar' ? 'املأ المعلومات لإنشاء خبر جديد' : 'Remplissez les informations pour créer une nouvelle news'}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
+            
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+              {/* Title Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  {currentLanguage === 'ar' ? 'العنوان' : 'Titre'} <span className="text-red-500">*</span>
                 </label>
-                <Input value={newNewsTitle} onChange={(e) => setNewNewsTitle(e.target.value)} placeholder={currentLanguage === 'ar' ? 'عنوان الخبر' : 'Titre de la news'} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
-                </label>
-                <Textarea value={newNewsContent} onChange={(e) => setNewNewsContent(e.target.value)} placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'} rows={6} />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  {currentLanguage === 'ar' ? 'القسم' : 'Catégorie'}
-                </label>
-                <Select value={newNewsCategoryId !== null ? String(newNewsCategoryId) : undefined} onValueChange={(v) => setNewNewsCategoryId(Number(v))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر القسم' : 'Choisir une catégorie'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={String(c.id)}>{c.name}{c.name_ar ? ` • ${c.name_ar}` : ''}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input 
+                  value={newNewsTitle} 
+                  onChange={(e) => setNewNewsTitle(e.target.value)} 
+                  placeholder={currentLanguage === 'ar' ? 'عنوان الخبر' : 'Titre de la news'}
+                  className="w-full text-base h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200"
+                />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {/* Content Editor Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'} <span className="text-red-500">*</span>
+                </label>
+                <div className="border-2 border-gray-300 rounded-lg overflow-hidden focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-200">
+                  <ReactQuill
+                    theme="snow"
+                    value={newNewsContent}
+                    onChange={setNewNewsContent}
+                    placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
+                    modules={quillModules}
+                    className={`${isRTL ? 'rtl' : 'ltr'} min-h-[300px]`}
+                    style={{ height: '300px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Category and Championship Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {currentLanguage === 'ar' ? 'القسم' : 'Catégorie'} <span className="text-red-500">*</span>
+                  </label>
+                  <Select value={newNewsCategoryId !== null ? String(newNewsCategoryId) : undefined} onValueChange={(v) => setNewNewsCategoryId(Number(v))}>
+                    <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                      <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر القسم' : 'Choisir une catégorie'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.name}{c.name_ar ? ` • ${c.name_ar}` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}
+                  </label>
+                  <Select value={newNewsChampionId !== null ? String(newNewsChampionId) : undefined} onValueChange={(v) => setNewNewsChampionId(v === 'none' ? null : Number(v))}>
+                    <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                      <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+                      {champions.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>{c.nom}{c.nom_ar ? ` • ${c.nom_ar}` : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Image Upload Section */}
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   {currentLanguage === 'ar' ? 'صورة' : 'Image'}
                 </label>
-                <Input type="file" accept="image/*" onChange={(e) => setNewNewsImageFile(e.target.files?.[0] ?? null)} />
-                {newNewsImageFile && (
-                  <p className="text-xs text-slate-500 mt-1">{currentLanguage === 'ar' ? 'سيتم تحميل:' : 'À téléverser:'} {newNewsImageFile.name}</p>
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all duration-200">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => setNewNewsImageFile(e.target.files?.[0] ?? null)}
+                    className="hidden"
+                    id="admin-image-upload"
+                  />
+                  <label htmlFor="admin-image-upload" className="cursor-pointer block">
+                    <ImageIcon className="w-12 h-12 mx-auto mb-3 text-gray-400 hover:text-teal-500 transition-colors" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                      {newNewsImageFile ? newNewsImageFile.name : (currentLanguage === 'ar' ? 'انقر لاختيار صورة' : 'Cliquez pour choisir une image')}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {currentLanguage === 'ar' ? 'PNG, JPG, GIF حتى 10MB' : 'PNG, JPG, GIF up to 10MB'}
+                    </p>
+                  </label>
+                </div>
+              </div>
+
+              {/* Error and Info Messages */}
+              {createNewsError && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-600 font-medium">{createNewsError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {createNewsInfo && (
+                <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-emerald-600 font-medium">{createNewsInfo}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className={`flex-shrink-0 flex ${isRTL ? 'justify-start' : 'justify-end'} gap-3 px-6 py-4 border-t bg-gray-50 dark:bg-slate-800`}>
+              <Button 
+                variant="outline" 
+                onClick={() => onChangeCreateNewsOpen(false)}
+                className="min-w-[120px] h-11 text-base font-medium"
+              >
+                {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
+              </Button>
+              <Button
+                className="bg-teal-600 hover:bg-teal-700 min-w-[120px] h-11 text-base font-medium"
+                disabled={creatingNews}
+                onClick={() => onCreateNewsSubmit()}
+              >
+                {creatingNews ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {currentLanguage === 'ar' ? 'جاري الإنشاء...' : 'Création...'}
+                  </div>
+                ) : (
+                  currentLanguage === 'ar' ? 'إنشاء' : 'Créer'
                 )}
-              </div>
-
-              {createNewsError && <p className="text-sm text-red-600">{createNewsError}</p>}
-              {createNewsInfo && <p className="text-sm text-emerald-600">{createNewsInfo}</p>}
-
-              <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
-                <Button variant="outline" onClick={() => onChangeCreateNewsOpen(false)}>
-                  {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
-                </Button>
-                <Button
-                  className="bg-teal-600 hover:bg-teal-700"
-                  disabled={creatingNews}
-                  onClick={() => onCreateNewsSubmit()}
-                >
-                  {creatingNews ? (currentLanguage === 'ar' ? 'جاري الإنشاء...' : 'Création...') : (currentLanguage === 'ar' ? 'إنشاء' : 'Créer')}
-                </Button>
-              </div>
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

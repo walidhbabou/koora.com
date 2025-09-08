@@ -68,21 +68,18 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
           size="icon"
           className={`
             group relative h-10 w-10 rounded-full
-            text-white hover:text-white
-            bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400
-            hover:from-emerald-600 hover:via-emerald-500 hover:to-teal-500
-            shadow-[0_6px_16px_rgba(16,185,129,0.35)]
-            border border-white/10 dark:border-white/5
-            transition-all duration-300 hover:scale-105
-            ${isOpen ? 'ring-2 ring-emerald-400/60' : 'ring-0'}
+            text-slate-600 dark:text-slate-300 hover:text-slate-700 dark:hover:text-slate-200
+            bg-slate-100 dark:bg-slate-700
+            hover:bg-slate-200 dark:hover:bg-slate-600
+            border border-slate-200 dark:border-slate-600
+            transition-all duration-200 hover:scale-105
+            ${isOpen ? 'ring-2 ring-slate-300 dark:ring-slate-500' : 'ring-0'}
             ${className}
           `}
           aria-label={isRTL ? 'إعدادات' : 'Paramètres'}
           title={isRTL ? 'إعدادات' : 'Paramètres'}
         >
-          <Settings className="w-5 h-5 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
-          {/* subtle hover glow */}
-          <span className="pointer-events-none absolute inset-0 rounded-full bg-emerald-300/0 group-hover:bg-emerald-300/10 transition-colors duration-300" />
+          <Settings className="w-5 h-5" />
         </Button>
       </PopoverTrigger>
       <PopoverContent

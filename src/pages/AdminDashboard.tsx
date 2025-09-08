@@ -44,6 +44,9 @@ import NewsTab from './admin/NewsTab';
 import CategoriesTab from './admin/CategoriesTab';
 import CommentsTab from './admin/CommentsTab';
 import UsersTab from './admin/UsersTab';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
 
 interface News {
   id: string;
@@ -88,6 +91,24 @@ const AdminDashboard: React.FC = () => {
   const { t, currentLanguage, isRTL, direction } = useLanguage();
   const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
+  
+  // ReactQuill modules
+  const quillModules = {
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ script: 'sub' }, { script: 'super' }],
+        ['blockquote', 'code-block'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
+        ['link', 'image'],
+        ['clean'],
+      ],
+    },
+  };
   const [activeTab, setActiveTab] = useState('overview');
   const [news, setNews] = useState<News[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -109,9 +130,11 @@ const AdminDashboard: React.FC = () => {
   const [newNewsTitle, setNewNewsTitle] = useState('');
   const [newNewsContent, setNewNewsContent] = useState('');
   const [newNewsCategoryId, setNewNewsCategoryId] = useState<number | null>(null);
+  const [newNewsChampionId, setNewNewsChampionId] = useState<number | null>(null);
   const [createNewsError, setCreateNewsError] = useState('');
   const [createNewsInfo, setCreateNewsInfo] = useState('');
   const [newNewsImageFile, setNewNewsImageFile] = useState<File | null>(null);
+  const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -176,16 +199,29 @@ const AdminDashboard: React.FC = () => {
     }
     setCreatingUser(true);
     try {
-      const { error } = await supabase.rpc('register_user', {
-        p_email: newUserEmail,
-        p_password: newUserPassword,
-        p_first_name: newUserName,
-        p_last_name: '',
-        p_role: newUserRole,
-      });
+      // Create auth user
+      const { data, error } = await supabase.auth.signUp({ email: newUserEmail, password: newUserPassword });
       if (error) {
         setCreateUserError(error.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
         return;
+      }
+      const authUser = data.user;
+      if (authUser) {
+        // Ensure profile row exists with requested role
+        const { error: upErr } = await supabase
+          .from('users')
+          .upsert({
+            id: authUser.id,
+            email: authUser.email,
+            first_name: newUserName,
+            last_name: '',
+            role: newUserRole,
+            status: 'active',
+          }, { onConflict: 'id' });
+        if (upErr) {
+          setCreateUserError(upErr.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
+          return;
+        }
       }
       setCreateUserInfo(currentLanguage === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'Utilisateur créé avec succès');
       await fetchUsers();
@@ -313,6 +349,15 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Load champions from Supabase
+  const fetchChampions = async () => {
+    try {
+      const { data, error } = await supabase.from('champions').select('id, nom, nom_ar').order('id');
+      if (error) throw error;
+      setChampions(data || []);
+    } catch (e) { console.error('load champions failed', e); }
+  };
+
   // Load comments from Supabase (paged)
   const fetchComments = async () => {
     setLoadingComments(true);
@@ -374,6 +419,7 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchCategories();
+    fetchChampions();
     fetchNews();
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -475,22 +521,47 @@ const AdminDashboard: React.FC = () => {
         imageUrl = pub?.publicUrl;
       }
 
-      // Use SECURITY DEFINER RPC to bypass RLS with internal role checks
-      const { error } = await supabase.rpc('create_news', {
-        p_user_id: user.id,
-        p_title: newNewsTitle,
-        p_content: newNewsContent,
-        p_status: 'draft',
-        p_image_url: imageUrl ?? null,
-        p_category_id: newNewsCategoryId ?? null,
-      });
-      if (error) throw error;
+      // Essayer d'abord la fonction RPC create_news
+      try {
+        const { error } = await supabase.rpc('create_news', {
+          p_user_id: user.id,
+          p_title: newNewsTitle,
+          p_content: newNewsContent,
+          p_status: 'draft',
+          p_image_url: imageUrl ?? null,
+          p_category_id: newNewsCategoryId ?? null,
+          p_champion_id: newNewsChampionId ?? null,
+        });
+        
+        if (error) {
+          console.error('Supabase RPC error details:', error);
+          throw error;
+        }
+      } catch (rpcErr: any) {
+        // Si la fonction RPC n'existe pas ou échoue, utiliser l'insertion directe avec user_id
+        console.log('RPC failed, trying direct insert:', rpcErr);
+        const { error } = await supabase.from('news').insert({
+          title: newNewsTitle,
+          content: newNewsContent,
+          status: 'draft',
+          image_url: imageUrl ?? null,
+          category_id: newNewsCategoryId,
+          champion_id: newNewsChampionId,
+          user_id: user.id, // Inclure explicitement user_id
+        }).select();
+        
+        if (error) {
+          console.error('Direct insert error details:', error);
+          throw error;
+        }
+      }
       setCreateNewsInfo(currentLanguage === 'ar' ? 'تم إنشاء الخبر' : 'News créée');
       await fetchNews();
       setIsCreateNewsOpen(false);
       setNewNewsTitle('');
       setNewNewsContent('');
       setNewNewsCategoryId(null);
+      setNewNewsChampionId(null);
       setNewNewsImageFile(null);
     } catch (e: any) {
       setCreateNewsError(e.message || (currentLanguage === 'ar' ? 'فشل إنشاء الخبر' : 'Échec de création de la news'));
@@ -676,9 +747,12 @@ const AdminDashboard: React.FC = () => {
               setNewNewsContent={setNewNewsContent}
               newNewsCategoryId={newNewsCategoryId}
               setNewNewsCategoryId={setNewNewsCategoryId}
+              newNewsChampionId={newNewsChampionId}
+              setNewNewsChampionId={setNewNewsChampionId}
               newNewsImageFile={newNewsImageFile}
               setNewNewsImageFile={setNewNewsImageFile}
               categories={categories}
+              champions={champions}
               creatingNews={creatingNews}
               createNewsError={createNewsError}
               createNewsInfo={createNewsInfo}
@@ -865,7 +939,7 @@ const AdminDashboard: React.FC = () => {
 };
 
 const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({ onSubmit }) => {
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, isRTL } = useLanguage();
   const [formData, setFormData] = useState<{
     title: string;
     content: string;
@@ -880,6 +954,24 @@ const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({
     imageFile: undefined,
   });
   const [imagePreview, setImagePreview] = useState<string>('');
+  
+  // ReactQuill modules
+  const quillModules = {
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ script: 'sub' }, { script: 'super' }],
+        ['blockquote', 'code-block'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
+        ['link', 'image'],
+        ['clean'],
+      ],
+    },
+  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -915,13 +1007,16 @@ const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
         </label>
-        <Textarea
-          value={formData.content}
-          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
-          rows={6}
-          required
-        />
+        <div className="border rounded-md">
+          <ReactQuill
+            theme="snow"
+            value={formData.content}
+            onChange={(content) => setFormData({ ...formData, content })}
+            placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
+            modules={quillModules}
+            className={isRTL ? 'rtl' : 'ltr'}
+          />
+        </div>
       </div>
       
       {/* Image Upload */}
@@ -1003,13 +1098,31 @@ const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({
 };
 
 const EditNewsForm: React.FC<{ news: News; onSubmit: (data: Partial<News>) => void }> = ({ news, onSubmit }) => {
-  const { currentLanguage } = useTranslation();
+  const { currentLanguage, isRTL } = useLanguage();
   const [formData, setFormData] = useState({
     title: news.title,
     content: news.content,
     category: news.category,
     status: news.status
   });
+  
+  // ReactQuill modules
+  const quillModules = {
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ script: 'sub' }, { script: 'super' }],
+        ['blockquote', 'code-block'],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
+        ['link', 'image'],
+        ['clean'],
+      ],
+    },
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1033,13 +1146,16 @@ const EditNewsForm: React.FC<{ news: News; onSubmit: (data: Partial<News>) => vo
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
           {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
         </label>
-        <Textarea
-          value={formData.content}
-          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
-          rows={6}
-          required
-        />
+        <div className="border rounded-md">
+          <ReactQuill
+            theme="snow"
+            value={formData.content}
+            onChange={(content) => setFormData({ ...formData, content })}
+            placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
+            modules={quillModules}
+            className={isRTL ? 'rtl' : 'ltr'}
+          />
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>

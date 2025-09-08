@@ -261,8 +261,8 @@ const Standings = () => {
         {!showLeagueDetail && (
           <>
             {/* En-tête de la page */}
-            <div className={`flex flex-col gap-4 mb-6 sm:mb-8 ${isRTL ? 'text-right' : 'text-left'}`}>
-              <div> 
+            <div className={`flex flex-col gap-4 mb-6 sm:mb-8 ${isRTL ? 'text-right' : 'text-left'}`} dir="rtl">
+              <div dir="rtl"> 
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-2 tracking-tight">
                   {currentLanguage === 'ar' ? 'كوورة - ترتيب البطولات' : 'koora - Classement des tournois'}
                 </h1>
@@ -272,7 +272,7 @@ const Standings = () => {
               </div>
               
               {/* Barre de recherche */}
-              <div className="relative w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto" dir="rtl">
                 <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
                   placeholder={t('searchTournament')}
@@ -284,12 +284,10 @@ const Standings = () => {
             </div>
 
             {/* Liste des ligues (style simple comme la maquette) */}
-            <div className="w-full max-w-2xl mx-auto">
-              <h2 className={`mb-3 sm:mb-4 text-sm sm:text-base font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
-                {currentLanguage === 'ar' ? 'البطولات' : 'Tournois'}
-              </h2>
+            <div className="w-full max-w-2xl mx-auto" dir="rtl">
+              
 
-              <ul className="space-y-2 sm:space-y-3">
+              <ul className="space-y-2 sm:space-y-3" dir="rtl">
                 {filteredLeagues.map((league) => (
                   <li key={league.id}>
                     <div

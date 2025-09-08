@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Ban, CheckCircle, MessageSquare } from 'lucide-react';
+import { Ban, CheckCircle, MessageSquare, Trash2 } from 'lucide-react';
+import LeagueSelector from '@/components/LeagueSelector';
 
 export interface ModerationUser {
   id: string;
@@ -13,6 +14,7 @@ export interface ModerationUser {
   avatar_url?: string | null;
   role: string;
   status: string;
+  league_id?: number | null;
   raw?: Record<string, any>;
 }
 
@@ -21,12 +23,11 @@ interface ModeratorUsersTabProps {
   isRTL: boolean;
   searchTerm: string;
   setSearchTerm: (v: string) => void;
-  roleFilter: string;
-  setRoleFilter: (v: string) => void;
   loadingUsers: boolean;
   users: ModerationUser[];
   onBlock: (id: string) => void;
   onUnblock: (id: string) => void;
+  onDelete: (id: string) => void;
   onSelectUserComments: (id: string) => void;
   expandedUserId: string | null;
   setExpandedUserId: (id: string | null) => void;
@@ -40,12 +41,11 @@ const ModeratorUsersTab: React.FC<ModeratorUsersTabProps> = ({
   isRTL,
   searchTerm,
   setSearchTerm,
-  roleFilter,
-  setRoleFilter,
   loadingUsers,
   users,
   onBlock,
   onUnblock,
+  onDelete,
   onSelectUserComments,
   expandedUserId,
   setExpandedUserId,
@@ -63,18 +63,9 @@ const ModeratorUsersTab: React.FC<ModeratorUsersTabProps> = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-64"
           />
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="border rounded-md px-3 py-2 text-sm bg-white dark:bg-slate-900"
-          >
-            <option value="all">{currentLanguage === 'ar' ? 'الكل' : 'Tous'}</option>
-            <option value="user">{currentLanguage === 'ar' ? 'مستخدم' : 'Utilisateur'}</option>
-            <option value="author">{currentLanguage === 'ar' ? 'كاتب' : 'Auteur'}</option>
-            <option value="editor">{currentLanguage === 'ar' ? 'محرر' : 'Éditeur'}</option>
-            <option value="moderator">{currentLanguage === 'ar' ? 'مشرف' : 'Modérateur'}</option>
-            <option value="admin">{currentLanguage === 'ar' ? 'مدير' : 'Admin'}</option>
-          </select>
+          <div className="text-sm text-slate-600 dark:text-slate-400">
+            {currentLanguage === 'ar' ? 'عرض المستخدمين العاديين فقط' : 'Affichage des utilisateurs normaux uniquement'}
+          </div>
         </div>
       </div>
       <Card>
@@ -122,18 +113,20 @@ const ModeratorUsersTab: React.FC<ModeratorUsersTabProps> = ({
                         <td className="px-3 py-2">
                           <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
                             {u.status === 'banned' ? (
-                              <Button size="sm" variant="outline" onClick={() => onUnblock(u.id)} className="text-green-600 border-green-200 hover:bg-green-50">
+                              <Button size="sm" variant="outline" onClick={() => onUnblock(u.id)} className="text-green-600 border-green-200 hover:bg-green-50" title={currentLanguage === 'ar' ? 'إلغاء الحظر' : 'Débloquer'}>
                                 <CheckCircle className="w-4 h-4" />
                               </Button>
                             ) : (
-                              <Button size="sm" variant="outline" onClick={() => onBlock(u.id)} className="text-red-600 border-red-200 hover:bg-red-50">
+                              <Button size="sm" variant="outline" onClick={() => onBlock(u.id)} className="text-red-600 border-red-200 hover:bg-red-50" title={currentLanguage === 'ar' ? 'حظر المستخدم' : 'Bloquer l\'utilisateur'}>
                                 <Ban className="w-4 h-4" />
                               </Button>
                             )}
-                            <Button size="sm" variant="outline" onClick={() => onSelectUserComments(u.id)} className="text-slate-700 border-slate-200 hover:bg-slate-50">
+                            <Button size="sm" variant="outline" onClick={() => onSelectUserComments(u.id)} className="text-slate-700 border-slate-200 hover:bg-slate-50" title={currentLanguage === 'ar' ? 'عرض التعليقات' : 'Voir les commentaires'}>
                               <MessageSquare className="w-4 h-4" />
                             </Button>
-                           
+                            <Button size="sm" variant="outline" onClick={() => onDelete(u.id)} className="text-red-600 border-red-200 hover:bg-red-50" title={currentLanguage === 'ar' ? 'حذف المستخدم' : 'Supprimer l\'utilisateur'}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </td>
                       </tr>

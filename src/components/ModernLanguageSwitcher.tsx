@@ -44,13 +44,11 @@ const ModernLanguageSwitcher = ({
         className={`
           ${mobile ? 'h-8 px-2' : 'h-10 px-3'} 
           language-switcher
-          bg-gradient-to-r from-teal-50 to-teal-50 
-          hover:from-teal-100 hover:to-teal-100 
-          border border-teal-200 
-          transition-all duration-300 
-          hover:shadow-lg hover:scale-105
-          text-foreground hover:text-teal-600
-          backdrop-blur-sm
+          bg-white dark:bg-slate-800
+          hover:bg-slate-50 dark:hover:bg-slate-700
+          border border-slate-200 dark:border-slate-600
+          transition-colors duration-200
+          text-foreground hover:text-slate-700 dark:hover:text-slate-200
         `}
       >
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -60,7 +58,7 @@ const ModernLanguageSwitcher = ({
               {currentLang.code.toUpperCase()}
             </span>
           )}
-          <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isLanguageOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isLanguageOpen ? 'rotate-180' : ''}`} />
         </div>
       </Button>
 
@@ -86,14 +84,14 @@ const ModernLanguageSwitcher = ({
             absolute ${getDropdownPosition()} 
             top-full mt-2 z-50
             language-dropdown
-            bg-background/95 backdrop-blur-xl 
-            border border-border/50 
-            rounded-xl shadow-2xl 
+            bg-white dark:bg-slate-800
+            border border-slate-200 dark:border-slate-600
+            rounded-lg shadow-lg
             overflow-hidden
-            min-w-[160px]
+            min-w-[140px]
             animate-in fade-in-0 zoom-in-95 duration-200
           `} dir={direction}>
-            <div className="p-2">
+            <div className="p-1">
               {languages.map((lang) => (
                 <button
                   key={lang.code}
@@ -103,13 +101,12 @@ const ModernLanguageSwitcher = ({
                   }}
                   className={`
                     w-full flex items-center gap-3 px-3 py-2.5 
-                    rounded-lg transition-all duration-200
-                    hover:bg-gradient-to-r hover:from-teal-50 hover:to-teal-100
-                    hover:shadow-md
+                    rounded-md transition-colors duration-200
+                    hover:bg-slate-50 dark:hover:bg-slate-700
                     ${isRTL ? 'flex-row-reverse text-right' : 'text-left'}
                     ${currentLanguage === lang.code 
-                      ? 'bg-gradient-to-r from-teal-100 to-teal-100 text-teal-600' 
-                      : 'text-foreground hover:text-teal-600'
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200' 
+                      : 'text-foreground hover:text-slate-700 dark:hover:text-slate-200'
                     }
                   `}
                 >
@@ -120,9 +117,6 @@ const ModernLanguageSwitcher = ({
                       {lang.code}
                     </span>
                   </div>
-                  {currentLanguage === lang.code && (
-                    <div className="w-2 h-2 bg-teal-600 rounded-full animate-pulse" />
-                  )}
                 </button>
               ))}
             </div>

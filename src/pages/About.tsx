@@ -7,30 +7,52 @@ const About = () => (
     <Header />
     <main className="container mx-auto flex-grow py-8 px-4">
       <div className="bg-white dark:bg-[#23272a] rounded-lg shadow p-8 text-right" dir="rtl">
-        <h2 className="text-xl font-bold mb-4 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">من نحن</h2>
-        <p className="mb-2 dark:text-gray-200" dir="rtl">مرحبًا بكم في <span className="font-semibold" dir="rtl">كورة</span>!</p>
-        <p className="mb-4 dark:text-gray-200" dir="rtl">نحن فريق متخصص في تقديم تحديثات لحظية دقيقة عن الأحداث الرياضية، بخبرات تمتد لعشرات السنين. يسعدنا أن نكون وجهتك الأولى لعالم الرياضة، حيث نسعى لتلبية احتياجات عشاق الرياضة في جميع أنحاء العالم.</p>
         
-        <h2 className="text-lg font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">رؤيتنا:</h2>
-        <p className="mb-4 dark:text-gray-200" dir="rtl">نسعى لأن نكون الرائدين في تقديم المعلومات الرياضية الموثوقة، مع التركيز على الدقة وسرعة التحديث. نحن هنا لضمان أن تكون على اطلاع دائم بأحدث الأخبار والنتائج.</p>
+        <h1 className="text-2xl font-bold mb-6 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">من نحن</h1>
+        <p className="mb-4 dark:text-gray-200" dir="rtl">
+          مرحباً بكم في <span className="font-semibold" dir="rtl">Koora.com</span>، المصدر الأول لكل ما يتعلق بعالم كرة القدم! 
+          نحن موقع رياضي شامل يهدف إلى تقديم أحدث الأخبار، النتائج، والتحليلات من عالم كرة القدم، سواء على الصعيد المحلي، الإقليمي، أو العالمي.
+        </p>
 
-        <h2 className="text-lg font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">قيمنا:</h2>
-        <ul className="list-none pr-4 mb-4" dir="rtl">
-          <li className="mb-1 dark:text-gray-200" dir="rtl"><span className="font-bold text-[#1dbf73] dark:text-[#1dbf73]">الدقة:</span> نضمن أن المعلومات التي نقدمها دقيقة وموثوقة.</li>
-          <li className="mb-1 dark:text-gray-200"><span className="font-bold text-[#1dbf73] dark:text-[#1dbf73]">الشغف:</span> نحن نحب الرياضة، ونسعى لنقل هذا الشغف لزوارنا.</li>
-          <li className="mb-1 dark:text-gray-200"><span className="font-bold text-[#1dbf73] dark:text-[#1dbf73]">التفاعل:</span> نحن نستمع إلى تعليقاتكم ونحرص على تحسين خدماتنا باستمرار.</li>
+        {/* --- رؤيتنا --- */}
+        <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">رؤيتنا</h2>
+        <p className="mb-4 dark:text-gray-200" dir="rtl">
+          في Koora.com، نسعى إلى أن نكون الوجهة الأولى لعشاق كرة القدم في العالم العربي، 
+          من خلال توفير تغطية شاملة للمباريات، البطولات، وأخبار الأندية واللاعبين. 
+          نعمل على تقديم محتوى موثوق ومحدث باستمرار لنبقيكم على اطلاع دائم بكل ما يحدث في الساحة الكروية.
+        </p>
+
+        {/* --- رسالتنا --- */}
+        <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">رسالتنا</h2>
+        <ul className="list-disc pr-6 space-y-2 dark:text-gray-200" dir="rtl">
+          <li>تغطية شاملة لأهم البطولات والدوريات العالمية والمحلية.</li>
+          <li>نقل مباشر للمباريات مع تحديث مستمر للنتائج.</li>
+          <li>تحليلات فنية معمقة لأداء الفرق واللاعبين.</li>
+          <li>إحصائيات دقيقة تساعد المشجعين على متابعة تفاصيل اللعبة.</li>
+          <li>أخبار الانتقالات وأحدث ما يدور في عالم سوق اللاعبين.</li>
         </ul>
-        
-        <h2 className="text-lg font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]"dir="rtl">مميزاتنا:</h2>
-        <ul className="list-none pr-4 mb-4" dir="rtl">
-          <li className="mb-1 dark:text-gray-200">متابعة لحظية دقيقة للأحداث الرياضية.</li>
-          <li className="mb-1 dark:text-gray-200">التعرف على مواعيد المباريات حسب دولتك.</li>
-          <li className="mb-1 dark:text-gray-200">معلومات عن القنوات الناقلة والمعلقين.</li>
-          <li className="mb-1 dark:text-gray-200">ترتيب البطولات والهدافين.</li>
-          <li className="mb-1 dark:text-gray-200">تحديثات مستمرة حول آخر المستجدات الرياضية.</li>
+
+        {/* --- فريقنا --- */}
+        <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">فريقنا</h2>
+        <p className="mb-4 dark:text-gray-200" dir="rtl">
+          يتألف فريق Koora.com من نخبة من الصحفيين الرياضيين والمحللين والخبراء في عالم كرة القدم. 
+          نعمل على مدار الساعة لتقديم محتوى دقيق وموضوعي يلبي تطلعات جمهورنا في العالم العربي.
+        </p>
+
+        {/* --- ماذا نقدم --- */}
+        <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73]" dir="rtl">ماذا نقدم</h2>
+        <ul className="list-disc pr-6 space-y-2 dark:text-gray-200" dir="rtl">
+          <li>آخر الأخبار الرياضية من الدوريات الكبرى مثل الدوري الإنجليزي، الإسباني، الإيطالي، السعودي، والمصري.</li>
+          <li>نتائج مباشرة للمباريات المحلية والدولية.</li>
+          <li>إحصائيات وتوقعات للمباريات واللاعبين.</li>
+          <li>فيديوهات وملخصات لأبرز اللحظات في المباريات.</li>
+          <li>مقالات تحليلية لأداء الفرق وخطط المدربين.</li>
         </ul>
-        
-        <p className="mt-6 font-semibold dark:text-gray-200" dir="rtl">نشكركم على دعمكم وثقتكم بنا. نتطلع إلى تقديم أفضل تجربة رياضية لكم!</p>
+
+        <p className="mt-6 font-semibold dark:text-gray-200" dir="rtl">
+          نحن في Koora.com نؤمن بأن كرة القدم ليست مجرد لعبة، بل هي شغف يجمع بين الملايين حول العالم. 
+          تابعونا لتكونوا دائماً في قلب الحدث الكروي!
+        </p>
       </div>
     </main>
     <Footer />

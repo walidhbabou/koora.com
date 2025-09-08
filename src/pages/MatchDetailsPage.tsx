@@ -1,4 +1,6 @@
 import React from "react";
+import SEO from "@/components/SEO";
+import { Helmet } from "react-helmet-async";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -17,6 +19,30 @@ const MatchDetailsPage: React.FC = () => {
 
   return (
     <div dir={direction} className={`min-h-screen bg-[#f6f7fa] dark:bg-[#020617] ${isRTL ? 'rtl' : 'ltr'}`}>
+      <SEO
+        title={match ? `${match?.teams?.home?.name} vs ${match?.teams?.away?.name} | كورة` : 'تفاصيل مباراة | كورة'}
+        description={match ? `تفاصيل مباراة ${match?.teams?.home?.name} ضد ${match?.teams?.away?.name}` : 'تفاصيل المباراة'}
+        type="sports_event"
+      />
+      {match && (
+        <Helmet>
+          <script type="application/ld+json">
+            {JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'SportsEvent',
+              name: `${match?.teams?.home?.name} vs ${match?.teams?.away?.name}`,
+              startDate: new Date(match.date).toISOString(),
+              eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+              eventStatus: 'https://schema.org/EventScheduled',
+              sport: 'Soccer',
+              competitor: [
+                { '@type': 'SportsTeam', name: match?.teams?.home?.name },
+                { '@type': 'SportsTeam', name: match?.teams?.away?.name }
+              ]
+            })}
+          </script>
+        </Helmet>
+      )}
       <Header />
       <div className="container mx-auto px-2 sm:px-3 py-3 sm:py-6 max-w-[980px]">
         <div className="mb-3">

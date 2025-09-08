@@ -32,11 +32,11 @@ const NewsCard = ({ news, size = 'medium' }: NewsCardProps) => {
   const getImageHeight = () => {
     switch (size) {
       case 'large':
-        return 'h-48 sm:h-64';
+        return 'h-56 sm:h-72';
       case 'small':
-        return 'h-32 sm:h-36';
-      default:
         return 'h-40 sm:h-48';
+      default:
+        return 'h-48 sm:h-56';
     }
   };
 

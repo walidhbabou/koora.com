@@ -17,7 +17,7 @@ import "../styles/rtl.css";
 
 const Transfers = () => {
   const { t, currentLanguage } = useTranslation();
-  const [selectedSeason, setSelectedSeason] = useState(new Date().getFullYear());
+  const [selectedSeason, setSelectedSeason] = useState(2025);
   // Use hook to get transfers data
   const { data, loading, error } = useMainLeaguesTransfers(selectedSeason);
   const isRTL = currentLanguage === "ar";
@@ -277,18 +277,9 @@ const Transfers = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className={selectedSeason === 2025 ? 'bg-blue-100 border-blue-300' : ''}
-                  onClick={() => { setSelectedSeason(2025); setPage(1); }}
+                  className="bg-blue-100 border-blue-300"
                 >
                   {isRTL ? "2025" : "2025"}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className={selectedSeason === 2024 ? 'bg-blue-100 border-blue-300' : ''}
-                  onClick={() => { setSelectedSeason(2024); setPage(1); }}
-                >
-                  {isRTL ? "2024" : "2024"}
                 </Button>
               </div>
             </div>
@@ -366,18 +357,7 @@ const Transfers = () => {
 
               {/* Pagination (always visible) */}
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{isRTL ? 'العناصر لكل صفحة' : 'Items per page'}:</span>
-                  <span className="h-9 inline-flex items-center rounded-md bg-[hsl(var(--input))] px-3 text-sm">{pageSize}</span>
-                  <span className="text-xs text-muted-foreground">{filteredTransfers.length} {isRTL ? 'إجمالي' : 'total'}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {(() => {
-                      const start = filteredTransfers.length ? (safePage - 1) * pageSize + 1 : 0;
-                      const end = Math.min(safePage * pageSize, filteredTransfers.length);
-                      return isRTL ? `${start}–${end} من ${filteredTransfers.length}` : `${start}–${end} of ${filteredTransfers.length}`;
-                    })()}
-                  </span>
-                </div>
+                
                 <div className="flex items-center gap-1">
                   <Button size="sm" variant="outline" disabled={safePage === 1} onClick={() => setPage(1)}>{isRTL ? 'الأول' : 'First'}</Button>
                   <Button size="sm" variant="outline" disabled={safePage === 1} onClick={() => setPage(safePage - 1)}>{isRTL ? 'السابق' : 'Prev'}</Button>

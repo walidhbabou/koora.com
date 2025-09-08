@@ -58,8 +58,8 @@ const ModeratorDashboard: React.FC = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<ModerationUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-  // Default to only showing regular users
-  const [roleFilter, setRoleFilter] = useState<string>('user');
+  // Always filter to show only regular users
+  const roleFilter = 'user';
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserComments, setSelectedUserComments] = useState<Comment[]>([]);
   const [loadingUserComments, setLoadingUserComments] = useState(false);
@@ -560,13 +560,11 @@ const ModeratorDashboard: React.FC = () => {
       }
 
       if (!mapped || mapped.length === 0) {
-        // Fallback: direct table query on public.users with role filter
+        // Fallback: direct table query on public.users with role filter for 'user' only
         let q = supabase
           .from('users')
-          .select('id, name, email, avatar_url, role, status, created_at, first_name, last_name');
-        if (roleFilter && roleFilter !== 'all') {
-          q = q.eq('role', roleFilter);
-        }
+          .select('id, name, email, avatar_url, role, status, created_at, first_name, last_name')
+          .eq('role', 'user');
         if (searchTerm) {
           // Basic search on name or email
           q = q.or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
@@ -586,10 +584,6 @@ const ModeratorDashboard: React.FC = () => {
           raw: r,
         }));
         setUsersHasNext(((tdata || []).length) === pageSize);
-      }
-
-      if (roleFilter !== 'all') {
-        mapped = mapped.filter(u => (u.role || '').toLowerCase() === roleFilter);
       }
       setUsers(mapped);
     } catch (e: any) {
@@ -612,11 +606,11 @@ const ModeratorDashboard: React.FC = () => {
     return () => clearTimeout(t);
   }, [searchTerm, activeTab]);
 
-  // Refetch users when role filter changes
+  // Refetch users when active tab changes to users
   useEffect(() => {
     if (activeTab !== 'users') return;
     fetchUsers();
-  }, [roleFilter, activeTab]);
+  }, [activeTab]);
 
   // Refetch when users page changes
   useEffect(() => {
@@ -658,7 +652,6 @@ const ModeratorDashboard: React.FC = () => {
             .from('users')
             .upsert(minimal, { onConflict: 'id' })
             .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
-            .eq('id', user.id)
             .maybeSingle();
           if (upErr) throw upErr;
           setMyProfile(up as any);
@@ -872,6 +865,21 @@ const ModeratorDashboard: React.FC = () => {
       const msg = e?.message || '';
       const hint = msg.includes('function unblock_user') ? (currentLanguage === 'ar' ? 'أنشئ دالة RPC unblock_user في Supabase' : 'Créez la fonction RPC unblock_user dans Supabase') : '';
       toast({ title: currentLanguage === 'ar' ? 'خطأ' : 'Erreur', description: `${msg || (currentLanguage === 'ar' ? 'تعذر إلغاء الحظر' : 'Impossible de débloquer')} ${hint}`.trim(), variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteUser = async (uid: string) => {
+    const prev = users;
+    setUsers(us => us.filter(u => u.id !== uid));
+    try {
+      const { error } = await supabase.rpc('delete_user', { p_user_id: uid });
+      if (error) throw error;
+      toast({ description: currentLanguage === 'ar' ? 'تم حذف المستخدم' : 'Utilisateur supprimé' });
+    } catch (e: any) {
+      setUsers(prev);
+      const msg = e?.message || '';
+      const hint = msg.includes('function delete_user') ? (currentLanguage === 'ar' ? 'أنشئ دالة RPC delete_user في Supabase' : 'Créez la fonction RPC delete_user dans Supabase') : '';
+      toast({ title: currentLanguage === 'ar' ? 'خطأ' : 'Erreur', description: `${msg || (currentLanguage === 'ar' ? 'تعذر الحذف' : 'Impossible de supprimer')} ${hint}`.trim(), variant: 'destructive' });
     }
   };
 
@@ -1144,12 +1152,11 @@ const ModeratorDashboard: React.FC = () => {
               isRTL={isRTL}
               searchTerm={searchTerm}
               setSearchTerm={setSearchTerm}
-              roleFilter={roleFilter}
-              setRoleFilter={setRoleFilter}
               loadingUsers={loadingUsers}
               users={users as any}
               onBlock={handleBlock}
               onUnblock={handleUnblock}
+              onDelete={handleDeleteUser}
               onSelectUserComments={(id: string) => { setSelectedUserId(id); fetchCommentsForUser(id); }}
               expandedUserId={expandedUserId}
               setExpandedUserId={setExpandedUserId}

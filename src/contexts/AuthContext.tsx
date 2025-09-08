@@ -29,7 +29,13 @@ interface AuthContextValue {
 
   // actions
   login: (email: string, password: string) => Promise<{ error?: string } | void>;
-  register: (email: string, password: string, firstName?: string, lastName?: string, role?: UserRole) => Promise<{ error?: string } | void>;
+  register: (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string,
+    role?: UserRole
+  ) => Promise<{ error?: string; needsEmailConfirm?: boolean } | void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   updateUser: (patch: Partial<AppUser>) => void;
@@ -59,6 +65,22 @@ function safelyPersistUserToLocalStorage(user: AppUser) {
       try { localStorage.setItem('koora_user', JSON.stringify(user)); } catch {}
     } catch {}
   }
+}
+
+function purgeHeavyCachesFromLocalStorage() {
+  try {
+    const keys = Object.keys(localStorage);
+    for (const key of keys) {
+      if (
+        key.startsWith('api-cache:transfers') ||
+        key.startsWith('api-cache:standings') ||
+        key.startsWith('api-cache:leagues') ||
+        key.startsWith('koora_cache_')
+      ) {
+        try { localStorage.removeItem(key); } catch {}
+      }
+    }
+  } catch {}
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -181,7 +203,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           status: u.status as any,
         };
         setUser(baseUser);
-        localStorage.setItem('koora_user', JSON.stringify(baseUser));
+        safelyPersistUserToLocalStorage(baseUser);
+        purgeHeavyCachesFromLocalStorage();
         setRoleLoaded(true);
         return;
       }
@@ -205,6 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       setUser(baseUser);
       safelyPersistUserToLocalStorage(baseUser);
+      purgeHeavyCachesFromLocalStorage();
       setRoleLoaded(true);
     } catch (e: any) {
       return { error: e?.message ?? 'Erreur de connexion' };
@@ -215,38 +239,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = useCallback(async (email: string, password: string, firstName?: string, lastName?: string, role: UserRole = 'user') => {
     try {
-      // Primary: Supabase Auth sign up
-      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
-      if (signUpErr) {
-        return { error: signUpErr.message };
+      // Custom table-based registration via SECURITY DEFINER RPC
+      // UTILISEZ LES NOUVEAUX NOMS DE PARAMÈTRES
+      const { data, error } = await supabase.rpc('register_user', {
+        p_user_email: email,           // Changé de p_email à p_user_email
+        p_user_password: password,     // Changé de p_password à p_user_password
+        p_first_name: firstName ?? '',
+        p_last_name: lastName ?? '',
+        p_user_role: role || 'user',   // Changé de p_role à p_user_role
+      });
+      if (error) {
+        console.error('Registration error:', error);
+        return { error: error.message || 'Registration failed' };
       }
-      const authUser = signUpData.user!;
-      // Create users row
-      const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || null;
-      await supabase.from('users').upsert({
-        id: authUser.id,
-        email,
-        first_name: firstName ?? null,
-        last_name: lastName ?? null,
-        name: fullName,
-        role,
-        status: 'active',
-      }, { onConflict: 'id' });
+      
+      // Handle case where function might return empty array
+      if (!data || (Array.isArray(data) && data.length === 0)) {
+        return { error: 'Registration failed - no user returned' };
+      }
 
-      // Auto set context (user will still need email confirmation if configured)
+      const u = Array.isArray(data) ? data[0] : data;
       const baseUser: AppUser = {
-        id: authUser.id,
-        email,
-        firstName: firstName,
-        lastName: lastName,
-        name: fullName || undefined,
-        role,
-        status: 'active',
+        id: u.id,
+        email: u.email,
+        firstName: u.first_name || undefined,
+        lastName: u.last_name || undefined,
+        name: u.name || (([firstName, lastName].filter(Boolean).join(' ')) || undefined),
+        role: (u.role as UserRole) || 'user',
+        status: (u.status as any) || 'active',
       };
       setUser(baseUser);
       setRoleLoaded(true);
       safelyPersistUserToLocalStorage(baseUser);
+      return { success: true };
     } catch (e: any) {
+      console.error('Registration exception:', e);
       return { error: e?.message ?? 'Registration failed' };
     }
   }, []);
@@ -268,7 +295,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (res && 'error' in res) {
       return { ok: false, message: res.error };
     }
-    return { ok: true, needsEmailConfirm: false };
+    return { ok: true, needsEmailConfirm: false }; // Custom auth doesn't use email confirmation
   }, [register]);
 
   const resetPassword = useCallback(async (_email: string) => {
@@ -336,7 +363,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signUp,
       resetPassword,
     };
-  }, [user, isAuthLoading, roleLoaded, login, register, logout, refresh, updateUser]);
+  }, [user, isAuthLoading, roleLoaded, login, register, logout, refresh, updateUser, loginWithEmail, signUp, resetPassword]);
 
   return (
     <AuthContext.Provider value={value}>

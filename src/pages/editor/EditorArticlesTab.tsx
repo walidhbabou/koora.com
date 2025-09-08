@@ -110,9 +110,7 @@ const EditorArticlesTab: React.FC<EditorArticlesTabProps> = ({
                     <Button variant="outline" size="sm" onClick={() => openEdit(article)}>
                       <EditIcon className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setConfirmDeleteId(article.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  
                     {article.status === 'rejected' && (
                       <Badge variant="destructive">{currentLanguage === 'ar' ? 'مرفوض' : 'Rejeté'}</Badge>
                     )}

@@ -20,9 +20,6 @@ import {
   Settings,
   MessageSquare,
   Shield,
-  Camera,
-  Lock,
-  Save,
   Activity
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,7 +31,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useLanguage } from '@/contexts/LanguageContext';
 import EditorOverviewTab from './editor/EditorOverviewTab';
 import EditorArticlesTab from './editor/EditorArticlesTab';
-import AuthorProfileTab from './author/AuthorProfileTab';
+import EditorProfileTab from './editor/EditorProfileTab';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -62,10 +59,12 @@ interface Last24NewsRow {
   created_at: string;
   status: string | null;
   author?: string | null;
+  image_url?: string | null;
+  content?: string;
 }
 
 const EditorDashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { currentLanguage, isRTL, direction } = useLanguage();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
@@ -93,10 +92,12 @@ const EditorDashboard: React.FC = () => {
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
+  const [newChampionId, setNewChampionId] = useState<number | null>(null);
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
   const [categories, setCategories] = useState<{id:number,name:string,name_ar:string}[]>([]);
+  const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
   const newQuillRef = useRef<ReactQuill | null>(null);
   const buildModules = (ref: React.RefObject<ReactQuill>) => ({
     toolbar: {
@@ -115,22 +116,6 @@ const EditorDashboard: React.FC = () => {
   });
   const newModules = useMemo(() => buildModules(newQuillRef), [isRTL, currentLanguage]);
 
-  // Profile editing state
-  const [myProfile, setMyProfile] = useState<Record<string, any> | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
-    name: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
-  const [profileError, setProfileError] = useState('');
-  const [profileSuccess, setProfileSuccess] = useState('');
 
   const fetchArticles = async () => {
     setLoading(true);
@@ -172,7 +157,7 @@ const EditorDashboard: React.FC = () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('news')
-        .select('id, title, created_at, status, users(name)')
+        .select('id, title, created_at, status, image_url, content, users(name)')
         .eq('status', 'published')
         .gte('created_at', since)
         .order('created_at', { ascending: false });
@@ -183,6 +168,8 @@ const EditorDashboard: React.FC = () => {
         created_at: n.created_at,
         status: n.status || 'published',
         author: n.users?.name || null,
+        image_url: n.image_url || null,
+        content: n.content || '',
       }));
       setLast24News(mapped);
     } catch (e) {
@@ -217,64 +204,20 @@ const EditorDashboard: React.FC = () => {
       setCategories(data || []);
     } catch (e) { console.error('load categories failed', e); }
   };
-  useEffect(() => { fetchCategories(); }, []);
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (activeTab !== 'profile' || !user?.id) return;
-      setLoadingProfile(true);
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (!error && data) {
-          setMyProfile(data);
-          setProfileForm({
-            name: data.name || '',
-            firstName: data.first_name || (data as any).firstName || '',
-            lastName: data.last_name || (data as any).lastName || '',
-            email: data.email || '',
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: ''
-          });
-        } else {
-          const minimal = {
-            id: user.id,
-            email: user.email,
-            name: user.name ?? [user.firstName, user.lastName].filter(Boolean).join(' '),
-            first_name: user.firstName ?? null,
-            last_name: user.lastName ?? null,
-            role: (user as any).role,
-            status: (user as any).status,
-            avatar_url: null as string | null,
-          };
-          const { data: inserted, error: upErr } = await supabase
-            .from('users')
-            .upsert(minimal, { onConflict: 'id' })
-            .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
-            .single();
-          if (!upErr && inserted) {
-            setMyProfile(inserted);
-            setProfileForm({
-              name: inserted.name || '',
-              firstName: inserted.first_name || '',
-              lastName: inserted.last_name || '',
-              email: inserted.email || '',
-              currentPassword: '',
-              newPassword: '',
-              confirmPassword: ''
-            });
-          }
-        }
-      } finally {
-        setLoadingProfile(false);
-      }
-    };
-    loadProfile();
-  }, [activeTab, user?.id]);
+  const fetchChampions = async () => {
+    try {
+      const { data, error } = await supabase.from('champions').select('id, nom, nom_ar').order('id');
+      if (error) throw error;
+      setChampions(data || []);
+    } catch (e) { console.error('load champions failed', e); }
+  };
+
+  useEffect(() => { 
+    fetchCategories(); 
+    fetchChampions();
+  }, []);
+
 
   useEffect(() => {
     fetchArticles();
@@ -424,12 +367,16 @@ const EditorDashboard: React.FC = () => {
     setNewTitle('');
     setNewContent('');
     setNewCategoryId(null);
+    setNewChampionId(null);
     setNewImageFile(null);
     setCreateError('');
   };
 
   const handleCreate = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setCreateError(currentLanguage === 'ar' ? 'يجب تسجيل الدخول أولاً' : 'Vous devez être connecté');
+      return;
+    }
     setCreateError('');
     if (!newTitle || !newContent) {
       setCreateError(currentLanguage === 'ar' ? 'أدخل العنوان والمحتوى' : 'Entrez le titre et le contenu');
@@ -442,232 +389,94 @@ const EditorDashboard: React.FC = () => {
     setCreating(true);
     try {
       const imageUrl = await uploadNewImageIfAny();
-      const payload: any = {
-        title: newTitle,
-        content: newContent,
-        status: 'published',
-        image_url: imageUrl ?? null,
-        category_id: newCategoryId,
-      };
-      console.debug('Editor create news payload (no user_id):', payload);
-      const { error } = await supabase.from('news').insert(payload).select();
-      if (error) throw error;
+      
+      // Essayer d'abord la fonction RPC create_news
+      try {
+        const { error } = await supabase.rpc('create_news', {
+          p_user_id: user.id,
+          p_title: newTitle,
+          p_content: newContent,
+          p_status: 'published',
+          p_image_url: imageUrl ?? null,
+          p_category_id: newCategoryId,
+          p_champion_id: newChampionId,
+        });
+        
+        if (error) {
+          console.error('Supabase RPC error details:', error);
+          throw error;
+        }
+      } catch (rpcErr: any) {
+        // Si la fonction RPC n'existe pas ou échoue, utiliser l'insertion directe avec user_id
+        console.log('RPC failed, trying direct insert:', rpcErr);
+        const { error } = await supabase.from('news').insert({
+          title: newTitle,
+          content: newContent,
+          status: 'published',
+          image_url: imageUrl ?? null,
+          category_id: newCategoryId,
+          champion_id: newChampionId,
+          user_id: user.id, // Inclure explicitement user_id
+        }).select();
+        
+        if (error) {
+          console.error('Direct insert error details:', error);
+          throw error;
+        }
+      }
+      
       setIsCreateOpen(false);
       resetCreateForm();
       await fetchArticles();
       setActiveTab('articles');
       toast({ title: currentLanguage === 'ar' ? 'تم النشر' : 'Publié', description: currentLanguage === 'ar' ? 'تم إضافة مقال جديد' : 'Nouvel article publié' });
     } catch (e: any) {
+      console.error('Erreur lors de la création:', e);
       setCreateError(e?.message || (currentLanguage === 'ar' ? 'فشل الإنشاء' : 'Échec de la création'));
     } finally {
       setCreating(false);
     }
   };
 
-  // Profile update functions
-  const handleProfileUpdate = async () => {
-    setProfileError('');
-    setProfileSuccess('');
-    setEditingProfile(true);
-    
-    try {
-      if (!user?.id) {
-        setProfileError(currentLanguage === 'ar' ? 'جلسة غير صالحة' : 'Session invalide');
-        return;
-      }
 
-      // Validate password change if requested
-      if (profileForm.newPassword) {
-        if (profileForm.newPassword !== profileForm.confirmPassword) {
-          setProfileError(currentLanguage === 'ar' ? 'كلمات المرور غير متطابقة' : 'Les mots de passe ne correspondent pas');
-          return;
-        }
-        if (profileForm.newPassword.length < 6) {
-          setProfileError(currentLanguage === 'ar' ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : 'Le mot de passe doit contenir au moins 6 caractères');
-          return;
-        }
-      }
-
-      let avatarUrl = myProfile?.avatar_url;
-      
-      // Upload new profile image if provided
-      if (profileImageFile) {
-        const ext = profileImageFile.name.split('.').pop();
-        const filePath = `users/${user.id}/avatar_${Date.now()}.${ext}`;
-        const bucket = (import.meta as any).env?.VITE_SUPABASE_AVATAR_BUCKET || 'avatars';
-        const { error: upErr } = await supabase
-          .storage
-          .from(bucket)
-          .upload(filePath, profileImageFile, { upsert: true, cacheControl: '3600' });
-        if (upErr) {
-          const msg = String(upErr.message || '');
-          if (msg.toLowerCase().includes('bucket not found')) {
-            throw new Error(currentLanguage === 'ar'
-              ? 'لم يتم العثور على حاوية الصور "avatars". أنشئها واجعلها عامة أو حدّد VITE_SUPABASE_AVATAR_BUCKET.'
-              : "Bucket de stockage 'avatars' introuvable. Créez-le (public) ou définissez VITE_SUPABASE_AVATAR_BUCKET.");
-          }
-          throw upErr;
-        }
-        const { data: pub } = supabase.storage.from(bucket).getPublicUrl(filePath);
-        avatarUrl = pub?.publicUrl;
-      }
-
-      // Update profile information
-      const updateData: any = {
-        name: profileForm.name,
-        first_name: profileForm.firstName,
-        last_name: profileForm.lastName,
-      };
-      
-      if (avatarUrl !== myProfile?.avatar_url) {
-        updateData.avatar_url = avatarUrl;
-      }
-
-      // Try update; if name is immutable (generated), retry without name; if RLS/session issue, use RPC fallback
-      let { error: updateErr } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', user.id);
-      if (updateErr) {
-        const msg = String(updateErr.message || '');
-        const immutableName = msg.includes('can only be updated to DEFAULT') || msg.toLowerCase().includes('generated');
-        if (immutableName) {
-          const { name, ...rest } = updateData;
-          const { error: e2 } = await supabase
-            .from('users')
-            .update(rest)
-            .eq('id', user.id);
-          if (e2) {
-            updateErr = e2;
-          } else {
-            updateErr = null as any;
-          }
-        }
-      }
-      if (updateErr) {
-        // RPC fallback when no auth session or RLS blocks
-        try {
-          const { data: sessionRes } = await supabase.auth.getSession();
-          const hasAuthSession = !!sessionRes?.session;
-          const msg = String(updateErr.message || '').toLowerCase();
-          const rlsViolation = msg.includes('row-level security') || msg.includes('rls');
-          if (!hasAuthSession || rlsViolation) {
-            const email = myProfile?.email || (user as any)?.email;
-            const { error: rpcErr } = await supabase.rpc('app_update_user_profile', {
-              p_email: email,
-              p_password: profileForm.currentPassword || null,
-              p_name: updateData.name ?? null,
-              p_first_name: updateData.first_name ?? null,
-              p_last_name: updateData.last_name ?? null,
-              p_avatar_url: updateData.avatar_url ?? null,
-            });
-            if (rpcErr) throw rpcErr;
-          } else {
-            throw updateErr;
-          }
-        } catch (e: any) {
-          const hint = String(e?.message || '').includes('function app_update_user_profile')
-            ? (currentLanguage === 'ar' ? 'أنشئ دالة RPC app_update_user_profile في Supabase' : 'Créez la fonction RPC app_update_user_profile dans Supabase')
-            : '';
-          throw new Error(`${e?.message || updateErr?.message || ''} ${hint}`.trim());
-        }
-      }
-
-      // Update password if requested
-      if (profileForm.newPassword) {
-        const { data: sessionRes } = await supabase.auth.getSession();
-        const hasAuthSession = !!sessionRes?.session;
-        if (hasAuthSession) {
-          const { error: pwErr } = await supabase.auth.updateUser({ password: profileForm.newPassword });
-          if (pwErr) throw pwErr;
-        } else {
-          const email = myProfile?.email || (user as any)?.email;
-          const { error: pwRpcErr } = await supabase.rpc('app_change_password', {
-            p_email: email,
-            p_current_password: profileForm.currentPassword,
-            p_new_password: profileForm.newPassword,
-          });
-          if (pwRpcErr) throw pwRpcErr;
-        }
-      }
-
-      setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي بنجاح' : 'Profil mis à jour avec succès');
-      setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
-      setProfileImageFile(null);
-      
-      // Refresh profile data
-      if (activeTab === 'profile') {
-        const { data } = await supabase
-          .from('users')
-          .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (data) setMyProfile(data);
-      }
-      
-    } catch (e: any) {
-      setProfileError(e?.message || (currentLanguage === 'ar' ? 'فشل في تحديث الملف الشخصي' : 'Échec de mise à jour du profil'));
-    } finally {
-      setEditingProfile(false);
-    }
-  };
 
   const deleteArticle = async (id: string) => {
     try {
-      // S'assurer que l'utilisateur est connecté
-      if (!user?.id) {
-        throw new Error(currentLanguage === 'ar' ? 'يجب تسجيل الدخول أولاً' : 'Vous devez être connecté');
-      }
-
-      console.log('Tentative de suppression:', { articleId: id, userId: user.id, userRole: (user as any)?.role });
-
-      // 1) Essayer via RPC (SECURITY DEFINER) pour éviter les rejets RLS côté client
-      const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_news_submission', {
-        submission_id: Number(id),
-        current_user_id: user.id,
-        current_user_role: (user as any)?.role || 'editor'
-      });
-      if (!rpcErr) {
-        const ok = Boolean(rpcRes);
-        if (!ok) throw new Error(currentLanguage === 'ar' ? 'غير مصرح بالحذف أو السجل غير موجود' : 'Suppression non autorisée ou enregistrement introuvable');
-        await fetchArticles();
-        toast({ 
-          title: currentLanguage === 'ar' ? 'تم الحذف' : 'Supprimé', 
-          description: currentLanguage === 'ar' ? 'تم حذف المقال بنجاح' : 'Article supprimé avec succès' 
-        });
-        return;
-      }
-
-      // 2) Repli: suppression directe (RLS) si RPC indisponible
-      const { data, error } = await supabase
+      console.log('🔍 Tentative de suppression - ID:', id);
+  
+      // Supprimer d'abord de news_submissions (table principale)
+      const { error: subError, count: subCount } = await supabase
         .from('news_submissions')
-        .delete()
-        .eq('id', Number(id))
-        .select();
-
-      if (error) {
-        console.error('Delete error:', error);
-        throw new Error(error.message);
+        .delete({ count: 'exact' })
+        .eq('id', Number(id));
+  
+      if (subError) {
+        console.log('❌ Erreur news_submissions:', subError);
+        // Essayer news si news_submissions échoue
+        const { error: newsError, count: newsCount } = await supabase
+          .from('news')
+          .delete({ count: 'exact' })
+          .eq('id', Number(id));
+  
+        if (newsError) throw newsError;
+        if (!newsCount || newsCount === 0) {
+          throw new Error(currentLanguage === 'ar' ? 
+            'لم يتم العثور على المقال' : 
+            'Article non trouvé');
+        }
       }
-
-      if (!data || data.length === 0) {
-        throw new Error(currentLanguage === 'ar' ? 'لم يتم العثور على المقال أو ليس لديك صلاحية لحذفه' : 'Article introuvable ou permissions insuffisantes');
-      }
-      
+  
       await fetchArticles();
       toast({ 
         title: currentLanguage === 'ar' ? 'تم الحذف' : 'Supprimé', 
         description: currentLanguage === 'ar' ? 'تم حذف المقال بنجاح' : 'Article supprimé avec succès' 
       });
+  
     } catch (e: any) {
-      console.error('delete failed', e);
-      const msg = e?.message || '';
-      const errorMessage = msg.includes('PGRST116')
-        ? (currentLanguage === 'ar' ? 'رفض RLS: تحقق من الأذونات والجلسة' : 'Refus RLS: vérifiez permissions et session')
-        : (msg || (currentLanguage === 'ar' ? 'فشل في حذف المقال' : 'Échec de la suppression'));
+      console.error('❌ Échec suppression:', e);
       toast({ 
         title: currentLanguage === 'ar' ? 'فشل الحذف' : 'Échec de suppression', 
-        description: errorMessage, 
+        description: e?.message || (currentLanguage === 'ar' ? 'فشل في حذف المقال' : 'Échec de la suppression'), 
         variant: 'destructive' 
       });
     }
@@ -769,42 +578,86 @@ const EditorDashboard: React.FC = () => {
                 ) : last24News.length === 0 ? (
                   <div className="text-sm text-muted-foreground">{currentLanguage === 'ar' ? 'لا توجد أخبار حديثة' : 'Aucune actualité récente'}</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead>
-                        <tr className="text-left border-b">
-                          <th className="py-2 px-3">ID</th>
-                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</th>
-                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'الكاتب' : 'Auteur'}</th>
-                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'التاريخ' : 'Date'}</th>
-                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'الحالة' : 'Statut'}</th>
-                          <th className="py-2 px-3">{currentLanguage === 'ar' ? 'إجراءات' : 'Actions'}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {last24News.map((n) => (
-                          <tr key={String(n.id)} className="border-b hover:bg-slate-50">
-                            <td className="py-2 px-3 whitespace-nowrap">{n.id}</td>
-                            <td className="py-2 px-3 min-w-[240px]">{n.title}</td>
-                            <td className="py-2 px-3 whitespace-nowrap">{n.author || '-'}</td>
-                            <td className="py-2 px-3 whitespace-nowrap">{n.created_at ? new Date(n.created_at).toLocaleString() : ''}</td>
-                            <td className="py-2 px-3 whitespace-nowrap">
-                              <Badge variant="secondary">{n.status || 'published'}</Badge>
-                            </td>
-                            <td className="py-2 px-3 whitespace-nowrap flex items-center gap-2">
-                              <Button variant="outline" size="sm" onClick={() => navigate(`/news/${n.id}`)}>
-                                {currentLanguage === 'ar' ? 'عرض' : 'Voir'}
-                              </Button>
-                              {(['moderator','admin'].includes(String((user as any)?.role || '')) ) && (
-                                <Button variant="destructive" size="sm" onClick={() => deletePublishedNews(n.id)}>
-                                  {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {last24News.map((n, index) => {
+                      // Créer un résumé du contenu
+                      const stripHtml = (html: string) =>
+                        html
+                          .replace(/<[^>]*>/g, ' ')
+                          .replace(/&nbsp;/gi, ' ')
+                          .replace(/&amp;/gi, '&')
+                          .replace(/&lt;/gi, '<')
+                          .replace(/&gt;/gi, '>')
+                          .replace(/\s+/g, ' ')
+                          .trim();
+                      
+                      const summary = stripHtml(n.content || '').slice(0, 120) + (stripHtml(n.content || '').length > 120 ? '...' : '');
+                      
+                      return (
+                        <div key={String(n.id)} className="bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden group">
+                          {/* Image */}
+                          <div className="relative h-48 overflow-hidden">
+                            {n.image_url ? (
+                              <img 
+                                src={n.image_url} 
+                                alt={n.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                                <Image className="w-16 h-16 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="absolute top-3 left-3">
+                              <Badge variant="secondary" className="bg-white/90 text-slate-700">
+                                {n.created_at ? new Date(n.created_at).toLocaleDateString('ar-SA') : ''}
+                              </Badge>
+                            </div>
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="p-4">
+                            <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {n.title}
+                            </h3>
+                            
+                            {summary && (
+                              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-3">
+                                {summary}
+                              </p>
+                            )}
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-xs text-slate-500">
+                                <User className="w-4 h-4" />
+                                <span>{n.author || 'غير محدد'}</span>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => navigate(`/news/${n.id}`)}
+                                  className="text-xs"
+                                >
+                                  {currentLanguage === 'ar' ? 'عرض' : 'Voir'}
                                 </Button>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                                {(['moderator','admin'].includes(String((user as any)?.role || ''))) && (
+                                  <Button 
+                                    variant="destructive" 
+                                    size="sm" 
+                                    onClick={() => deleteArticle(String(n.id))}
+                                    className="text-xs"
+                                  >
+                                    {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -896,38 +749,95 @@ const EditorDashboard: React.FC = () => {
 
             {/* Create Article Dialog */}
             <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); } }}>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>{currentLanguage === 'ar' ? 'مقال جديد' : 'Nouvel Article'}</DialogTitle>
-                  <DialogDescription>
+              <DialogContent className="w-[98vw] sm:w-[95vw] md:w-[85vw] lg:w-[75vw] xl:w-[65vw] 2xl:w-[55vw] max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+                <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700">
+                  <DialogTitle className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                    {currentLanguage === 'ar' ? 'مقال جديد' : 'Nouvel Article'}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
                     {currentLanguage === 'ar' ? 'أنشئ مقالك وانشره مباشرة' : 'Créez votre article et publiez-le immédiatement'}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</label>
-                    <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+                
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
+                  {/* Title Section */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'العنوان' : 'Titre'} <span className="text-red-500">*</span>
+                    </label>
+                    <Input 
+                      value={newTitle} 
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      placeholder={currentLanguage === 'ar' ? 'أدخل عنوان المقال...' : 'Entrez le titre de l\'article...'}
+                      className="w-full text-base h-12 border-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}</label>
-                    <select
-                      value={newCategoryId ?? ''}
-                      onChange={(e) => setNewCategoryId(e.target.value ? Number(e.target.value) : null)}
-                      className="w-full border rounded-md p-2 bg-white"
-                    >
-                      <option value="">{currentLanguage === 'ar' ? 'اختر فئة' : 'Choisir une catégorie'}</option>
-                      {categories.map(c => (
-                        <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.name_ar || c.name) : c.name}</option>
-                      ))}
-                    </select>
+
+                  {/* Category and Championship Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'} <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={newCategoryId ?? ''}
+                        onChange={(e) => setNewCategoryId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full h-12 border-2 border-gray-300 rounded-lg px-3 bg-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                      >
+                        <option value="">{currentLanguage === 'ar' ? 'اختر فئة' : 'Choisir une catégorie'}</option>
+                        {categories.map(c => (
+                          <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.name_ar || c.name) : c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        {currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}
+                      </label>
+                      <select
+                        value={newChampionId ?? ''}
+                        onChange={(e) => setNewChampionId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full h-12 border-2 border-gray-300 rounded-lg px-3 bg-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                      >
+                        <option value="">{currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'}</option>
+                        {champions.map(c => (
+                          <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.nom_ar || c.nom) : c.nom}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الصورة' : 'Image'}</label>
-                    <input type="file" accept="image/*" onChange={(e) => setNewImageFile(e.target.files?.[0] || null)} />
+
+                  {/* Image Upload Section */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'الصورة' : 'Image'}
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => setNewImageFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label htmlFor="image-upload" className="cursor-pointer block">
+                        <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400 hover:text-blue-500 transition-colors" />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                          {newImageFile ? newImageFile.name : (currentLanguage === 'ar' ? 'انقر لاختيار صورة' : 'Cliquez pour choisir une image')}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {currentLanguage === 'ar' ? 'PNG, JPG, GIF jusqu\'à 10MB' : 'PNG, JPG, GIF up to 10MB'}
+                        </p>
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}</label>
-                    <div className="border rounded-md">
+
+                  {/* Content Editor Section */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'} <span className="text-red-500">*</span>
+                    </label>
+                    <div className="border-2 border-gray-300 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200">
                       <ReactQuill
                         ref={newQuillRef as any}
                         theme="snow"
@@ -935,17 +845,52 @@ const EditorDashboard: React.FC = () => {
                         onChange={setNewContent}
                         placeholder={currentLanguage === 'ar' ? 'اكتب المحتوى هنا...' : 'Écrivez le contenu ici...'}
                         modules={newModules}
-                        className={isRTL ? 'rtl' : 'ltr'}
+                        className={`${isRTL ? 'rtl' : 'ltr'} min-h-[300px]`}
+                        style={{ height: '300px' }}
                       />
                     </div>
                   </div>
-                  {createError && <p className="text-sm text-red-600">{createError}</p>}
-                  <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
-                    <Button variant="outline" onClick={() => { setIsCreateOpen(false); }}>{currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}</Button>
-                    <Button className="bg-blue-600 hover:bg-blue-700" disabled={creating} onClick={handleCreate}>
-                      {creating ? (currentLanguage === 'ar' ? 'نشر...' : 'Publication...') : (currentLanguage === 'ar' ? 'نشر' : 'Publier')}
-                    </Button>
-                  </div>
+
+                  {/* Error Message */}
+                  {createError && (
+                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-red-600 font-medium">{createError}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className={`flex-shrink-0 flex ${isRTL ? 'justify-start' : 'justify-end'} gap-3 px-6 py-4 border-t bg-gray-50 dark:bg-slate-800`}>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => { setIsCreateOpen(false); }}
+                    className="min-w-[120px] h-11 text-base font-medium"
+                  >
+                    {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
+                  </Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 min-w-[120px] h-11 text-base font-medium" 
+                    disabled={creating} 
+                    onClick={handleCreate}
+                  >
+                    {creating ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        {currentLanguage === 'ar' ? 'نشر...' : 'Publication...'}
+                      </div>
+                    ) : (
+                      currentLanguage === 'ar' ? 'نشر' : 'Publier'
+                    )}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -970,7 +915,7 @@ const EditorDashboard: React.FC = () => {
 
           {/* Profile Tab */}
           <TabsContent value="profile" className="space-y-6">
-            <AuthorProfileTab />
+            <EditorProfileTab />
           </TabsContent>
 
           {/* Analytics Tab */}

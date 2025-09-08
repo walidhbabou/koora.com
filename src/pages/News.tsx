@@ -56,6 +56,29 @@ const News = () => {
   const [reportDesc, setReportDesc] = useState('');
   const [categories, setCategories] = useState<DisplayCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [champions, setChampions] = useState<{id: number, nom: string, nom_ar?: string}[]>([]);
+  const [selectedChampion, setSelectedChampion] = useState<number | null>(null);
+
+  // Fetch champions from Supabase
+  useEffect(() => {
+    const fetchChampions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('champions')
+          .select('id, nom, nom_ar')
+          .order('id');
+        
+        if (error) throw error;
+        setChampions(data || []);
+        // Debug: Log champions to help with mapping
+        console.log('Available champions:', data);
+      } catch (error) {
+        console.error('Error fetching champions:', error);
+      }
+    };
+    
+    fetchChampions();
+  }, []);
 
   // Fetch categories from Supabase
   useEffect(() => {
@@ -69,21 +92,33 @@ const News = () => {
         if (categoriesError) throw categoriesError;
         
         // Get total count for all news
-        const { count: totalCount, error: totalCountError } = await supabase
+        let totalCountQuery = supabase
           .from('news')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'published');
+        
+        if (selectedChampion) {
+          totalCountQuery = totalCountQuery.eq('champion_id', selectedChampion);
+        }
+        
+        const { count: totalCount, error: totalCountError } = await totalCountQuery;
         
         if (totalCountError) throw totalCountError;
         
         // Get counts per category
         const categoriesWithCounts = await Promise.all(
           (categoriesData || []).map(async (cat) => {
-            const { count, error: countError } = await supabase
+            let countQuery = supabase
               .from('news')
               .select('*', { count: 'exact', head: true })
               .eq('status', 'published')
               .eq('category_id', cat.id);
+            
+            if (selectedChampion) {
+              countQuery = countQuery.eq('champion_id', selectedChampion);
+            }
+            
+            const { count, error: countError } = await countQuery;
             
             if (countError) throw countError;
             return {
@@ -117,7 +152,7 @@ const News = () => {
     };
     
     fetchCategories();
-  }, [currentLanguage, selectedCategory]);
+  }, [currentLanguage, selectedCategory, selectedChampion]);
 
   const fetchNews = async (nextPage: number, append: boolean = false) => {
     setLoadingNews(true);
@@ -131,6 +166,10 @@ const News = () => {
       
       if (selectedCategory) {
         query = query.eq('category_id', selectedCategory);
+      }
+      
+      if (selectedChampion) {
+        query = query.eq('champion_id', selectedChampion);
       }
       
       const { data, count, error } = await query;
@@ -229,8 +268,29 @@ const News = () => {
     fetchNews(1);
   };
 
+  const handleChampionClick = (championId: number | null) => {
+    setSelectedChampion(championId);
+    setSelectedCategory(null); // Reset category when changing champion
+    setPage(1);
+    setAllNews([]);
+    fetchNews(1);
+  };
+
   // Trending topics derived from latest news titles
   const trendingTopics = allNews.slice(0, 5).map(n => n.title);
+
+  // Mapping between league IDs and champion IDs
+  // IMPORTANT: You need to adjust these IDs based on your actual champions table
+  // Check the console.log output to see available champions and their IDs
+  // Then update this mapping accordingly
+  const leagueToChampionMap: { [key: number]: number } = {
+    [MAIN_LEAGUES.CHAMPIONS_LEAGUE]: 1, // UEFA Champions League -> champion_id = 1
+    [MAIN_LEAGUES.PREMIER_LEAGUE]: 2,   // Premier League -> champion_id = 2
+    [MAIN_LEAGUES.LA_LIGA]: 3,          // La Liga -> champion_id = 3
+    [MAIN_LEAGUES.SERIE_A]: 4,          // Serie A -> champion_id = 4
+    [MAIN_LEAGUES.BUNDESLIGA]: 5,       // Bundesliga -> champion_id = 5
+    [MAIN_LEAGUES.LIGUE_1]: 6,          // Ligue 1 -> champion_id = 6
+  };
 
   // Leagues list (left sidebar) localized, consistent with Standings.tsx
   const leagues = [
@@ -238,31 +298,37 @@ const News = () => {
       id: MAIN_LEAGUES.CHAMPIONS_LEAGUE,
       name: currentLanguage === 'ar' ? 'دوري أبطال أوروبا' : 'Champions League',
       logo: 'https://media.api-sports.io/football/leagues/2.png',
+      championId: leagueToChampionMap[MAIN_LEAGUES.CHAMPIONS_LEAGUE],
     },
     {
       id: MAIN_LEAGUES.PREMIER_LEAGUE,
       name: currentLanguage === 'ar' ? 'الدوري الإنجليزي الممتاز' : 'Premier League',
       logo: 'https://media.api-sports.io/football/leagues/39.png',
+      championId: leagueToChampionMap[MAIN_LEAGUES.PREMIER_LEAGUE],
     },
     {
       id: MAIN_LEAGUES.LA_LIGA,
       name: currentLanguage === 'ar' ? 'الدوري الإسباني الممتاز' : 'La Liga',
       logo: 'https://media.api-sports.io/football/leagues/140.png',
+      championId: leagueToChampionMap[MAIN_LEAGUES.LA_LIGA],
     },
     {
       id: MAIN_LEAGUES.SERIE_A,
       name: currentLanguage === 'ar' ? 'الدوري الإيطالي الممتاز' : 'Serie A',
       logo: 'https://media.api-sports.io/football/leagues/135.png',
+      championId: leagueToChampionMap[MAIN_LEAGUES.SERIE_A],
     },
     {
       id: MAIN_LEAGUES.BUNDESLIGA,
       name: currentLanguage === 'ar' ? 'الدوري الألماني الممتاز' : 'Bundesliga',
       logo: 'https://media.api-sports.io/football/leagues/78.png',
+      championId: leagueToChampionMap[MAIN_LEAGUES.BUNDESLIGA],
     },
     {
       id: MAIN_LEAGUES.LIGUE_1,
       name: currentLanguage === 'ar' ? 'الدوري الفرنسي الممتاز' : 'Ligue 1',
       logo: 'https://media.api-sports.io/football/leagues/61.png',
+      championId: leagueToChampionMap[MAIN_LEAGUES.LIGUE_1],
     },
   ];
 
@@ -275,13 +341,32 @@ const News = () => {
           {/* Left Sidebar (Leagues) */}
           <div className="hidden lg:block w-80 space-y-6">
             <Card className="p-6">
-              <h3 className="text-lg font-bold text-sport-dark mb-4">البطولات</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-sport-dark">البطولات</h3>
+                {selectedChampion && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleChampionClick(null)}
+                    className="text-xs"
+                  >
+                    {currentLanguage === 'ar' ? 'إلغاء التصفية' : 'Clear Filter'}
+                  </Button>
+                )}
+              </div>
               <ul className="space-y-3">
                 {leagues.map((l, i) => (
                   <li key={i}>
-                    <div className={`flex items-center justify-between rounded-2xl bg-white dark:bg-[#181a20] border border-gray-100 dark:border-[#23262f] px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div 
+                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''} ${
+                        selectedChampion === l.championId 
+                          ? 'bg-sport-green text-white border-sport-green' 
+                          : 'bg-white dark:bg-[#181a20] border-gray-100 dark:border-[#23262f]'
+                      }`}
+                      onClick={() => handleChampionClick(l.championId)}
+                    >
                       {/* Chevron */}
-                      <div className={`shrink-0 text-gray-400`}>
+                      <div className={`shrink-0 ${selectedChampion === l.championId ? 'text-white' : 'text-gray-400'}`}>
                         {isRTL ? (
                           <ChevronRight className="w-4 h-4" />
                         ) : (
@@ -290,7 +375,9 @@ const News = () => {
                       </div>
                       {/* Name */}
                       <div className={`flex-1 ${isRTL ? 'text-right pr-3' : 'text-left pl-3'}`}>
-                        <div className="text-sm font-medium text-gray-800 dark:text-gray-100">{l.name}</div>
+                        <div className={`text-sm font-medium ${selectedChampion === l.championId ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
+                          {l.name}
+                        </div>
                       </div>
                       {/* Logo */}
                       <div className="shrink-0">
@@ -307,21 +394,44 @@ const News = () => {
            
 
             {/* Categories */}
-            <div className="flex flex-wrap gap-2">
-              {categories.map((category, index) => (
-                <Badge 
-                  key={index}
-                  variant={category.active ? "default" : "secondary"}
-                  className={`cursor-pointer px-4 py-2 ${
-                    category.active 
-                      ? "bg-sport-green text-white" 
-                      : "hover:bg-sport-green/10"
-                  }`}
-                  onClick={() => handleCategoryClick(category.id)}
-                >
-                  {category.name} ({category.count})
-                </Badge>
-              ))}
+            <div className="space-y-4">
+              {selectedChampion && (
+                <div className="flex items-center gap-2 p-3 bg-sport-green/10 rounded-lg border border-sport-green/20">
+                  <div className="w-2 h-2 bg-sport-green rounded-full"></div>
+                  <span className="text-sm font-medium text-sport-green">
+                    {currentLanguage === 'ar' ? 'تصفية حسب البطولة:' : 'Filtered by league:'} {
+                      champions.find(c => c.id === selectedChampion)?.nom_ar || 
+                      champions.find(c => c.id === selectedChampion)?.nom || 
+                      'Unknown'
+                    }
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleChampionClick(null)}
+                    className="text-sport-green hover:bg-sport-green/20 ml-auto"
+                  >
+                    ✕
+                  </Button>
+                </div>
+              )}
+              
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category, index) => (
+                  <Badge 
+                    key={index}
+                    variant={category.active ? "default" : "secondary"}
+                    className={`cursor-pointer px-4 py-2 ${
+                      category.active 
+                        ? "bg-sport-green text-white" 
+                        : "hover:bg-sport-green/10"
+                    }`}
+                    onClick={() => handleCategoryClick(category.id)}
+                  >
+                    {category.name} ({category.count})
+                  </Badge>
+                ))}
+              </div>
             </div>
 
             {/* Featured News (hero + two cards) */}
