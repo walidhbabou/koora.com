@@ -64,16 +64,16 @@ const Header = () => {
               >
                 <div className="flex items-center space-x-2 transition-all duration-300 group-hover:opacity-90 group-hover:scale-[1.02]">
                 
-                  <img 
-                    src="/black koora.png" 
-                    alt="Koora Logo" 
-                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain dark:hidden filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
-                  />
-                  <img 
-                    src="/kooralogo.png" 
-                    alt="Koora Logo" 
-                    className="w-36 h-12 sm:w-28 sm:h-10 object-contain hidden dark:block filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
-                  />
+                <img 
+                src="/black koora.png" 
+                alt="Koora Logo" 
+                className="w-36 h-12 sm:w-28 sm:h-10 object-contain dark:hidden"
+              />
+              <img 
+                src="/kooralogo.png" 
+                alt="Koora Logo" 
+                className="w-36 h-12 sm:w-28 sm:h-10 object-contain hidden dark:block"
+              />
                 </div>
               </div>
             </div>
@@ -119,7 +119,7 @@ const Header = () => {
                 variant="ghost"
                 size="icon"
                 aria-label="Search"
-                className="xl:hidden w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
+                className="xl:hidden w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
               >
                 <Search className="w-4 h-4" />
               </Button>
@@ -158,24 +158,16 @@ const Header = () => {
               >
                 {/* Logo principal - visible sur tous les écrans */}
                 <div className="flex items-center">
-                  <img 
-                    src="/black koora.png" 
-                    alt="Koora Logo" 
-                    className="h-13 sm:h-10 w-auto object-contain dark:hidden filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
-                  />
-                  <img 
-                    src="/kooralogo.png" 
-                    alt="Koora Logo" 
-                    className="h-13 sm:h-10 w-auto object-contain hidden dark:block filter drop-shadow-lg group-hover:drop-shadow-xl group-hover:brightness-110 transition-all duration-300"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
-                  />
+                <img 
+                src="/black koora.png" 
+                alt="Koora Logo" 
+                className="h-13 sm:h-10 w-auto object-contain dark:hidden"
+              />
+              <img 
+                src="/kooralogo.png" 
+                alt="Koora Logo" 
+                className="h-13 sm:h-10 w-auto object-contain hidden dark:block"
+              />
                 </div>
                 
                 {/* Texte du logo - visible sur écrans plus grands */}
@@ -195,9 +187,9 @@ const Header = () => {
                 size="icon"
                 aria-label="Search"
                 onClick={() => setMobileSearchOpen(true)}
-                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
+                className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
               >
-                <Search className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Search className="w-5 h-5 sm:w-5 sm:h-5" />
               </Button>
               
               {/* Admin Button - Mobile (show only from sm+) */}
