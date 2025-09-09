@@ -48,8 +48,8 @@ export default function DarkModeToggle({ variant = "standalone", size = "default
           dark:from-gray-800 dark:to-gray-800
           dark:hover:from-gray-700 dark:hover:to-gray-700
           border border-amber-200 dark:border-gray-600
-          transition-all duration-300 
-          hover:shadow-lg hover:scale-105
+          transition-opacity transition-colors duration-300 
+          hover:shadow-lg
           text-foreground hover:text-amber-600 dark:hover:text-blue-400
           backdrop-blur-sm
         `}
@@ -77,7 +77,7 @@ export default function DarkModeToggle({ variant = "standalone", size = "default
 
   return (
     <button
-      className="fixed top-4 right-4 z-50 p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+      className="fixed top-4 right-4 z-50 p-3 rounded-full bg-background/80 backdrop-blur-sm border border-border shadow-lg hover:shadow-xl transition-opacity transition-colors duration-300"
       onClick={toggleMode}
       aria-label={mode === "dark" ? "Activer le mode clair" : "Activer le mode sombre"}
     >

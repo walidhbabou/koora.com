@@ -158,17 +158,8 @@ const Header = () => {
       >
         <div className="flex items-center">
           {/* Logo clair */}
-          <img 
-            src="/black koora.png" 
-            alt="Koora Logo" 
-            className="h-10 w-auto object-contain dark:hidden"
-          />
-          {/* Logo sombre */}
-          <img 
-            src="/kooralogo.png" 
-            alt="Koora Logo" 
-            className="h-10 w-auto object-contain hidden dark:block"
-          />
+          <img src="/black koora.png" alt="Koora Logo" className="logo-header dark:hidden" />
+          <img src="/kooralogo.png" alt="Koora Logo" className="logo-header hidden dark:block" />
         </div>
         
         {/* Texte logo (seulement sur sm+) */}

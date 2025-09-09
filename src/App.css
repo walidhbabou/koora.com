@@ -54,6 +54,13 @@ a:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
+.logo-header {
+  width: 144px; /* équivalent à w-36 */
+  height: 48px; /* équivalent à h-12 */
+  object-fit: contain;
+  display: block;
+}
+
 @keyframes logo-spin {
   from {
     transform: rotate(0deg);
