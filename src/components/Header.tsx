@@ -137,70 +137,71 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Mobile Header */}
-      <header className="modern-header lg:hidden sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-700/60 shadow-sm">
-        <div className="container mx-auto px-2 sm:px-3">
-          <div className={`flex items-center justify-between h-16 sm:h-18 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            {/* Logo */}
-            <div className={`flex items-center flex-shrink-0 ${isRTL ? 'space-x-reverse space-x-1' : 'space-x-1'}`}>
-              <div 
-                className={`flex items-center flex-shrink-0 group cursor-pointer`}
-                onClick={handleLogoClick}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    window.location.reload();
-                  }
-                }}
-                role="button"
-                tabIndex={0}
-                aria-label="Rafraîchir la page"
-              >
-                {/* Logo principal - visible sur tous les écrans */}
-                <div className="flex items-center">
-                <img 
-                src="/black koora.png" 
-                alt="Koora Logo" 
-                className="h-13 sm:h-10 w-auto object-contain dark:hidden"
-              />
-              <img 
-                src="/kooralogo.png" 
-                alt="Koora Logo" 
-                className="h-13 sm:h-10 w-auto object-contain hidden dark:block"
-              />
-                </div>
-                
-                {/* Texte du logo - visible sur écrans plus grands */}
-                <div className="hidden sm:flex items-center ml-2">
-                  <span className={`text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-                    {currentLanguage === 'ar' ? 'كورة' : 'KOORA'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Actions */}
-            <div className={`flex items-center gap-1 sm:gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              {/* Search Icon */}
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Search"
-                onClick={() => setMobileSearchOpen(true)}
-                className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
-              >
-                <Search className="w-5 h-5 sm:w-5 sm:h-5" />
-              </Button>
-              
-              {/* Admin Button - Mobile (show only from sm+) */}
-              <AdminButton isAdmin={isAdmin} className="hidden sm:flex" />
-              
-              {/* User Settings */}
-              <UserSettings />
-            </div>
-          </div>
+    {/* Mobile Header */}
+<header className="modern-header lg:hidden sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/70 dark:border-slate-700/60 shadow-sm">
+  <div className="container mx-auto px-2 sm:px-3">
+    <div className={`flex items-center justify-between h-16 sm:h-18 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      
+      {/* Logo */}
+      <div 
+        className="flex items-center flex-shrink-0 group cursor-pointer"
+        onClick={handleLogoClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            window.location.reload();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label="Rafraîchir la page"
+      >
+        <div className="flex items-center">
+          {/* Logo clair */}
+          <img 
+            src="/black koora.png" 
+            alt="Koora Logo" 
+            className="h-10 w-auto object-contain dark:hidden"
+          />
+          {/* Logo sombre */}
+          <img 
+            src="/kooralogo.png" 
+            alt="Koora Logo" 
+            className="h-10 w-auto object-contain hidden dark:block"
+          />
         </div>
-      </header>
+        
+        {/* Texte logo (seulement sur sm+) */}
+        <div className="hidden sm:flex items-center ml-2">
+          <span className={`text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {currentLanguage === 'ar' ? 'كورة' : 'KOORA'}
+          </span>
+        </div>
+      </div>
+
+      {/* Mobile Actions */}
+      <div className={`flex items-center gap-1 sm:gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        {/* Search Icon */}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Search"
+          onClick={() => setMobileSearchOpen(true)}
+          className="w-10 h-10 sm:w-9 sm:h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
+        >
+          <Search className="w-5 h-5 sm:w-5 sm:h-5" />
+        </Button>
+        
+        {/* Admin Button (mobile → sm+) */}
+        <AdminButton isAdmin={isAdmin} className="hidden sm:flex" />
+        
+        {/* User Settings */}
+        <UserSettings />
+      </div>
+    </div>
+  </div>
+</header>
+
 
       {/* Mobile search overlay */}
       {mobileSearchOpen && (
