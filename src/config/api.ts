@@ -6,8 +6,8 @@ import axios from 'axios';
 export const API_CONFIG = {
   BASE_URL: 'https://v3.football.api-sports.io',
   HEADERS: {
-    // API-FOOTBALL v3 accepts 'x-apisports-key' for direct host, and 'x-rapidapi-key' if used via RapidAPI.
-    // Provide both to maximize compatibility.
+    // API-FOOTBALL v3 accepte 'x-apisports-key' pour le host direct, et 'x-rapidapi-key' s'il est utilisé via RapidAPI.
+    // Fournir les deux pour maximiser la compatibilité.
     'x-apisports-key': import.meta.env.VITE_FOOTBALL_API_KEY,
     'X-RapidAPI-Key': import.meta.env.VITE_FOOTBALL_API_KEY,
     'X-RapidAPI-Host': 'v3.football.api-sports.io',
@@ -207,6 +207,13 @@ export class FootballAPI {
     const today = new Date().toISOString().split('T')[0];
     const allFixtures = await this.makeRequest('/fixtures', { date: today }) as { response: Fixture[] };
     return this.filterBySelectedLeagues(allFixtures);
+  }
+
+  // Méthode pour récupérer les matchs d'aujourd'hui
+  async getTodayMatches(): Promise<ApiResponse<Fixture[]>> {
+    const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+    const endpoint = API_ENDPOINTS.FIXTURES_TODAY.replace('{date}', today);
+    return this.makeRequest(endpoint);
   }
 
   // Page matchs - Matchs par date et championnat spécifique

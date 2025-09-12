@@ -98,60 +98,54 @@ const Index = () => {
     return Array.from(map.values());
   }, [matchesData]);
 
-  const fetchLatestNews = async () => {
+  const fetchNews = async (nextPage: number, append: boolean = false) => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-      // Try primary API first
-      let mapped: NewsCardItem[] = [];
-      try {
-        const apiRes: any = await footballAPI.getLatestNews(20);
-        const items = (apiRes?.response || apiRes || []) as any[];
-        if (Array.isArray(items)) {
-          mapped = items.map((n: any) => ({
-            id: String(n.id || n.slug || n.uuid || Math.random()),
-            title: n.title ?? "-",
-            summary: (n.summary || n.content || "").toString().replace(/\s+/g, " ").slice(0, 160) + (((n?.summary || n?.content)?.length > 160) ? "…" : ""),
-            imageUrl: n.imageUrl || n.image_url || "/placeholder.svg",
-            publishedAt: n.publishedAt || n.created_at ? new Date(n.publishedAt || n.created_at).toISOString().slice(0, 10) : "",
-            category: n.category || "أخبار",
-          }));
-        }
-      } catch (apiErr) {
-        // Silently fallback to Supabase
-        console.debug('News API failed, falling back to Supabase', apiErr);
-      }
+      const query = supabase
+        .from('news')
+        .select('*', { count: 'exact' })
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .range((nextPage - 1) * 10, nextPage * 10 - 1);
 
-      if (!mapped.length) {
-        const { data, error } = await supabase
-          .from("news")
-          .select("id, title, content, created_at, image_url, status")
-          .eq("status", "published")
-          .order("created_at", { ascending: false })
-          .limit(20);
-        if (error) throw error;
-        mapped = (data || []).map((n: any) => ({
-          id: String(n.id),
-          title: n.title ?? "-",
-          summary: (n.content ?? "").toString().replace(/\s+/g, " ").slice(0, 160) + ((n?.content && n.content.length > 160) ? "…" : ""),
-          imageUrl: n.image_url || "/placeholder.svg",
-          publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : "",
-          category: "أخبار",
-        }));
-      }
+      const { data, count, error } = await query;
 
-      setNewsItems(mapped);
+      if (error) throw error;
+
+      if (data) {
+        const stripHtml = (html: string) =>
+          html
+            .replace(/<[^>]*>/g, ' ')               // remove tags
+            .replace(/&nbsp;/gi, ' ')               // decode common entities
+            .replace(/&amp;/gi, '&')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/\s+/g, ' ')                  // collapse spaces
+            .trim();
+
+        const mapped: NewsCardItem[] = (data || []).map((n: { id: string; title: string; content: string; image_url: string; created_at: string }) => {
+          const plain = stripHtml((n.content ?? '').toString());
+          return {
+            id: String(n.id),
+            title: n.title ?? '-',
+            summary: plain.slice(0, 160) + (plain.length > 160 ? '…' : ''),
+            imageUrl: n.image_url || '/placeholder.svg',
+            publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
+            category: 'أخبار',
+          };
+        });
+
+        setNewsItems(prev => append ? [...prev, ...mapped] : mapped);
+      }
     } catch (e) {
-      console.error("Failed to load latest news", e);
-      setError("تعذر تحميل الأخبار");
+      console.error('Failed to load news', e);
+      setNewsItems([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchLatestNews();
-  }, []);
+  useEffect(() => { fetchNews(1, false); }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
@@ -238,258 +232,7 @@ const Index = () => {
           </div>
 
           {/* Right Sidebar (Today Matches) */}
-          <div className="hidden md:block md:w-80 lg:w-80 xl:w-96 space-y-4 md:sticky md:top-24 lg:top-24 xl:top-28">
-
-  {/* Header Card */}
-  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-    <div className="p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" opacity=".2"></circle>
-              <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">مباريات اليوم</h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">{formattedDate}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="sr-only"
-            id="home-date-picker-desktop"
-          />
-          <Filter
-            className="w-5 h-5 text-green-500 cursor-pointer transition-colors hover:text-green-600"
-            onClick={() => setShowLeagueFilter((s) => !s)}
-          />
-        </div>
-      </div>
-      
-      {/* Filter chips */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span
-          className="inline-flex items-center rounded-full bg-slate-100 text-slate-700 px-3 py-1.5 text-xs font-medium whitespace-nowrap cursor-pointer select-none hover:bg-slate-200 transition-colors"
-          onClick={() => document.getElementById('home-date-picker-desktop')?.click()}
-          title="Choisir la date"
-        >
-          {fullDateFr}
-        </span>
-        <span
-          className="inline-flex items-center rounded-full bg-green-100 text-green-700 px-3 py-1.5 text-xs font-medium whitespace-nowrap cursor-pointer select-none hover:bg-green-200 transition-colors"
-          onClick={() => document.getElementById('home-date-picker-desktop')?.click()}
-          title="اختيار التاريخ"
-        >
-          {formattedDate}
-        </span>
-        {mainLeaguesOnly ? (
-          <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap bg-slate-50 dark:bg-slate-800">
-            {selectedLeagues.length > 0 ? `دوريات مختارة (${selectedLeagues.length})` : 'الدوريات الرئيسية'}
-          </span>
-        ) : (
-          <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 whitespace-nowrap bg-slate-50 dark:bg-slate-800">كل الدوريات</span>
-        )}
-      </div>
-    </div>
-  </div>
-
-  {/* Filter Dropdown */}
-  {showLeagueFilter && (
-    <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40" 
-        onClick={() => setShowLeagueFilter(false)}
-      />
-      <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 p-4 text-right">
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">اختر الدوريات</div>
-        <button
-          className="text-xs text-green-500 hover:underline font-medium"
-          onClick={() => setSelectedLeagues(SPECIFIC_LEAGUES.map(l => l.id))}
-        >
-          المفضلة
-        </button>
-      </div>
-      <div className="max-h-56 overflow-auto pr-1">
-        {loadingLeagues && <div className="text-xs text-slate-500 dark:text-slate-400">جارٍ التحميل…</div>}
-        {!loadingLeagues && SPECIFIC_LEAGUES.map((league) => {
-          const checked = selectedLeagues.includes(league.id);
-          return (
-            <label key={league.id} className="flex items-center gap-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg px-2">
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => {
-                  setMainLeaguesOnly(true);
-                  setSelectedLeagues((prev) => e.target.checked ? [...prev, league.id] : prev.filter((x) => x !== league.id));
-                }}
-                className="w-4 h-4 text-blue-500 rounded border-slate-300"
-              />
-              <div className="flex flex-col">
-                <span className="text-sm text-slate-700 dark:text-slate-300 font-medium">{league.nameAr}</span>
-                <span className="text-xs text-slate-500 dark:text-slate-400">{league.country}</span>
-              </div>
-            </label>
-          );
-        })}
-      </div>
-      <div className="mt-4 flex items-center justify-between">
-        <button
-          className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
-          onClick={() => { setMainLeaguesOnly(true); setSelectedLeagues(SPECIFIC_LEAGUES.map(l => l.id)); }}
-        >
-          الدوريات المختارة
-        </button>
-        <div className="flex items-center gap-2">
-          <button
-            className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
-            onClick={() => { setMainLeaguesOnly(false); setShowLeagueFilter(false); }}
-            title="عرض كل الدوريات"
-          >
-            كل الدوريات
-          </button>
-          <button
-            className="text-xs text-slate-600 dark:text-slate-400 hover:underline font-medium"
-            onClick={() => setSelectedLeagues([])}
-          >
-            مسح
-          </button>
-          <button
-            className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-green-600 transition-colors"
-            onClick={() => setShowLeagueFilter(false)}
-          >
-            تم
-          </button>
-        </div>
-      </div>
-    </div>
-    </>
-  )}
-
-  {/* Matches List Card */}
-  <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-    <div className="p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-green-500 flex items-center justify-center">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="currentColor" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" opacity=".2"></circle>
-            <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
-          </svg>
-        </div>
-        <div>
-          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">مباريات {weekday}</h2>
-          <p className="text-sm text-slate-600 dark:text-slate-400">{formattedDate}</p>
-        </div>
-      </div>
-      
-      {(() => {
-        if (loadingMatches) {
-          return <div className="h-24 rounded-xl bg-slate-100/60 dark:bg-slate-800/40 animate-pulse" />;
-        }
-        const filteredGroups = mainLeaguesOnly
-          ? groupedByLeague.filter(({ league }) => selectedLeagues.includes(league?.id))
-          : groupedByLeague;
-        const hasAny = filteredGroups.length > 0 && filteredGroups.some(g => (g.fixtures?.length || 0) > 0);
-        if (!hasAny) {
-          return (
-            <div className="text-center py-6">
-              <div className="text-slate-500 dark:text-slate-400 mb-4">لا توجد مباريات لهذا اليوم ضمن الدوريات المختارة</div>
-              <button
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold rounded-md bg-green-500 text-white hover:bg-green-600 transition-colors"
-                onClick={() => setMainLeaguesOnly(false)}
-              >
-                عرض كل المباريات لهذا اليوم
-              </button>
-            </div>
-          );
-        }
-      return (
-        <>
-          {filteredGroups.map(({ league, fixtures }) => (
-            <div key={league?.id}>
-              {/* League Header */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
-                {league?.logo && <img src={league.logo} className="w-5 h-5 rounded-full" />}
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {league?.nameTranslated?.arabic || league?.name}
-                </span>
-                {league?.flag && <img src={league.flag} className="w-4 h-3 rounded-sm ml-auto" />}
-              </div>
-
-              {/* Fixtures */}
-              <div className="divide-y">
-                {fixtures.map((fx: any) => {
-                  const homeScore = fx.goals?.home ?? 0;
-                  const awayScore = fx.goals?.away ?? 0;
-                  const status = fx.fixture?.status?.short;
-                  const elapsed = fx.fixture?.status?.elapsed;
-                  const isLive = ["1H", "2H", "ET", "LIVE"].includes(status);
-                  const isFinished = ["FT", "AET", "PEN"].includes(status);
-                  const isScheduled = status === "NS";
-
-                  return (
-                    <div key={fx.fixture?.id} className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40">
-                      <div className="grid grid-cols-5 items-center gap-2">
-                        {/* Home */}
-                        <div className="flex justify-end items-center gap-2 col-span-2">
-                          <span className="text-sm text-slate-800 dark:text-slate-100 truncate">
-                            {fx.teams?.home?.nameTranslated?.arabic || fx.teams?.home?.name}
-                          </span>
-                          {fx.teams?.home?.logo && (
-                            <img src={fx.teams.home.logo} className="w-6 h-6 rounded-full" />
-                          )}
-                        </div>
-
-                        {/* Score & Status */}
-                        <div className="text-center">
-                          {isScheduled ? (
-                            <>
-                              <div className="text-green-600 font-bold text-sm">
-                                {formatKickoffAr(fx.fixture?.date)}
-                              </div>
-                              <div className="text-xs text-slate-500 dark:text-slate-400">لم تبدأ</div>
-                            </>
-                          ) : (
-                            <>
-                              <div className={`font-bold text-lg ${isLive ? "text-red-500" : "text-slate-800 dark:text-slate-100"}`}>
-                                {homeScore} - {awayScore}
-                              </div>
-                              <div className={`text-xs ${isLive ? "text-red-500" : "text-slate-500 dark:text-slate-400"}`}>
-                                {isLive && elapsed ? `${elapsed}'` : isFinished ? "انتهت" : ""}
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Away */}
-                        <div className="flex justify-start items-center gap-2 col-span-2">
-                          {fx.teams?.away?.logo && (
-                            <img src={fx.teams.away.logo} className="w-6 h-6 rounded-full" />
-                          )}
-                          <span className="text-sm text-slate-800 dark:text-slate-100 truncate">
-                            {fx.teams?.away?.nameTranslated?.arabic || fx.teams?.away?.name}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </>
-      );
-    })()}
-    </div>
-  </div>
-</div>
+          <Sidebar />
 
         </div>
       </div>
@@ -630,7 +373,7 @@ const Index = () => {
               <div className="w-7 h-7 rounded-lg bg-green-500 flex items-center justify-center">
                 <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor" aria-hidden="true">
                   <circle cx="12" cy="12" r="10" opacity=".2"></circle>
-                  <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8 2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
+                  <path d="M12 7l2.2 1.6-.8 2.5H10.6l-.8-2.5L12 7zm-5.8 3.5l2.6-.2 1 2.4-1.9 1.6-1.7-1.4.1-2.4zm11.6 0l.1 2.4-1.7 1.4-1.9-1.6 1-2.4 2.5.2zM9.9 15.6l1.1-2.3h2l1.1 2.3-2.1 1.5-2.1-1.5z" />
                 </svg>
               </div>
               <div>
@@ -672,7 +415,7 @@ const Index = () => {
                         <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{league?.nameTranslated?.arabic || league?.name}</span>
                         {league?.flag && <img src={league.flag} className="w-4 h-3 rounded-sm ml-auto" />}
                       </div>
-                      {fixtures.map((fx: any) => {
+                      {fixtures.map((fx: Fixture) => {
                         const homeScore = fx.goals?.home ?? 0;
                         const awayScore = fx.goals?.away ?? 0;
                         const status = fx.fixture?.status?.short;

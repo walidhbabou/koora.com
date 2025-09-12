@@ -33,14 +33,15 @@ interface TranslatedContent {
 const TranslatedMatchCard = ({ match, showTranslation = true }: MatchCardProps) => {
   const { language } = useLanguage();
   const { quickTranslateToArabic, quickTranslateToFrench, translateBatchToArabic } = useFootballTranslation();
-  
+
+  // Use match directly without memoization to avoid unnecessary complexity
   const [translatedContent, setTranslatedContent] = useState<TranslatedContent>({
     homeTeam: match.homeTeam,
     awayTeam: match.awayTeam,
     competition: match.competition,
     isTranslated: false
   });
-  
+
   const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
@@ -56,14 +57,13 @@ const TranslatedMatchCard = ({ match, showTranslation = true }: MatchCardProps) 
       }
 
       setIsTranslating(true);
-      
+
       try {
-        // Utiliser la traduction en lot pour optimiser les performances
         const textsToTranslate = [match.homeTeam, match.awayTeam, match.competition];
         const translatedTexts = language === 'ar' 
           ? await translateBatchToArabic(textsToTranslate)
           : await Promise.all(textsToTranslate.map(text => quickTranslateToFrench(text)));
-        
+
         setTranslatedContent({
           homeTeam: translatedTexts[0] || match.homeTeam,
           awayTeam: translatedTexts[1] || match.awayTeam,
@@ -72,7 +72,6 @@ const TranslatedMatchCard = ({ match, showTranslation = true }: MatchCardProps) 
         });
       } catch (error) {
         console.error('Translation failed:', error);
-        // Garder le contenu original en cas d'erreur
         setTranslatedContent({
           homeTeam: match.homeTeam,
           awayTeam: match.awayTeam,
@@ -85,7 +84,7 @@ const TranslatedMatchCard = ({ match, showTranslation = true }: MatchCardProps) 
     };
 
     translateContent();
-  }, [match, language, showTranslation]);
+  }, [match, language, showTranslation, quickTranslateToFrench, translateBatchToArabic]);
 
   const getStatusColor = () => {
     switch (match.status) {

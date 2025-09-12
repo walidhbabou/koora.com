@@ -65,6 +65,14 @@ interface NewsTabProps {
   setNewNewsChampionId: (v: number | null) => void;
   newNewsImageFile: File | null;
   setNewNewsImageFile: (f: File | null) => void;
+  newNewsStatus: string;
+  setNewNewsStatus: (v: string) => void;
+  newNewsImageUrl: string;
+  setNewNewsImageUrl: (v: string) => void;
+  newNewsCreatedAt: string;
+  setNewNewsCreatedAt: (v: string) => void;
+  newNewsUpdatedAt: string;
+  setNewNewsUpdatedAt: (v: string) => void;
   categories: CategoryRow[];
   champions: ChampionRow[];
 
@@ -125,12 +133,38 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
     newNewsCategoryId, setNewNewsCategoryId,
     newNewsChampionId, setNewNewsChampionId,
     newNewsImageFile, setNewNewsImageFile,
+    newNewsStatus, setNewNewsStatus,
+    newNewsImageUrl, setNewNewsImageUrl,
+    newNewsCreatedAt, setNewNewsCreatedAt,
+    newNewsUpdatedAt, setNewNewsUpdatedAt,
     categories, champions,
     creatingNews, createNewsError, createNewsInfo, onCreateNewsSubmit,
     news, loadingNews, newsPage, newsTotal, pageSize, onPrevPage, onNextPage,
     onEditNews, onDeleteNews, onOpenDetails,
     selectedNews, loadingSelectedNews, selectedNewsComments, loadingSelectedComments, onDeleteComment,
   } = props;
+
+  const fetchNewsDetails = async (newsId: string) => {
+    try {
+      const response = await fetch(`/api/news/${newsId}`); // Remplacez par l'URL correcte de votre API
+      if (!response.ok) {
+        throw new Error('Failed to fetch news details');
+      }
+      const newsDetails = await response.json();
+      setNewNewsTitle(newsDetails.title || '');
+      setNewNewsContent(newsDetails.content || '');
+      setNewNewsCategoryId(newsDetails.category_id || null);
+      setNewNewsChampionId(newsDetails.champion_id || null);
+      setNewNewsImageFile(null); // Vous pouvez gérer l'image différemment si nécessaire
+      // Ajout des champs supplémentaires pour le formulaire de modification
+      setNewNewsStatus(newsDetails.status || '');
+      setNewNewsImageUrl(newsDetails.image_url || '');
+      setNewNewsCreatedAt(newsDetails.created_at || '');
+      setNewNewsUpdatedAt(newsDetails.updated_at || '');
+    } catch (error) {
+      console.error('Error fetching news details:', error);
+    }
+  };
 
   return (
     <TabsContentWrapper>
@@ -373,7 +407,10 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onEditNews(item)}
+                      onClick={() => {
+                        onEditNews(item);
+                        fetchNewsDetails(item.id);
+                      }}
                     >
                       <Edit className="w-4 h-4" />
                     </Button>
