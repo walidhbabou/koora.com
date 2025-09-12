@@ -28,6 +28,7 @@ interface NewsRow {
 const NewsDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [news, setNews] = useState<NewsRow | null>(null);
+  const [relatedNews, setRelatedNews] = useState<NewsRow[]>([]); // State for related news
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -43,11 +44,23 @@ const NewsDetails: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('news')
-        .select('id, title, content, created_at, image_url, status')
+        .select('id, title, content, created_at, image_url, status, category_id') // Include category_id
         .eq('id', Number(id))
         .single();
       if (error) throw error;
       setNews(data as any);
+
+      // Fetch related news
+      if (data?.category_id) {
+        const { data: related, error: relatedError } = await supabase
+          .from('news')
+          .select('id, title, image_url, created_at')
+          .eq('category_id', data.category_id)
+          .neq('id', Number(id)) // Exclude current news
+          .limit(5); // Limit to 5 related news
+        if (relatedError) throw relatedError;
+        setRelatedNews(related || []);
+      }
     } catch (e: any) {
       setError(e?.message || 'Failed to load news');
     } finally {
@@ -172,11 +185,35 @@ const NewsDetails: React.FC = () => {
               <CommentsSection newsId={Number(id)} />
             </div>
 
-            {/* Sidebar placeholder (related news, categories, etc.) */}
+            {/* Sidebar with related news */}
             <div className="space-y-6">
               <Card className="p-5">
                 <h3 className="font-bold mb-3">قد يهمك</h3>
-                <p className="text-sm text-muted-foreground">سنضيف أخبارًا ذات صلة هنا لاحقًا.</p>
+                {relatedNews.length > 0 ? (
+                  <ul className="space-y-4">
+                    {relatedNews.map((item) => (
+                      <li key={item.id}>
+                        <Link to={`/news/${item.id}`} className="flex items-center gap-4">
+                          {item.image_url && (
+                            <img
+                              src={item.image_url}
+                              alt={item.title}
+                              className="w-16 h-16 object-cover rounded-md"
+                            />
+                          )}
+                          <div>
+                            <h4 className="text-sm font-bold">{item.title}</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {item.created_at ? new Date(item.created_at).toISOString().slice(0, 10) : ''}
+                            </p>
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">لا توجد أخبار ذات صلة.</p>
+                )}
               </Card>
             </div>
           </div>

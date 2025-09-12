@@ -11,6 +11,7 @@ import { Plus, Filter, Edit, Trash2, Eye, Image as ImageIcon } from 'lucide-reac
 import { useLanguage } from '@/contexts/LanguageContext';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import DOMPurify from 'dompurify';
 
 export interface CategoryRow {
   id: number;
@@ -409,7 +410,6 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                       size="sm"
                       onClick={() => {
                         onEditNews(item);
-                        fetchNewsDetails(item.id);
                       }}
                     >
                       <Edit className="w-4 h-4" />
@@ -480,9 +480,14 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                   <div className="text-xs text-slate-500">{selectedNews.date ?? '-'}</div>
                 </div>
               </div>
-              <div className="prose dark:prose-invert max-w-none text-sm text-slate-800 dark:text-slate-200">
-                {loadingSelectedNews ? (currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...') : (selectedNews.content || '-')}
-              </div>
+              <div 
+                className="prose dark:prose-invert max-w-none text-sm text-slate-800 dark:text-slate-200"
+                dangerouslySetInnerHTML={{ 
+                  __html: loadingSelectedNews 
+                    ? (currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...') 
+                    : DOMPurify.sanitize(selectedNews.content || '-') 
+                }}
+              />
             </div>
 
             {/* Comments list */}

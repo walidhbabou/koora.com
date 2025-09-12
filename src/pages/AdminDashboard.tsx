@@ -68,13 +68,6 @@ interface CategoryRow {
   created_at?: string | null;
 }
 
-interface CommentRow {
-  id: number;
-  news_id: number | null;
-  user_id: string | null;
-  content: string | null;
-  created_at?: string | null;
-}
 
 interface User {
   id: string;
@@ -85,6 +78,23 @@ interface User {
   joinDate: string;
   lastLogin: string;
   avatar?: string;
+}
+
+// Types locaux pour éviter les conflits d'import
+interface LocalCommentRow {
+  id: number;
+  content: string;
+  user_id: string | null;
+  news_id: string | null;
+  created_at?: string | null;
+}
+
+interface LocalNewsTabCommentRow {
+  id: number;
+  content: string;
+  user_id: string | null;
+  news_id: number | null;
+  created_at?: string | null;
 }
 
 const AdminDashboard: React.FC = () => {
@@ -115,16 +125,16 @@ const AdminDashboard: React.FC = () => {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
-  const [comments, setComments] = useState<CommentRow[]>([]);
+  const [comments, setComments] = useState<LocalCommentRow[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [selectedNews, setSelectedNews] = useState<News | null>(null);
   const [loadingSelectedNews, setLoadingSelectedNews] = useState(false);
-  const [selectedNewsComments, setSelectedNewsComments] = useState<CommentRow[]>([]);
+  const [selectedNewsComments, setSelectedNewsComments] = useState<LocalNewsTabCommentRow[]>([]);
   const [loadingSelectedComments, setLoadingSelectedComments] = useState(false);
 
   const [isCreateNewsOpen, setIsCreateNewsOpen] = useState(false);
   const [isEditNewsOpen, setIsEditNewsOpen] = useState(false);
-  const [editingNews, setEditingNews] = useState<News | null>(null);
+  const [editingNews, setEditingNews] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [creatingNews, setCreatingNews] = useState(false);
   const [newNewsTitle, setNewNewsTitle] = useState('');
@@ -133,6 +143,7 @@ const AdminDashboard: React.FC = () => {
   const [newNewsChampionId, setNewNewsChampionId] = useState<number | null>(null);
   const [createNewsError, setCreateNewsError] = useState('');
   const [createNewsInfo, setCreateNewsInfo] = useState('');
+  const [publishMessage, setPublishMessage] = useState('');
   const [newNewsImageFile, setNewNewsImageFile] = useState<File | null>(null);
   const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
@@ -143,7 +154,10 @@ const AdminDashboard: React.FC = () => {
   const [newUserRole, setNewUserRole] = useState<'admin' | 'editor' | 'author' | 'moderator'>('author');
   const [createUserError, setCreateUserError] = useState('');
   const [createUserInfo, setCreateUserInfo] = useState('');
-
+  const [newNewsStatus, setNewNewsStatus] = useState<string>('');
+  const [newNewsImageUrl, setNewNewsImageUrl] = useState<string>('');
+  const [newNewsCreatedAt, setNewNewsCreatedAt] = useState<string>('');
+  const [newNewsUpdatedAt, setNewNewsUpdatedAt] = useState<string>('');
   // Pagination state (10 per page)
   const pageSize = 10;
   const [newsPage, setNewsPage] = useState(1);
@@ -268,7 +282,7 @@ const AdminDashboard: React.FC = () => {
       const { data, error } = await supabase
         .from('news')
         .select('id, title, content, status, created_at, image_url')
-        .eq('id', Number(newsId))
+        .eq('id', newsId)
         .single();
       if (error) throw error;
       const n = data as any;
@@ -296,10 +310,10 @@ const AdminDashboard: React.FC = () => {
       const { data, error } = await supabase
         .from('comments')
         .select('id, news_id, user_id, content, created_at')
-        .eq('news_id', Number(newsId))
+        .eq('news_id', newsId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setSelectedNewsComments((data || []) as CommentRow[]);
+      setSelectedNewsComments((data || []) as LocalNewsTabCommentRow[]);
     } catch (e) {
       console.error('Failed to load comments for news:', e);
       setSelectedNewsComments([]);
@@ -370,7 +384,7 @@ const AdminDashboard: React.FC = () => {
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
-      setComments((data || []) as CommentRow[]);
+      setComments((data || []).map((c: any) => ({ ...c, news_id: c.news_id ? String(c.news_id) : null })) as LocalCommentRow[]);
       setCommentsTotal(count || 0);
     } catch (e) {
       console.error('Failed to load comments:', e);
@@ -481,14 +495,101 @@ const AdminDashboard: React.FC = () => {
     setIsCreateNewsOpen(false);
   };
 
-  const handleEditNews = (newsData: Partial<News>) => {
+  const handleEditNews = async (newsData: any) => {
     if (editingNews) {
-      setNews(news.map(n => n.id === editingNews.id ? { ...n, ...newsData } : n));
-      setEditingNews(null);
-      setIsEditNewsOpen(false);
+      try {
+        const { error } = await supabase
+          .from('news')
+          .update({
+            title: newsData.title,
+            content: newsData.content,
+            status: newsData.status,
+            category_id: newsData.categoryId || null,
+            champion_id: newsData.championId || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingNews.id);
+        if (error) throw error;
+        // Mettre à jour l'état local
+        setNews(news.map(n => n.id === editingNews.id ? { ...n, ...newsData } : n));
+        setEditingNews(null);
+        setIsEditNewsOpen(false);
+        // Rafraîchir la liste des news
+        await fetchNews();
+      } catch (e) {
+        console.error('Failed to update news:', e);
+      }
     }
   };
 
+const handlePublishNews = async (id: string | number) => {
+  try {
+    console.log('ID passed to handlePublishNews:', id);
+    
+    // D'abord, vérifier si la news existe
+    const newsId = typeof id === 'string' ? parseInt(id, 10) : id;
+    console.log('ID converti:', newsId);
+
+    const { data: existingNews, error: checkError } = await supabase
+      .from('news')
+      .select('id, status')
+      .eq('id', newsId)
+      .single();
+
+    if (checkError || !existingNews) {
+      console.error('News non trouvée:', checkError);
+      throw new Error('News non trouvée');
+    }
+
+    console.log('News existante:', existingNews);
+
+    // Ensuite, faire la mise à jour
+    const { data, error } = await supabase
+      .from('news')
+      .update({
+        status: 'published',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', newsId)
+      .select();
+
+    console.log('Réponse Supabase:', { data, error });
+
+    if (error) {
+      console.error('Erreur Supabase détaillée:', error);
+      throw error;
+    }
+
+    if (data && data.length === 0) {
+      console.warn('Aucune ligne mise à jour - vérifier les politiques RLS');
+      
+      // Essayer une autre approche
+      await testDirectUpdate(newsId);
+    }
+
+    console.log('Mise à jour réussie');
+    await fetchNews();
+    
+  } catch (e) {
+    console.error('Échec de la publication:', e);
+  }
+};
+
+// Fonction de test alternative
+const testDirectUpdate = async (newsId: number) => {
+  try {
+    // Essayer avec une requête SQL directe via RPC
+    const { error } = await supabase.rpc('update_news_status', {
+      p_news_id: newsId,
+      p_status: 'published'
+    });
+    
+    if (error) throw error;
+    console.log('Mise à jour via RPC réussie');
+  } catch (rpcError) {
+    console.error('Échec de la mise à jour via RPC:', rpcError);
+  }
+};
   const handleDeleteNews = (id: string) => {
     setNews(news.filter(n => n.id !== id));
   };
@@ -639,7 +740,7 @@ const AdminDashboard: React.FC = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-7 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
             <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'نظرة عامة' : 'Vue d\'ensemble'}
+              {currentLanguage === 'ar' ? 'نظرة عامة' : 'Dashboard'}
             </TabsTrigger>
             <TabsTrigger value="news" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
               {currentLanguage === 'ar' ? 'إدارة الأخبار' : 'Gestion des News'}
@@ -751,6 +852,14 @@ const AdminDashboard: React.FC = () => {
               setNewNewsChampionId={setNewNewsChampionId}
               newNewsImageFile={newNewsImageFile}
               setNewNewsImageFile={setNewNewsImageFile}
+              newNewsStatus={newNewsStatus}
+              setNewNewsStatus={setNewNewsStatus}
+              newNewsImageUrl={newNewsImageUrl}
+              setNewNewsImageUrl={setNewNewsImageUrl}
+              newNewsCreatedAt={newNewsCreatedAt}
+              setNewNewsCreatedAt={setNewNewsCreatedAt}
+              newNewsUpdatedAt={newNewsUpdatedAt}
+              setNewNewsUpdatedAt={setNewNewsUpdatedAt}
               categories={categories}
               champions={champions}
               creatingNews={creatingNews}
@@ -764,12 +873,41 @@ const AdminDashboard: React.FC = () => {
               pageSize={pageSize}
               onPrevPage={() => setNewsPage(p => Math.max(1, p - 1))}
               onNextPage={() => setNewsPage(p => p + 1)}
-              onEditNews={(item) => { setEditingNews(item); setIsEditNewsOpen(true); }}
+              onEditNews={async (item) => {
+                setLoadingSelectedNews(true);
+                try {
+                  const { data, error } = await supabase
+                    .from('news')
+                    .select('id, title, title_ar, content, content_ar, status, image_url, category_id, champion_id, created_at, updated_at')
+                    .eq('id', item.id)
+                    .single();
+                  if (error) throw error;
+                  setEditingNews({
+                    id: String(data.id),
+                    title: data.title || '',
+                    titleAr: data.title_ar || '',
+                    content: data.content || '',
+                    contentAr: data.content_ar || '',
+                    status: data.status || 'draft',
+                    categoryId: data.category_id || '',
+                    championId: data.champion_id || null,
+                    imageUrl: data.image_url || undefined,
+                    createdAt: data.created_at ? new Date(data.created_at).toISOString().slice(0,10) : '',
+                    updatedAt: data.updated_at ? new Date(data.updated_at).toISOString().slice(0,10) : '',
+                  });
+                  setIsEditNewsOpen(true);
+                } catch (e) {
+                  setEditingNews(null);
+                  setIsEditNewsOpen(false);
+                } finally {
+                  setLoadingSelectedNews(false);
+                }
+              }}
               onDeleteNews={handleDeleteNews}
               onOpenDetails={openNewsDetails}
               selectedNews={selectedNews}
               loadingSelectedNews={loadingSelectedNews}
-              selectedNewsComments={selectedNewsComments}
+              selectedNewsComments={selectedNewsComments as any}
               loadingSelectedComments={loadingSelectedComments}
               onDeleteComment={handleDeleteComment}
             />
@@ -791,7 +929,7 @@ const AdminDashboard: React.FC = () => {
           {/* Comments Tab */}
           <TabsContent value="comments" className="space-y-6">
             <CommentsTab
-              comments={comments}
+              comments={comments as any}
               loadingComments={loadingComments}
               commentsPage={commentsPage}
               commentsTotal={commentsTotal}
@@ -921,16 +1059,27 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Edit News Dialog */}
-      <Dialog open={isEditNewsOpen} onOpenChange={setIsEditNewsOpen}>
-        <DialogContent className="max-w-2xl">
+      <Dialog open={isEditNewsOpen && !!editingNews} onOpenChange={setIsEditNewsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>{currentLanguage === 'ar' ? 'تعديل الخبر' : 'Modifier la news'}</DialogTitle>
             <DialogDescription>
               {currentLanguage === 'ar' ? 'عدل معلومات الخبر' : 'Modifiez les informations de la news'}
             </DialogDescription>
           </DialogHeader>
+          {publishMessage && (
+            <div className={`p-3 rounded-md text-sm ${
+              publishMessage.includes('نجاح') || publishMessage.includes('succès') 
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+            }`}>
+              {publishMessage}
+            </div>
+          )}
           {editingNews && (
-            <EditNewsForm news={editingNews} onSubmit={handleEditNews} />
+            <div className="flex-1 overflow-y-auto pr-2">
+              <EditNewsForm news={editingNews} champions={champions} onSubmit={handleEditNews} onPublish={handlePublishNews} />
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -1097,13 +1246,19 @@ const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({
   );
 };
 
-const EditNewsForm: React.FC<{ news: News; onSubmit: (data: Partial<News>) => void }> = ({ news, onSubmit }) => {
+const EditNewsForm: React.FC<{ 
+  news: any; 
+  champions: {id:number,nom:string,nom_ar:string}[];
+  onSubmit: (data: Partial<News>) => void;
+  onPublish?: (id: string | number) => void; // Change this line
+}> = ({ news, champions, onSubmit, onPublish }) => {
   const { currentLanguage, isRTL } = useLanguage();
   const [formData, setFormData] = useState({
     title: news.title,
     content: news.content,
     category: news.category,
-    status: news.status
+    status: news.status,
+    championId: news.championId || null
   });
   
   // ReactQuill modules
@@ -1157,7 +1312,7 @@ const EditNewsForm: React.FC<{ news: News; onSubmit: (data: Partial<News>) => vo
           />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
             {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}
@@ -1189,9 +1344,44 @@ const EditNewsForm: React.FC<{ news: News; onSubmit: (data: Partial<News>) => vo
             </SelectContent>
           </Select>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            {currentLanguage === 'ar' ? 'البطولة' : 'Championnat'} <span className="text-red-500">*</span>
+          </label>
+          <Select 
+            value={formData.championId !== null ? String(formData.championId) : undefined} 
+            onValueChange={(value) => setFormData({ ...formData, championId: value === 'none' ? null : Number(value) })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+              {champions.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.nom}{c.nom_ar ? ` • ${c.nom_ar}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
+      
+      <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
+        <Button 
+          type="button" 
+          variant="outline"
+          onClick={(e) => {
+            e.preventDefault();
+            if (onPublish) {
+              onPublish(news.id); // Pass the ID instead of form data
+            }
+          }}
+          className="w-full sm:w-auto"
+        >
+          {currentLanguage === 'ar' ? 'نشر' : 'Publier'}
+        </Button>
+        <Button type="submit" className="bg-teal-600 hover:bg-teal-700 w-full sm:w-auto">
           {currentLanguage === 'ar' ? 'تحديث' : 'Mettre à jour'}
         </Button>
       </div>
