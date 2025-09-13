@@ -247,7 +247,7 @@ const CommentsSection: React.FC<{ newsId: number }> = ({ newsId }) => {
 
   const submit = async () => {
     if (!user?.id) {
-      toast({ title: 'Connexion requise', description: 'Veuillez vous connecter pour commenter', variant: 'destructive' });
+      toast({ title: 'مطلوب تسجيل الدخول', description: 'يرجى تسجيل الدخول لإضافة تعليق', variant: 'destructive' });
       return;
     }
     if (!newComment.trim()) return;

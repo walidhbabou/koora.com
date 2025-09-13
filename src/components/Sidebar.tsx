@@ -3,15 +3,23 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { footballAPI, MAIN_LEAGUES } from "@/config/api";
 import { getTeamTranslation } from "@/utils/teamNameMap";
+import { useSettings } from "@/contexts/SettingsContext";
+import { Fixture as APIFixture } from "@/config/api";
 
-interface Fixture {
-  teams: {
-    home: { name: string; logo: string };
-    away: { name: string; logo: string };
+interface GroupedMatches {
+  [league: string]: {
+    leagueLogo: string;
+    matches: {
+      homeTeam: string;
+      awayTeam: string;
+      homeLogo: string;
+      awayLogo: string;
+      homeScore: number | null;
+      awayScore: number | null;
+      time: string;
+      status: string;
+    }[];
   };
-  goals: { home: number | null; away: number | null };
-  fixture: { date: string; status: { short: string } };
-  league: { id: number; name: string; logo: string; country: string };
 }
 
 // Traduction ligues
@@ -40,24 +48,8 @@ function translateName(name: string): string {
 }
 
 const Sidebar = () => {
-  const [groupedMatches, setGroupedMatches] = useState<
-    Record<
-      string,
-      {
-        leagueLogo: string;
-        matches: {
-          homeTeam: string;
-          awayTeam: string;
-          homeLogo: string;
-          awayLogo: string;
-          homeScore: number | null;
-          awayScore: number | null;
-          time: string;
-          status: string;
-        }[];
-      }
-    >
-  >({});
+  const { hourFormat } = useSettings();
+  const [groupedMatches, setGroupedMatches] = useState<GroupedMatches>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -73,11 +65,12 @@ const Sidebar = () => {
 
         const filteredMatches = (res.response || [])
           .filter(
-            (fixture: Fixture) =>
+            (fixture: APIFixture) =>
               Object.values(MAIN_LEAGUES).includes(fixture.league.id) &&
-              fixture.league.name !== "Regionalliga - West" // 🚫 exclure cette ligue
+              fixture.league.name !== "Regionalliga - West" && // 🚫 exclure cette ligue
+              fixture.league.name !== "Eredivisie" // 🚫 exclure Eredivisie
           )
-          .map((fixture: Fixture) => ({
+          .map((fixture: APIFixture) => ({
             league: translateName(fixture.league.name),
             leagueLogo: fixture.league.logo,
             homeTeam: getTeamTranslation(fixture.teams.home.name),
@@ -91,7 +84,7 @@ const Sidebar = () => {
           }));
 
         // Regroupement par ligue
-        const grouped: Record<string, any> = {};
+        const grouped: GroupedMatches = {};
         filteredMatches.forEach((match) => {
           if (!grouped[match.league]) {
             grouped[match.league] = {
@@ -104,6 +97,7 @@ const Sidebar = () => {
 
         setGroupedMatches(grouped);
       } catch (err) {
+        console.error("Error fetching matches:", err);
         setError("خطأ في جلب المباريات");
       }
       setLoading(false);
@@ -132,6 +126,74 @@ const Sidebar = () => {
     month: "long",
   })} ${selectedDate.getFullYear()}`;
 
+  const formatTime = (time: string): string => {
+    const date = new Date(time);
+    const options: Intl.DateTimeFormatOptions = {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true, // Toujours en format 12 heures
+    };
+
+    // Format en français avec AM/PM remplacés par ص/م
+    const formattedTime = date.toLocaleTimeString("fr-FR", options);
+    return formattedTime.replace("AM", "ص").replace("PM", "م");
+  };
+
+  const renderContent = () => {
+    if (loading) {
+      return <div className="text-center text-muted-foreground">جاري التحميل...</div>;
+    }
+    if (error) {
+      return <div className="text-center text-red-500">{error}</div>;
+    }
+    if (Object.keys(groupedMatches).length === 0) {
+      return <div className="text-center text-muted-foreground">لا توجد مباريات اليوم</div>;
+    }
+
+    return (
+      <div className="space-y-6">
+        {Object.entries(groupedMatches).map(([league, data]) => (
+          <div key={league}>
+            {/* Nom de la ligue */}
+            <div className="flex items-center gap-2 mb-2 border-b pb-1">
+              <img
+                src={data.leagueLogo}
+                alt={league}
+                className="w-5 h-5 object-contain"
+              />
+              <span className="font-semibold text-sm">{league}</span>
+            </div>
+
+            {/* Matchs de la ligue */}
+            {data.matches.map((match, i) => (
+              <div
+                key={`${match.homeTeam}-${match.awayTeam}-${i}`}
+                className="flex flex-col border rounded-lg p-4 mb-4 shadow bg-white"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <img src={match.homeLogo} alt={match.homeTeam} className="w-6 h-6" />
+                    <span className="text-sm font-medium">{match.homeTeam}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{match.awayTeam}</span>
+                    <img src={match.awayLogo} alt={match.awayTeam} className="w-6 h-6" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className="text-xs text-gray-600">موعد المباراة</span>
+                  <span className="block text-lg font-bold text-gray-800">
+                    {formatTime(match.time)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full lg:w-80 max-w-sm space-y-6 lg:sticky lg:top-24">
       {/* Navigation date */}
@@ -152,58 +214,7 @@ const Sidebar = () => {
       {/* Matches regroupés */}
       <Card className="p-4">
         <h3 className="font-semibold text-foreground mb-4">مباريات اليوم</h3>
-
-        {loading ? (
-          <div className="text-center text-muted-foreground">جاري التحميل...</div>
-        ) : error ? (
-          <div className="text-center text-red-500">{error}</div>
-        ) : Object.keys(groupedMatches).length > 0 ? (
-          <div className="space-y-6">
-            {Object.entries(groupedMatches).map(([league, data], idx) => (
-              <div key={idx}>
-                {/* Nom de la ligue */}
-                <div className="flex items-center gap-2 mb-2 border-b pb-1">
-                  <img
-                    src={data.leagueLogo}
-                    alt={league}
-                    className="w-5 h-5 object-contain"
-                  />
-                  <span className="font-semibold text-sm">{league}</span>
-                </div>
-
-                {/* Matchs de la ligue */}
-                {data.matches.map((match: any, i: number) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between border rounded-lg p-2 mb-2 shadow"
-                  >
-                    <div className="flex items-center gap-2 w-1/3">
-                      <img src={match.homeLogo} alt={match.homeTeam} className="w-6 h-6" />
-                      <span className="text-xs truncate">{match.homeTeam}</span>
-                    </div>
-                    <div className="flex flex-col items-center w-1/3">
-                      <span className="font-bold">
-                        {match.homeScore ?? "-"} : {match.awayScore ?? "-"}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        {new Date(match.time).toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 justify-end w-1/3">
-                      <span className="text-xs truncate">{match.awayTeam}</span>
-                      <img src={match.awayLogo} alt={match.awayTeam} className="w-6 h-6" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center text-muted-foreground">لا توجد مباريات اليوم</div>
-        )}
+        {renderContent()}
       </Card>
     </div>
   );

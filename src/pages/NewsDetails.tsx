@@ -262,13 +262,7 @@ const NewsDetails: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Error message for login requirement */}
-      {!isAuthenticated && (
-        <div className="text-center text-red-600 font-bold">
-          <p>مطلوب تسجيل الدخول</p>
-          <p>يرجى تسجيل الدخول للتعليق</p>
-        </div>
-      )}
+      
     </div>
   );
 };
