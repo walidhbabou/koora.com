@@ -163,8 +163,15 @@ const NewsDetails: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <Card className="overflow-hidden p-0">
+                {/* News image */}
                 {news.image_url && (
-                  <img src={news.image_url} alt={news.title} className="w-full h-64 md:h-96 object-cover" />
+                  <div className="w-full h-64 md:h-96 overflow-hidden rounded-md"> {/* Added rounded corners */}
+                    <img
+                      src={news.image_url}
+                      alt={news.title}
+                      className="w-full h-full object-contain" // Changed to object-contain for better fit
+                    />
+                  </div>
                 )}
                 <div className="p-5">
                   <div className="flex items-center gap-2 mb-3">
@@ -195,11 +202,13 @@ const NewsDetails: React.FC = () => {
                       <li key={item.id}>
                         <Link to={`/news/${item.id}`} className="flex items-center gap-4">
                           {item.image_url && (
-                            <img
-                              src={item.image_url}
-                              alt={item.title}
-                              className="w-16 h-16 object-cover rounded-md"
-                            />
+                            <div className="w-20 h-20 overflow-hidden rounded-md">
+                              <img
+                                src={item.image_url}
+                                alt={item.title}
+                                className="w-full h-full object-cover" // Ensures consistent sizing
+                              />
+                            </div>
                           )}
                           <div>
                             <h4 className="text-sm font-bold">{item.title}</h4>
@@ -252,6 +261,14 @@ const NewsDetails: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Error message for login requirement */}
+      {!isAuthenticated && (
+        <div className="text-center text-red-600 font-bold">
+          <p>مطلوب تسجيل الدخول</p>
+          <p>يرجى تسجيل الدخول للتعليق</p>
+        </div>
+      )}
     </div>
   );
 };
