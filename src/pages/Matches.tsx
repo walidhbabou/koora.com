@@ -17,6 +17,7 @@ import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useNavigate } from "react-router-dom";
+import LiveMinuteCircle from "@/components/LiveMinuteCircle";
 
 // Shared formatters to match TeamDetails.tsx, extended with timezone
 const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
@@ -59,19 +60,24 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const getFormattedMatchDateTime = () => formatDisplayDate(match.date, currentLanguage, timezone);
 
   // Statut/heure
-  const getMatchTime = () => {
+  const getMatchTime = (match, currentLanguage, timezone, hourFormat) => {
     if (!match.date) return '';
     const matchDate = new Date(match.date);
 
-    // Prioritize status when available (live/finished)
-    const status = match.status || '';
-    const isLive = ["LIVE", "1H", "2H", "HT", "ET"].includes(status);
-    const isFinished = ["FT", "AET", "PEN"].includes(status);
+    // Utiliser le statut si disponible
+    const status = match.status?.short || '';
+    const elapsed = match.status?.elapsed || null;
+    const isLive = ['LIVE', '1H', '2H', 'HT', 'ET'].includes(status);
+    const isFinished = ['FT', 'AET', 'PEN'].includes(status);
 
-    if (isLive) return currentLanguage === 'ar' ? 'مباشر' : 'En direct';
-    if (isFinished) return currentLanguage === 'ar' ? 'انتهت' : 'Terminé';
+    if (isLive) {
+      return elapsed ? `${elapsed}'` : (currentLanguage === 'ar' ? 'مباشر' : 'En direct');
+    }
+    if (isFinished) {
+      return currentLanguage === 'ar' ? 'انتهت' : 'Terminé';
+    }
 
-    // Upcoming or scheduled: show localized time same as TeamDetails
+    // Match à venir : utiliser le même format que TeamDetails, avec fuseau et format heure
     return formatTimeLocalized(match.date, currentLanguage, timezone, hourFormat);
   };
 
@@ -82,9 +88,16 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   return (
     <div className="w-full mx-auto mb-2 sm:mb-3">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-row items-center p-2.5 sm:p-3 gap-2.5 sm:gap-3 overflow-hidden">
-        {/* Heure uniquement */}
+        {/* Heure et statut */}
         <div className="flex flex-col items-center min-w-[64px]">
-          <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] text-center">{getMatchTime()}</span>
+          <span className="text-blue-500 text-[12px] sm:text-[14px] font-bold">
+            {match.status?.short === 'LIVE' ? `${match.status.elapsed}'` : getMatchTime(match, currentLanguage, timezone, hourFormat)}
+          </span>
+          {match.status?.short === 'LIVE' && match.status.extra && (
+            <span className="text-red-500 text-[10px] sm:text-[12px]">
+              +{match.status.extra}'
+            </span>
+          )}
         </div>
         {/* Equipes */}
         <div className={`flex-1 basis-0 min-w-0 w-full flex items-center justify-between gap-3 sm:gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}> 
@@ -321,6 +334,48 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
 );
 };
 
+// Utilitaire pour aplatir un match (issu de l'API ou déjà à plat)
+const flattenMatch = (item: {
+  fixture?: {
+    id: number;
+    date: string;
+    status?: { short: string };
+  };
+  league?: {
+    id: number;
+    name: string;
+    logo: string;
+  };
+  teams?: {
+    home: { id: number; name: string; logo: string };
+    away: { id: number; name: string; logo: string };
+  };
+  goals?: { home: number; away: number };
+  score?: {
+    halftime?: { home: number; away: number };
+    fulltime?: { home: number; away: number };
+    extratime?: { home: number; away: number };
+    penalty?: { home: number; away: number };
+  };
+  status?: string;
+}) => {
+  const fixture = item.fixture || item;
+  const league = item.league || {};
+  return {
+    id: fixture.id,
+    date: fixture.date,
+    status: fixture.status?.short || item.status || '',
+    league: {
+      id: league.id,
+      name: league.name || '',
+      logo: league.logo || '',
+    },
+    teams: item.teams,
+    goals: item.goals,
+    score: item.score,
+  };
+};
+
 const Matches = () => {
   const { currentLanguage, isRTL, direction } = useTranslation();
   const { timezone, hourFormat } = useSettings();
@@ -398,51 +453,126 @@ const Matches = () => {
   const isLiveShort = (s?: string) => ['LIVE','1H','2H','HT','ET'].includes((s||''));
   const isFinishedShort = (s?: string) => ['FT','AET','PEN'].includes((s||''));
 
-  // Regrouper les matchs programmés par ligue
-  const scheduledMatchesByLeague: { [key: number]: unknown[] } = {};
+  // Regrouper les matchs programmés par ligue (aplatis)
+  const scheduledMatchesByLeague: {
+    [key: number]: Array<{
+      id: number;
+      date: string;
+      status: string;
+      league: { id: number; name: string; logo: string };
+      teams: {
+        home: { id: number; name: string; logo: string };
+        away: { id: number; name: string; logo: string };
+      };
+      goals: { home: number; away: number };
+      score: {
+        halftime?: { home: number; away: number };
+        fulltime?: { home: number; away: number };
+        extratime?: { home: number; away: number };
+        penalty?: { home: number; away: number };
+      };
+    }>;
+  } = {};
   if (selectedMatches.data?.response) {
     leagues.forEach(league => {
-      let list = selectedMatches.data.response.filter((match: any) => match.league?.id === league.id && !isLiveMatch(match));
-      // apply status filter
+      let list = selectedMatches.data.response
+        .filter((match: {
+          league?: { id: number };
+          status?: string;
+        }) => (match.league?.id === league.id && !isLiveMatch(match)))
+        .map(flattenMatch);
+
       if (statusFilter !== 'all') {
-        list = list.filter((m: any) => {
-          const s = m.fixture?.status?.short || m.status || '';
-          if (statusFilter === 'upcoming') return !(isLiveShort(s) || isFinishedShort(s));
+        list = list.filter((m: {
+          status?: string;
+        }) => {
+          const s = m.status || '';
           if (statusFilter === 'live') return isLiveShort(s);
           if (statusFilter === 'finished') return isFinishedShort(s);
           return true;
         });
       }
-      // sort by time if requested
+
       if (sortBy === 'time') {
-        list = list.slice().sort((a: any, b: any) => new Date(a.fixture?.date).getTime() - new Date(b.fixture?.date).getTime());
+        list = list.slice().sort((a: { date: string }, b: { date: string }) => new Date(a.date).getTime() - new Date(b.date).getTime());
       }
+
       scheduledMatchesByLeague[league.id] = list;
     });
   }
 
-  // Regrouper les matchs en direct par ligue
-  const liveMatchesByLeague: { [key: number]: unknown[] } = {};
-  const allLiveMatches = [
-    ...(liveMatches.data?.response || []),
-    ...(selectedMatches.data?.response || []).filter((match: any) => isLiveMatch(match))
-  ];
+  // Regrouper les matchs en direct par ligue (aplatis)
+  const liveMatchesByLeague: {
+    [key: number]: Array<{
+      id: number;
+      date: string;
+      status: string;
+      league: { id: number; name: string; logo: string };
+      teams: {
+        home: { id: number; name: string; logo: string };
+        away: { id: number; name: string; logo: string };
+      };
+      goals: { home: number; away: number };
+      score: {
+        halftime?: { home: number; away: number };
+        fulltime?: { home: number; away: number };
+        extratime?: { home: number; away: number };
+        penalty?: { home: number; away: number };
+      };
+    }>;
+  } = {};
+  const allLiveMatches = liveMatches.data?.response || [];
   leagues.forEach(league => {
-    let list = allLiveMatches.filter((match: any) => match.league?.id === league.id);
+    let list = allLiveMatches
+      .filter((match: {
+        league?: { id: number };
+      }) => match.league?.id === league.id)
+      .map(flattenMatch);
+
     if (statusFilter !== 'all') {
-      list = list.filter((m: any) => {
-        const s = m.fixture?.status?.short || m.status || '';
-        if (statusFilter === 'upcoming') return !(isLiveShort(s) || isFinishedShort(s));
+      list = list.filter((m: {
+        status?: string;
+      }) => {
+        const s = m.status || '';
         if (statusFilter === 'live') return isLiveShort(s);
         if (statusFilter === 'finished') return isFinishedShort(s);
         return true;
       });
     }
+
     if (sortBy === 'time') {
-      list = list.slice().sort((a: any, b: any) => new Date(a.fixture?.date).getTime() - new Date(b.fixture?.date).getTime());
+      list = list.slice().sort((a: { date: string }, b: { date: string }) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
+
     liveMatchesByLeague[league.id] = list;
   });
+
+  // Exclure les matchs en direct des matchs programmés
+  Object.keys(scheduledMatchesByLeague).forEach(leagueId => {
+    const liveIds = (liveMatchesByLeague[leagueId] || []).map(item => item.id);
+    scheduledMatchesByLeague[leagueId] = scheduledMatchesByLeague[leagueId].filter(item => {
+      return !liveIds.includes(item.id);
+    });
+  });
+
+  // Simplification des labels pour les filtres
+const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', language: string): string => {
+  const labels = {
+    ar: {
+      all: 'الكل',
+      upcoming: 'قادمة',
+      live: 'جارية',
+      finished: 'انتهت'
+    },
+    fr: {
+      all: 'Tous',
+      upcoming: 'À venir',
+      live: 'En direct',
+      finished: 'Terminé'
+    }
+  };
+  return labels[language === 'ar' ? 'ar' : 'fr'][filter];
+};
 
   return (
     <div dir={direction} className={`min-h-screen bg-[#f6f7fa] dark:bg-[#020617] ${isRTL ? 'rtl' : 'ltr'}`}>
@@ -497,82 +627,65 @@ const Matches = () => {
                     )}
                   </span>
                 </div>
-                {/* Affichage des matchs sous forme de cartes */}
-                <div>
-                  {matches.map((item: any) => {
-  // Correction du mapping : extraire les champs depuis item.fixture et autres objets
-  const match = {
-    id: item.fixture?.id,
-    date: item.fixture?.date,
-    status: item.fixture?.status?.short || item.status || '',
-    league: item.league,
-    teams: item.teams,
-    goals: item.goals,
-    score: item.score,
-    // Ajoute d'autres champs utiles si besoin
-  };
+               <div>
+{matches && matches.map((match, index) => (
+<TranslatedMatchRow
+key={`${match.id}-${match.date}-${index}`}
+    match={match}
+currentLanguage={currentLanguage}
+/>
+))}
+</div>
+</div>
+);
+})}
+</div>
+</div>
+{/* Filter Dialog */}
+<Dialog open={showFilter} onOpenChange={setShowFilter}>
+<DialogContent className="max-w-md">
+<DialogHeader>
+<DialogTitle className="text-right">{currentLanguage === 'ar' ? 'الفلترة' : 'Filtrer'}</DialogTitle>
+</DialogHeader>
+<div className={`space-y-4 ${isRTL ? 'rtl text-right' : ''}`}>
+<div>
+<div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'الترتيب حسب' : 'Trier par'}</div>
+<div className="flex gap-2">
+<Button variant={sortBy==='league'?'default':'outline'} onClick={()=>setSortBy('league')} className="rounded-full px-4">{currentLanguage==='ar'?'البطولة':'Compétition'}</Button>
+<Button variant={sortBy==='time'?'default':'outline'} onClick={()=>setSortBy('time')} className="rounded-full px-4">{currentLanguage==='ar'?'التوقيت':'Heure'}</Button>
+</div>
+</div>
+<div>
+<div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'حالة المباراة' : 'Statut'}</div>
+<div className="flex flex-wrap gap-2">
+{(['all','upcoming','live','finished'] as const).map(v=> (
+<Button key={v} variant={statusFilter===v?'default':'outline'} onClick={()=>setStatusFilter(v)} className="rounded-full px-4">
+{getFilterLabel(v, currentLanguage)}
+</Button>
+))}
+</div>
+</div>
+<div>
+<div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'الأهمية' : 'Importance'}</div>
+<div className="flex gap-2">
+<Button variant={importanceFilter==='all'?'default':'outline'} onClick={()=>setImportanceFilter('all')} className="rounded-full px-4">{currentLanguage==='ar'?'الكل':'Tous'}</Button>
+<Button variant={importanceFilter==='important'?'default':'outline'} onClick={()=>setImportanceFilter('important')} className="rounded-full px-4">{currentLanguage==='ar'?'الهامة فقط':'Importants'}</Button>
+<Button variant={importanceFilter==='most_important'?'default':'outline'} onClick={()=>setImportanceFilter('most_important')} className="rounded-full px-4">{currentLanguage==='ar'?'الأكثر أهمية':'Très importants'}</Button>
+</div>
+</div>
+</div>
+<DialogFooter>
+<Button onClick={()=>setShowFilter(false)} className="rounded-full w-full bg-emerald-600 hover:bg-emerald-700">{currentLanguage==='ar'?'الفلترة':'Appliquer'}</Button>
+</DialogFooter>
+</DialogContent>
+</Dialog>
 
-                      // Correction: afficher 0-0 si le score est 0-0, ne pas remplacer par une chaîne vide
-                      return (
-                        <TranslatedMatchRow
-                          key={match.id}
-                          match={{
-                            ...match,
-                            goals: match.goals // garder les valeurs 0 pour home et away
-                          }}
-                          currentLanguage={currentLanguage}
-                        />
-                      );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {/* Filter Dialog */}
-      <Dialog open={showFilter} onOpenChange={setShowFilter}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-right">{currentLanguage === 'ar' ? 'الفلترة' : 'Filtrer'}</DialogTitle>
-          </DialogHeader>
-          <div className={`space-y-4 ${isRTL ? 'rtl text-right' : ''}`}>
-            <div>
-              <div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'الترتيب حسب' : 'Trier par'}</div>
-              <div className="flex gap-2">
-                <Button variant={sortBy==='league'?'default':'outline'} onClick={()=>setSortBy('league')} className="rounded-full px-4">{currentLanguage==='ar'?'البطولة':'Compétition'}</Button>
-                <Button variant={sortBy==='time'?'default':'outline'} onClick={()=>setSortBy('time')} className="rounded-full px-4">{currentLanguage==='ar'?'التوقيت':'Heure'}</Button>
-              </div>
-            </div>
-            <div>
-              <div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'حالة المباراة' : 'Statut'}</div>
-              <div className="flex flex-wrap gap-2">
-                {(['all','upcoming','live','finished'] as const).map(v=> (
-                  <Button key={v} variant={statusFilter===v?'default':'outline'} onClick={()=>setStatusFilter(v)} className="rounded-full px-4">
-                    {currentLanguage==='ar' ? (v==='all'?'الكل': v==='upcoming'?'قادمة': v==='live'?'جارية':'انتهت') : (v==='all'?'Tous': v==='upcoming'?'À venir': v==='live'?'En direct':'Terminé')}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm mb-2 font-semibold">{currentLanguage === 'ar' ? 'الأهمية' : 'Importance'}</div>
-              <div className="flex gap-2">
-                <Button variant={importanceFilter==='all'?'default':'outline'} onClick={()=>setImportanceFilter('all')} className="rounded-full px-4">{currentLanguage==='ar'?'الكل':'Tous'}</Button>
-                <Button variant={importanceFilter==='important'?'default':'outline'} onClick={()=>setImportanceFilter('important')} className="rounded-full px-4">{currentLanguage==='ar'?'الهامة فقط':'Importants'}</Button>
-                <Button variant={importanceFilter==='most_important'?'default':'outline'} onClick={()=>setImportanceFilter('most_important')} className="rounded-full px-4">{currentLanguage==='ar'?'الأكثر أهمية':'Très importants'}</Button>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={()=>setShowFilter(false)} className="rounded-full w-full bg-emerald-600 hover:bg-emerald-700">{currentLanguage==='ar'?'الفلترة':'Appliquer'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Global modal removed, using page navigation */}
-      <Footer />
-    </div>
-  );
+{/* Global modal removed, using page navigation */}
+<Footer />
+</div>
+);
 };
+
 
 export default Matches;
