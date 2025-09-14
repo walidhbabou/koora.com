@@ -58,6 +58,7 @@ const News = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [champions, setChampions] = useState<{id: number, nom: string, nom_ar?: string}[]>([]);
   const [selectedChampion, setSelectedChampion] = useState<number | null>(null);
+  const [showLeagueModal, setShowLeagueModal] = useState(false);
 
   // Fetch champions from Supabase
   useEffect(() => {
@@ -394,7 +395,7 @@ const News = () => {
            
 
             {/* Categories */}
-            <div className="space-y-4">
+            <div className="space-y-4 mt-8">
               {selectedChampion && (
                 <div className="flex items-center gap-2 p-3 bg-sport-green/10 rounded-lg border border-sport-green/20">
                   <div className="w-2 h-2 bg-sport-green rounded-full"></div>
@@ -415,13 +416,13 @@ const News = () => {
                   </Button>
                 </div>
               )}
-              
+
               <div className="flex flex-wrap gap-2">
                 {categories.map((category, index) => (
                   <Badge 
                     key={index}
                     variant={category.active ? "default" : "secondary"}
-                    className={`cursor-pointer px-4 py-2 ${
+                    className={`cursor-pointer px-3 py-1 text-sm rounded-full ${
                       category.active 
                         ? "bg-sport-green text-white" 
                         : "hover:bg-sport-green/10"
@@ -588,6 +589,53 @@ const News = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Filter Button */}
+      <div className="lg:hidden fixed top-4 right-4 z-50">
+        <Button
+          variant="outline"
+          size="icon"
+          className="bg-white dark:bg-[#181a20] border-gray-100 dark:border-[#23262f] shadow-md hover:shadow-lg"
+          onClick={() => setShowLeagueModal(true)}
+        >
+          <Filter className="w-5 h-5 text-gray-800 dark:text-gray-100" />
+        </Button>
+
+        {/* League Modal */}
+        {showLeagueModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-[#181a20] rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-bold text-sport-dark mb-4">{currentLanguage === 'ar' ? 'اختر البطولة' : 'Select a League'}</h3>
+              <ul className="space-y-3">
+                {leagues.map((league, index) => (
+                  <li key={index}>
+                    <div
+                      className="flex items-center justify-between rounded-lg border px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all bg-white dark:bg-[#181a20] border-gray-100 dark:border-[#23262f]"
+                      onClick={() => {
+                        handleChampionClick(league.championId);
+                        setShowLeagueModal(false);
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <img src={league.logo} alt={league.name} className="w-8 h-8 rounded-md object-contain" />
+                        <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{league.name}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 w-full"
+                onClick={() => setShowLeagueModal(false)}
+              >
+                {currentLanguage === 'ar' ? 'إغلاق' : 'Close'}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

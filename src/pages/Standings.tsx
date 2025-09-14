@@ -181,7 +181,7 @@ const Standings = () => {
     if (currentLanguage === 'ar') {
       const translations: { [key: string]: string } = {
         'Round': 'الجولة',
-        'Regular Season': 'الموسم العادي',
+        'Regular Season': ' الجولة',
         'À venir': 'قريباً',
         'LIVE': 'مباشر',
         'Terminé': 'انتهى',
@@ -204,7 +204,7 @@ const Standings = () => {
       
       // Gérer les cas spéciaux comme "Regular Season - 24"
       if (text.includes('Regular Season')) {
-        return text.replace('Regular Season', 'الموسم العادي');
+        return text.replace('Regular Season', 'الجولة ');
       }
       
       return translations[text] || text;

@@ -17,7 +17,6 @@ import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useNavigate } from "react-router-dom";
-import LiveMinuteCircle from "@/components/LiveMinuteCircle";
 
 // Shared formatters to match TeamDetails.tsx, extended with timezone
 const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
@@ -99,63 +98,25 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
             </span>
           )}
         </div>
-        {/* Equipes */}
-        <div className={`flex-1 basis-0 min-w-0 w-full flex items-center justify-between gap-3 sm:gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}> 
+        {/* Équipes et score */}
+        <div className="flex-1 basis-0 min-w-0 w-full flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-2 min-w-0">
-            {homeLogo ? (
-              <img
-                src={homeLogo}
-                alt={homeName}
-                className="w-8 h-8 rounded-full border object-contain"
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const sib = target.nextElementSibling as HTMLElement | null;
-                  if (sib) sib.classList.remove('hidden');
-                }}
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-              />
-            ) : null}
-            <div className={`w-8 h-8 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${homeLogo ? 'hidden' : ''}`}>
-              H
-            </div>
-            <span className={`font-bold text-sm sm:text-base truncate max-w-[100px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayHomeName}</span>
+            <img src={match.teams?.home?.logo} alt={match.teams?.home?.name} className="w-6 h-6 sm:w-8 sm:h-8" />
+            <span className="text-[12px] sm:text-[14px] font-medium truncate">
+              {currentLanguage === 'ar' ? getTeamTranslation(match.teams?.home?.name) : match.teams?.home?.name}
+            </span>
           </div>
-          <div className="text-gray-700 dark:text-gray-200 font-extrabold text-base sm:text-lg min-w-[56px] w-[64px] text-center shrink-0">
-            {(isLiveState || isFinishedState)
-              ? (isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`)
-              : 'vs'}
+          <div className="text-center">
+            <span className="text-[12px] sm:text-[14px] font-bold">
+              {match.goals?.home} - {match.goals?.away}
+            </span>
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            <span className={`font-bold text-sm sm:text-base truncate max-w-[100px] sm:max-w-[180px] ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>{displayAwayName}</span>
-            {awayLogo ? (
-              <img
-                src={awayLogo}
-                alt={awayName}
-                className="w-8 h-8 rounded-full border object-contain"
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const sib = target.nextElementSibling as HTMLElement | null;
-                  if (sib) sib.classList.remove('hidden');
-                }}
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-              />
-            ) : null}
-            <div className={`w-8 h-8 rounded-full border bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white text-sm font-bold ${awayLogo ? 'hidden' : ''}`}>
-              A
-            </div>
+            <span className="text-[12px] sm:text-[14px] font-medium truncate">
+              {currentLanguage === 'ar' ? getTeamTranslation(match.teams?.away?.name) : match.teams?.away?.name}
+            </span>
+            <img src={match.teams?.away?.logo} alt={match.teams?.away?.name} className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
-        </div>
-        {/* Bouton détails */}
-        <div className="shrink-0">
-          <Button variant="outline" size="sm" className="whitespace-nowrap" onClick={() => onDetails(match)}>
-            {currentLanguage === 'ar' ? 'تفاصيل' : 'Détails'}
-          </Button>
         </div>
       </div>
     </div>
@@ -439,6 +400,11 @@ const Matches = () => {
       name: currentLanguage === 'ar' ? "البوندسليجا" : "Bundesliga",
       id: MAIN_LEAGUES.BUNDESLIGA,
       logo: "https://media.api-sports.io/football/leagues/78.png"
+    },
+    {
+      name: currentLanguage === 'ar' ? "الدوري الإيطالي" : "Serie A",
+      id: MAIN_LEAGUES.SERIE_A,
+      logo: "https://media.api-sports.io/football/leagues/135.png"
     }
   ];
 

@@ -141,13 +141,13 @@ const Sidebar = () => {
 
   const renderContent = () => {
     if (loading) {
-      return <div className="text-center text-muted-foreground">جاري التحميل...</div>;
+      return <div className="text-center text-muted-foreground dark:text-muted-foreground">جاري التحميل...</div>;
     }
     if (error) {
-      return <div className="text-center text-red-500">{error}</div>;
+      return <div className="text-center text-red-500 dark:text-red-400">{error}</div>;
     }
     if (Object.keys(groupedMatches).length === 0) {
-      return <div className="text-center text-muted-foreground">لا توجد مباريات اليوم</div>;
+      return <div className="text-center text-muted-foreground dark:text-muted-foreground">لا توجد مباريات اليوم</div>;
     }
 
     return (
@@ -155,36 +155,44 @@ const Sidebar = () => {
         {Object.entries(groupedMatches).map(([league, data]) => (
           <div key={league}>
             {/* Nom de la ligue */}
-            <div className="flex items-center gap-2 mb-2 border-b pb-1">
+            <div className="flex items-center gap-2 mb-2 border-b pb-1 dark:border-gray-700">
               <img
                 src={data.leagueLogo}
                 alt={league}
                 className="w-5 h-5 object-contain"
               />
-              <span className="font-semibold text-sm">{league}</span>
+              <span className="font-semibold text-sm dark:text-gray-300">{league}</span>
             </div>
 
             {/* Matchs de la ligue */}
             {data.matches.map((match, i) => (
               <div
                 key={`${match.homeTeam}-${match.awayTeam}-${i}`}
-                className="flex flex-col border rounded-lg p-4 mb-4 shadow bg-white"
+                className="flex flex-col border rounded-lg p-4 mb-4 shadow bg-white dark:bg-gray-800 dark:border-gray-700"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <img src={match.homeLogo} alt={match.homeTeam} className="w-6 h-6" />
-                    <span className="text-sm font-medium">{match.homeTeam}</span>
+                    <span className="text-sm font-medium dark:text-gray-300">{match.homeTeam}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{match.awayTeam}</span>
+                    <span className="text-sm font-medium dark:text-gray-300">{match.awayTeam}</span>
                     <img src={match.awayLogo} alt={match.awayTeam} className="w-6 h-6" />
                   </div>
                 </div>
                 <div className="text-center">
-                  <span className="text-xs text-gray-600">موعد المباراة</span>
-                  <span className="block text-lg font-bold text-gray-800">
-                    {formatTime(match.time)}
-                  </span>
+                  {match.status === "FT" ? (
+                    <div className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                      {match.homeScore} - {match.awayScore}
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">موعد المباراة</span>
+                      <span className="block text-lg font-bold text-gray-800 dark:text-gray-200">
+                        {formatTime(match.time)}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -197,9 +205,9 @@ const Sidebar = () => {
   return (
     <div className="w-full lg:w-80 max-w-sm space-y-6 lg:sticky lg:top-24">
       {/* Navigation date */}
-      <Card className="p-5 bg-gradient-to-br from-card to-sport-light/30 border shadow-card">
+      <Card className="p-5 bg-gradient-to-br from-card to-sport-light/30 border shadow-card dark:from-gray-800 dark:to-gray-700">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="font-bold text-xl text-foreground">{formattedDate}</h2>
+          <h2 className="font-bold text-xl text-foreground dark:text-gray-200">{formattedDate}</h2>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={handlePrevDay}>
               ←
@@ -212,8 +220,8 @@ const Sidebar = () => {
       </Card>
 
       {/* Matches regroupés */}
-      <Card className="p-4">
-        <h3 className="font-semibold text-foreground mb-4">مباريات اليوم</h3>
+      <Card className="p-4 dark:bg-gray-800">
+        <h3 className="font-semibold text-foreground mb-4 dark:text-gray-200">مباريات اليوم</h3>
         {renderContent()}
       </Card>
     </div>
