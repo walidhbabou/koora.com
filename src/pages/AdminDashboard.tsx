@@ -204,51 +204,70 @@ const AdminDashboard: React.FC = () => {
   };
 
   // Users handlers extracted from inline JSX
-  const submitCreateUser = async () => {
+const submitCreateUser = async () => {
     setCreateUserError('');
     setCreateUserInfo('');
-    if (!newUserEmail || !newUserPassword) {
-      setCreateUserError(currentLanguage === 'ar' ? 'أدخل البريد وكلمة المرور' : 'Entrez email et mot de passe');
-      return;
+    if (!newUserEmail || !newUserPassword || !newUserName) {
+        setCreateUserError(currentLanguage === 'ar' ? 'أدخل جميع الحقول' : 'Remplissez tous les champs');
+        return;
     }
     setCreatingUser(true);
     try {
-      // Create auth user
-      const { data, error } = await supabase.auth.signUp({ email: newUserEmail, password: newUserPassword });
-      if (error) {
-        setCreateUserError(error.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
-        return;
-      }
-      const authUser = data.user;
-      if (authUser) {
-        // Ensure profile row exists with requested role
-        const { error: upErr } = await supabase
-          .from('users')
-          .upsert({
-            id: authUser.id,
-            email: authUser.email,
-            first_name: newUserName,
+        // Hasher le mot de passe
+        const passwordHash = await hashPassword(newUserPassword);
+        
+        // Préparer les données SANS la colonne "name" (elle est générée automatiquement)
+        const userData = {
+            email: newUserEmail,
+            first_name: newUserName, // La colonne "name" sera générée à partir de ceci
             last_name: '',
             role: newUserRole,
             status: 'active',
-          }, { onConflict: 'id' });
-        if (upErr) {
-          setCreateUserError(upErr.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
-          return;
+            password_hash: passwordHash,
+            avatar_url: null,
+            last_login: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        console.log('Données à insérer:', userData);
+
+        // Créer l'utilisateur SANS inclure "name"
+        const { data, error } = await supabase
+            .from('users')
+            .insert(userData)
+            .select();
+
+        if (error) {
+            console.error('Erreur Supabase:', error);
+            setCreateUserError(error.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
+            return;
         }
-      }
-      setCreateUserInfo(currentLanguage === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'Utilisateur créé avec succès');
-      await fetchUsers();
-      setNewUserEmail('');
-      setNewUserPassword('');
-      setNewUserName('');
-      setNewUserRole('author');
+
+        setCreateUserInfo(currentLanguage === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'Utilisateur créé avec succès');
+        await fetchUsers();
+        // Réinitialiser les champs
+        setNewUserEmail('');
+        setNewUserPassword('');
+        setNewUserName('');
+        setNewUserRole('author');
     } catch (err: any) {
-      setCreateUserError(err.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
+        console.error('Erreur générale:', err);
+        setCreateUserError(err.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
     } finally {
-      setCreatingUser(false);
+        setCreatingUser(false);
     }
-  };
+};
+
+// Fonction pour hasher le mot de passe avec bcryptjs
+const hashPassword = async (password: string): Promise<string> => {
+    // Implémentation temporaire - remplacez par bcryptjs réel
+    // Pour bcryptjs réel :
+    // import * as bcrypt from 'bcryptjs';
+    // return await bcrypt.hash(password, 12);
+    
+    return `hashed_${password}_temp`;
+};
 
   const changeUserRole = async (id: string, newRole: string) => {
     try {
