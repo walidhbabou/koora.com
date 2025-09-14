@@ -18,6 +18,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useSettings } from "@/contexts/SettingsContext";
 import { useNavigate } from "react-router-dom";
 
+// Utility to check if a string contains Arabic characters
+const isArabic = (str: string) => /[\u0600-\u06FF]/.test(str);
+const getDisplayTeamName = (name: string) => {
+  const translated = getTeamTranslation(name);
+  return isArabic(translated) ? translated : name;
+};
+
 // Shared formatters to match TeamDetails.tsx, extended with timezone
 const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
   if (!dateString) return '';
@@ -48,8 +55,8 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  const displayHomeName = currentLanguage === 'ar' ? getTeamTranslation(homeName) : homeName;
-  const displayAwayName = currentLanguage === 'ar' ? getTeamTranslation(awayName) : awayName;
+  const displayHomeName = getDisplayTeamName(homeName);
+  const displayAwayName = getDisplayTeamName(awayName);
   const homeScore = (match.goals?.home ?? match.score?.fulltime?.home ?? 0);
   const awayScore = (match.goals?.away ?? match.score?.fulltime?.away ?? 0);
 
@@ -103,7 +110,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
           <div className="flex items-center gap-2 min-w-0">
             <img src={match.teams?.home?.logo} alt={match.teams?.home?.name} className="w-6 h-6 sm:w-8 sm:h-8" />
             <span className="text-[12px] sm:text-[14px] font-medium truncate">
-              {currentLanguage === 'ar' ? getTeamTranslation(match.teams?.home?.name) : match.teams?.home?.name}
+              {displayHomeName}
             </span>
           </div>
           <div className="text-center">
@@ -113,7 +120,7 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
           </div>
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-[12px] sm:text-[14px] font-medium truncate">
-              {currentLanguage === 'ar' ? getTeamTranslation(match.teams?.away?.name) : match.teams?.away?.name}
+              {displayAwayName}
             </span>
             <img src={match.teams?.away?.logo} alt={match.teams?.away?.name} className="w-6 h-6 sm:w-8 sm:h-8" />
           </div>
@@ -131,6 +138,9 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
+  const displayHomeName = getDisplayTeamName(homeName);
+  const displayAwayName = getDisplayTeamName(awayName);
+
   // Formatage du temps de début du match
   const getMatchTime = () => {
     if (!match.date) return '';
@@ -171,9 +181,6 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   })();
   const homeScore = match.goals?.home ?? 0;
   const awayScore = match.goals?.away ?? 0;
-  // Use static mapping for Arabic UI; keep original for other languages
-  const displayHomeName = currentLanguage === 'ar' ? getTeamTranslation(homeName) : homeName;
-  const displayAwayName = currentLanguage === 'ar' ? getTeamTranslation(awayName) : awayName;
 
   const navigate = useNavigate();
   return (
