@@ -208,65 +208,43 @@ const submitCreateUser = async () => {
     setCreateUserError('');
     setCreateUserInfo('');
     if (!newUserEmail || !newUserPassword || !newUserName) {
-        setCreateUserError(currentLanguage === 'ar' ? 'أدخل جميع الحقول' : 'Remplissez tous les champs');
+        setCreateUserError(currentLanguage === 'ar' ? 'أدخل البريد وكلمة المرور والاسم' : 'Entrez email, mot de passe et nom');
         return;
     }
     setCreatingUser(true);
     try {
-        // Hasher le mot de passe
-        const passwordHash = await hashPassword(newUserPassword);
-        
-        // Préparer les données SANS la colonne "name" (elle est générée automatiquement)
-        const userData = {
+        const { error } = await supabase.rpc('insert_user_with_hashed_password', {
             email: newUserEmail,
-            first_name: newUserName, // La colonne "name" sera générée à partir de ceci
+            first_name: newUserName,
             last_name: '',
             role: newUserRole,
             status: 'active',
-            password_hash: passwordHash,
-            avatar_url: null,
-            last_login: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-
-        console.log('Données à insérer:', userData);
-
-        // Créer l'utilisateur SANS inclure "name"
-        const { data, error } = await supabase
-            .from('users')
-            .insert(userData)
-            .select();
-
+            password: newUserPassword, // Raw password to be hashed in the database
+        });
         if (error) {
-            console.error('Erreur Supabase:', error);
+            console.error('Insert Error:', error);
             setCreateUserError(error.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
             return;
         }
-
         setCreateUserInfo(currentLanguage === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'Utilisateur créé avec succès');
         await fetchUsers();
-        // Réinitialiser les champs
         setNewUserEmail('');
         setNewUserPassword('');
         setNewUserName('');
         setNewUserRole('author');
     } catch (err: any) {
-        console.error('Erreur générale:', err);
+        console.error('Unexpected Error:', err);
         setCreateUserError(err.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
     } finally {
         setCreatingUser(false);
     }
 };
-
 // Fonction pour hasher le mot de passe avec bcryptjs
 const hashPassword = async (password: string): Promise<string> => {
-    // Implémentation temporaire - remplacez par bcryptjs réel
-    // Pour bcryptjs réel :
-    // import * as bcrypt from 'bcryptjs';
-    // return await bcrypt.hash(password, 12);
-    
-    return `hashed_${password}_temp`;
+    // Utilisation de bcryptjs pour hasher le mot de passe
+    const bcrypt = await import('bcryptjs');
+    const saltRounds = 12;
+    return await bcrypt.hash(password, saltRounds);
 };
 
   const changeUserRole = async (id: string, newRole: string) => {
