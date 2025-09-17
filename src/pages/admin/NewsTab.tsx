@@ -1,50 +1,18 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Filter, Edit, Trash2, Eye, Image as ImageIcon } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import NewsEditor from '../../components/NewsEditor';
 import DOMPurify from 'dompurify';
+import type { CategoryRow, ChampionRow, NewsItem as News, NewsTabCommentRow } from '@/types/admin';
 
-export interface CategoryRow {
-  id: number;
-  name: string;
-  name_ar?: string | null;
-  description?: string | null;
-  created_at?: string | null;
-}
-
-export interface ChampionRow {
-  id: number;
-  nom: string;
-  nom_ar?: string | null;
-}
-
-export interface NewsItem {
-  id: string;
-  title: string;
-  content: string;
-  category?: string;
-  author?: string;
-  date?: string;
-  status?: 'published' | 'draft' | 'archived';
-  imageUrl?: string;
-}
-
-export interface CommentRow {
-  id: number;
-  content: string;
-  user_id: string | null;
-  news_id: number | null;
-  created_at?: string | null;
-}
+// Using shared types from '@/types/admin'
 
 interface NewsTabProps {
   // search/filter
@@ -66,16 +34,35 @@ interface NewsTabProps {
   setNewNewsChampionId: (v: number | null) => void;
   newNewsImageFile: File | null;
   setNewNewsImageFile: (f: File | null) => void;
-  newNewsStatus: string;
+  newNewsStatus: string; // kept for compatibility though unused here
   setNewNewsStatus: (v: string) => void;
-  newNewsImageUrl: string;
+  newNewsImageUrl: string; // kept for compatibility though unused here
   setNewNewsImageUrl: (v: string) => void;
-  newNewsCreatedAt: string;
+  newNewsCreatedAt: string; // kept for compatibility though unused here
   setNewNewsCreatedAt: (v: string) => void;
-  newNewsUpdatedAt: string;
+  newNewsUpdatedAt: string; // kept for compatibility though unused here
   setNewNewsUpdatedAt: (v: string) => void;
   categories: CategoryRow[];
   champions: ChampionRow[];
+
+  // **NOUVEAUX CHAMPS POUR LES COMPÉTITIONS**
+  competitionsInternationales: {id:number,nom:string}[];
+  competitionsMondiales: {id:number,nom:string}[];
+  competitionsContinentales: {id:number,nom:string}[];
+  competitionsLocales: {id:number,nom:string}[];
+  transfertsNews: {id:number,nom:string}[];
+
+  // Nouveaux états pour les formulaires de création
+  newCompetitionInternationaleId: number | null;
+  setNewCompetitionInternationaleId: (v: number | null) => void;
+  newCompetitionMondialeId: number | null;
+  setNewCompetitionMondialeId: (v: number | null) => void;
+  newCompetitionContinentaleId: number | null;
+  setNewCompetitionContinentaleId: (v: number | null) => void;
+  newCompetitionLocaleId: number | null;
+  setNewCompetitionLocaleId: (v: number | null) => void;
+  newTransfertNewsId: number | null;
+  setNewTransfertNewsId: (v: number | null) => void;
 
   // create form status/messages
   creatingNews: boolean;
@@ -84,7 +71,7 @@ interface NewsTabProps {
   onCreateNewsSubmit: () => Promise<void> | void;
 
   // listing and pagination
-  news: NewsItem[];
+  news: News[];
   loadingNews: boolean;
   newsPage: number;
   newsTotal: number;
@@ -93,78 +80,46 @@ interface NewsTabProps {
   onNextPage: () => void;
 
   // actions
-  onEditNews: (item: NewsItem) => void;
+  onEditNews: (item: News) => void;
   onDeleteNews: (id: string) => void;
-  onOpenDetails: (item: NewsItem) => void;
+  onOpenDetails: (item: News) => void;
 
   // selected news details/comments
-  selectedNews: NewsItem | null;
+  selectedNews: News | null;
   loadingSelectedNews: boolean;
-  selectedNewsComments: CommentRow[];
+  selectedNewsComments: NewsTabCommentRow[];
   loadingSelectedComments: boolean;
   onDeleteComment: (commentId: number) => void;
 }
 
 const NewsTab: React.FC<NewsTabProps> = (props) => {
-  const { t, currentLanguage, isRTL } = useLanguage();
-  
-  // ReactQuill modules
-  const quillModules = {
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ script: 'sub' }, { script: 'super' }],
-        ['blockquote', 'code-block'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
-        ['link', 'image'],
-        ['clean'],
-      ],
-    },
-  };
+  const { currentLanguage, isRTL } = useLanguage();
   
   const {
     searchTerm, onSearchTermChange,
     isCreateNewsOpen, onChangeCreateNewsOpen,
     newNewsTitle, setNewNewsTitle,
     newNewsContent, setNewNewsContent,
-    newNewsCategoryId, setNewNewsCategoryId,
-    newNewsChampionId, setNewNewsChampionId,
     newNewsImageFile, setNewNewsImageFile,
-    newNewsStatus, setNewNewsStatus,
-    newNewsImageUrl, setNewNewsImageUrl,
-    newNewsCreatedAt, setNewNewsCreatedAt,
-    newNewsUpdatedAt, setNewNewsUpdatedAt,
-    categories, champions,
+    competitionsInternationales, competitionsMondiales, competitionsContinentales,
+    competitionsLocales, transfertsNews,
+    newCompetitionInternationaleId, setNewCompetitionInternationaleId,
+    newCompetitionMondialeId, setNewCompetitionMondialeId,
+    newCompetitionContinentaleId, setNewCompetitionContinentaleId,
+    newCompetitionLocaleId, setNewCompetitionLocaleId,
+    newTransfertNewsId, setNewTransfertNewsId,
     creatingNews, createNewsError, createNewsInfo, onCreateNewsSubmit,
     news, loadingNews, newsPage, newsTotal, pageSize, onPrevPage, onNextPage,
     onEditNews, onDeleteNews, onOpenDetails,
     selectedNews, loadingSelectedNews, selectedNewsComments, loadingSelectedComments, onDeleteComment,
   } = props;
 
-  const fetchNewsDetails = async (newsId: string) => {
-    try {
-      const response = await fetch(`/api/news/${newsId}`); // Remplacez par l'URL correcte de votre API
-      if (!response.ok) {
-        throw new Error('Failed to fetch news details');
-      }
-      const newsDetails = await response.json();
-      setNewNewsTitle(newsDetails.title || '');
-      setNewNewsContent(newsDetails.content || '');
-      setNewNewsCategoryId(newsDetails.category_id || null);
-      setNewNewsChampionId(newsDetails.champion_id || null);
-      setNewNewsImageFile(null); // Vous pouvez gérer l'image différemment si nécessaire
-      // Ajout des champs supplémentaires pour le formulaire de modification
-      setNewNewsStatus(newsDetails.status || '');
-      setNewNewsImageUrl(newsDetails.image_url || '');
-      setNewNewsCreatedAt(newsDetails.created_at || '');
-      setNewNewsUpdatedAt(newsDetails.updated_at || '');
-    } catch (error) {
-      console.error('Error fetching news details:', error);
-    }
+  // helpers
+  const statusLabel = (s?: News['status']) => {
+    if (s === 'published') return currentLanguage === 'ar' ? 'منشور' : 'published';
+    if (s === 'draft') return currentLanguage === 'ar' ? 'مسودة' : 'draft';
+    if (s === 'archived') return currentLanguage === 'ar' ? 'مؤرشف' : 'archived';
+    return '-';
   };
 
   return (
@@ -218,52 +173,111 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
                   {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'} <span className="text-red-500">*</span>
                 </label>
-                <div className="border-2 border-gray-300 rounded-lg overflow-hidden focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-200">
-                  <ReactQuill
-                    theme="snow"
-                    value={newNewsContent}
-                    onChange={setNewNewsContent}
-                    placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
-                    modules={quillModules}
-                    className={`${isRTL ? 'rtl' : 'ltr'} min-h-[300px]`}
-                    style={{ height: '300px' }}
+                <div className="border rounded-md">
+                  <NewsEditor
+                    initialData={newNewsContent ? JSON.parse(newNewsContent) : undefined}
+                    onSave={data => setNewNewsContent(JSON.stringify(data))}
+                    placeholder={currentLanguage === 'ar' ? 'اكتب محتوى الخبر هنا...' : 'Écrivez le contenu de la news ici...'}
                   />
                 </div>
               </div>
 
-              {/* Category and Championship Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {currentLanguage === 'ar' ? 'القسم' : 'Catégorie'} <span className="text-red-500">*</span>
-                  </label>
-                  <Select value={newNewsCategoryId !== null ? String(newNewsCategoryId) : undefined} onValueChange={(v) => setNewNewsCategoryId(Number(v))}>
-                    <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
-                      <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر القسم' : 'Choisir une catégorie'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.name}{c.name_ar ? ` • ${c.name_ar}` : ''}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Competitions Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 border-b pb-2">
+                  {currentLanguage === 'ar' ? 'المسابقات' : 'Compétitions'}
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Competitions Internationales */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'المسابقات الدولية' : 'Compétitions Internationales'}
+                    </label>
+                    <Select value={newCompetitionInternationaleId !== null ? String(newCompetitionInternationaleId) : undefined} onValueChange={(v) => setNewCompetitionInternationaleId(v === 'none' ? null : Number(v))}>
+                      <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                        <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر مسابقة دولية (اختياري)' : 'Choisir une compétition internationale (optionnel)'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+                        {competitionsInternationales.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                    {currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}
-                  </label>
-                  <Select value={newNewsChampionId !== null ? String(newNewsChampionId) : undefined} onValueChange={(v) => setNewNewsChampionId(v === 'none' ? null : Number(v))}>
-                    <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
-                      <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
-                      {champions.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>{c.nom}{c.nom_ar ? ` • ${c.nom_ar}` : ''}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {/* Competitions Mondiales */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'المسابقات العالمية' : 'Compétitions Mondiales'}
+                    </label>
+                    <Select value={newCompetitionMondialeId !== null ? String(newCompetitionMondialeId) : undefined} onValueChange={(v) => setNewCompetitionMondialeId(v === 'none' ? null : Number(v))}>
+                      <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                        <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر مسابقة عالمية (اختياري)' : 'Choisir une compétition mondiale (optionnel)'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+                        {competitionsMondiales.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Competitions Continentales */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'المسابقات القارية' : 'Compétitions Continentales'}
+                    </label>
+                    <Select value={newCompetitionContinentaleId !== null ? String(newCompetitionContinentaleId) : undefined} onValueChange={(v) => setNewCompetitionContinentaleId(v === 'none' ? null : Number(v))}>
+                      <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                        <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر مسابقة قارية (اختياري)' : 'Choisir une compétition continentale (optionnel)'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+                        {competitionsContinentales.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Competitions Locales */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'المسابقات المحلية' : 'Compétitions Locales'}
+                    </label>
+                    <Select value={newCompetitionLocaleId !== null ? String(newCompetitionLocaleId) : undefined} onValueChange={(v) => setNewCompetitionLocaleId(v === 'none' ? null : Number(v))}>
+                      <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                        <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر مسابقة محلية (اختياري)' : 'Choisir une compétition locale (optionnel)'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+                        {competitionsLocales.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Transferts News */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                      {currentLanguage === 'ar' ? 'أخبار الانتقالات' : 'News Transferts'}
+                    </label>
+                    <Select value={newTransfertNewsId !== null ? String(newTransfertNewsId) : undefined} onValueChange={(v) => setNewTransfertNewsId(v === 'none' ? null : Number(v))}>
+                      <SelectTrigger className="h-12 border-2 focus:border-teal-500 focus:ring-2 focus:ring-teal-200">
+                        <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر نوع الانتقال (اختياري)' : 'Choisir un type de transfert (optionnel)'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
+                        {transfertsNews.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.nom}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
@@ -397,9 +411,7 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                   <TableCell>
                     {item.status && (
                       <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
-                        {item.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
-                         item.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
-                         currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
+                        {statusLabel(item.status)}
                       </Badge>
                     )}
                   </TableCell>
@@ -471,9 +483,7 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                     <h3 className="text-lg font-semibold">{selectedNews.title}</h3>
                     {selectedNews.status && (
                       <Badge variant={selectedNews.status === 'published' ? 'default' : 'secondary'}>
-                        {selectedNews.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
-                         selectedNews.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
-                         currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
+                        {statusLabel(selectedNews.status)}
                       </Badge>
                     )}
                   </div>
@@ -483,9 +493,9 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
               <div 
                 className="prose dark:prose-invert max-w-none text-sm text-slate-800 dark:text-slate-200"
                 dangerouslySetInnerHTML={{ 
-                  __html: loadingSelectedNews 
-                    ? (currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...') 
-                    : DOMPurify.sanitize(selectedNews.content || '-') 
+                  __html: loadingSelectedNews
+                    ? (currentLanguage === 'ar' ? 'جاري التحميل...' : 'Chargement...')
+                    : DOMPurify.sanitize(selectedNews.content || '-')
                 }}
               />
             </div>

@@ -83,3 +83,45 @@ a:hover {
 .read-the-docs {
   color: #888;
 }
+/* Masquer la scrollbar horizontale sur mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animations personnalisées */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Effet glassmorphism */
+.backdrop-blur-custom {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Gradients personnalisés pour dark mode */
+.dark .bg-gradient-header {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #000000 100%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .category-mobile-scroll {
+    scroll-snap-type: x mandatory;
+  }
+  
+  .category-mobile-item {
+    scroll-snap-align: start;
+  }
+}

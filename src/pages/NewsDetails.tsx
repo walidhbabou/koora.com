@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import SEO from "@/components/SEO";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -14,7 +14,60 @@ import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
-import { Helmet } from 'react-helmet-async';
+
+// Types for Editor.js content
+interface EditorJsBlock {
+  type: string;
+  data: {
+    text?: string;
+    items?: string[];
+    level?: number;
+    [key: string]: unknown;
+  };
+}
+
+interface EditorJsContent {
+  blocks: EditorJsBlock[];
+  version?: string;
+  time?: number;
+}
+
+// Function to parse Editor.js content and convert to HTML
+const parseEditorJsToHtml = (content: string): string => {
+  try {
+    const parsed: EditorJsContent = JSON.parse(content);
+    if (parsed.blocks && Array.isArray(parsed.blocks)) {
+      return parsed.blocks
+        .map((block: EditorJsBlock) => {
+          switch (block.type) {
+            case 'paragraph':
+              return block.data.text ? `<p>${block.data.text}</p>` : '';
+            case 'header': {
+              const level = block.data.level || 2;
+              return block.data.text ? `<h${level}>${block.data.text}</h${level}>` : '';
+            }
+            case 'list': {
+              if (block.data.items && Array.isArray(block.data.items)) {
+                const listItems = block.data.items.map(item => `<li>${item}</li>`).join('');
+                return `<ul>${listItems}</ul>`;
+              }
+              return '';
+            }
+            case 'quote':
+              return block.data.text ? `<blockquote>${block.data.text}</blockquote>` : '';
+            default:
+              return block.data.text ? `<p>${block.data.text}</p>` : '';
+          }
+        })
+        .filter(Boolean)
+        .join('');
+    }
+  } catch (e) {
+    // If it's not JSON or has a different format, return as HTML
+    return `<p>${content}</p>`;
+  }
+  return `<p>${content}</p>`;
+};
 
 interface NewsRow {
   id: number;
@@ -25,10 +78,17 @@ interface NewsRow {
   status?: string | null;
 }
 
+interface RelatedNewsItem {
+  id: number;
+  title: string;
+  image_url?: string | null;
+  created_at: string;
+}
+
 const NewsDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [news, setNews] = useState<NewsRow | null>(null);
-  const [relatedNews, setRelatedNews] = useState<NewsRow[]>([]); // State for related news
+  const [relatedNews, setRelatedNews] = useState<RelatedNewsItem[]>([]); // State for related news
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -37,38 +97,64 @@ const NewsDetails: React.FC = () => {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportDesc, setReportDesc] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
       const { data, error } = await supabase
         .from('news')
-        .select('id, title, content, created_at, image_url, status, category_id') // Include category_id
+        .select('id, title, content, created_at, image_url, status, competition_internationale_id, competition_mondiale_id, competition_continentale_id, competition_locale_id') // Include competition foreign keys
         .eq('id', Number(id))
         .single();
       if (error) throw error;
-      setNews(data as any);
+      setNews(data as NewsRow);
 
-      // Fetch related news
-      if (data?.category_id) {
-        const { data: related, error: relatedError } = await supabase
+      // Fetch related news based on competition types
+      if (data) {
+        let relatedQuery = supabase
           .from('news')
           .select('id, title, image_url, created_at')
-          .eq('category_id', data.category_id)
           .neq('id', Number(id)) // Exclude current news
-          .limit(5); // Limit to 5 related news
-        if (relatedError) throw relatedError;
-        setRelatedNews(related || []);
+          .eq('status', 'published')
+          .limit(5);
+
+        // Filter by the same competition type if available
+        if (data.competition_internationale_id) {
+          relatedQuery = relatedQuery.eq('competition_internationale_id', data.competition_internationale_id);
+        } else if (data.competition_mondiale_id) {
+          relatedQuery = relatedQuery.eq('competition_mondiale_id', data.competition_mondiale_id);
+        } else if (data.competition_continentale_id) {
+          relatedQuery = relatedQuery.eq('competition_continentale_id', data.competition_continentale_id);
+        } else if (data.competition_locale_id) {
+          relatedQuery = relatedQuery.eq('competition_locale_id', data.competition_locale_id);
+        }
+
+        const { data: related, error: relatedError } = await relatedQuery;
+        if (relatedError) {
+          console.error('Error fetching related news:', relatedError);
+          // If no related news found with competition filter, get general news
+          const { data: generalRelated } = await supabase
+            .from('news')
+            .select('id, title, image_url, created_at')
+            .neq('id', Number(id))
+            .eq('status', 'published')
+            .limit(5)
+            .order('created_at', { ascending: false });
+          setRelatedNews(generalRelated || []);
+        } else {
+          setRelatedNews(related || []);
+        }
       }
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load news');
+    } catch (e: unknown) {
+      const error = e as { message?: string };
+      setError(error?.message || 'Failed to load news');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  useEffect(() => { load(); }, [id]);
+  useEffect(() => { load(); }, [id, load]);
 
   const reportThisNews = async (description: string) => {
     if (!id) return;
@@ -89,9 +175,10 @@ const NewsDetails: React.FC = () => {
           p_reported_by: user.id
         });
         if (error) throw error;
-      } catch (rpcErr: any) {
-        const msg: string = rpcErr?.message || '';
-        const code: string | undefined = rpcErr?.code;
+      } catch (rpcErr: unknown) {
+        const err = rpcErr as { message?: string; code?: string };
+        const msg: string = err?.message || '';
+        const code: string | undefined = err?.code;
         // Only fallback if the function TRULY does not exist (e.g., Postgres 42883)
         const fnMissing = (code === '42883') || /function\s+create_report\s*\(.*\)\s+does not exist/i.test(msg) || /does not exist/i.test(msg);
         if (!fnMissing) throw rpcErr; // avoid fallback on permission/RLS errors
@@ -108,8 +195,9 @@ const NewsDetails: React.FC = () => {
       toast({ description: 'تم إرسال البلاغ بنجاح' });
       setReportOpen(false);
       setReportDesc('');
-    } catch (e: any) {
-      toast({ title: 'Erreur', description: e?.message || 'تعذر إرسال البلاغ', variant: 'destructive' });
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      toast({ title: 'Erreur', description: err?.message || 'تعذر إرسال البلاغ', variant: 'destructive' });
     } finally {
       setReporting(false);
     }
@@ -183,7 +271,7 @@ const NewsDetails: React.FC = () => {
                   <div
                     className="prose prose-slate dark:prose-invert max-w-none leading-relaxed"
                     dir="auto"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content || '') }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parseEditorJsToHtml(news.content || '')) }}
                   />
                 </div>
               </Card>

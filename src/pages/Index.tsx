@@ -113,6 +113,33 @@ const Index = () => {
       if (error) throw error;
 
       if (data) {
+        // Fonction pour extraire le contenu textuel depuis le JSON Editor.js
+        const extractTextFromEditorJs = (content: string) => {
+          try {
+            const parsed = JSON.parse(content);
+            if (parsed.blocks && Array.isArray(parsed.blocks)) {
+              return parsed.blocks
+                .map((block: any) => {
+                  if (block.type === 'paragraph' && block.data?.text) {
+                    return block.data.text;
+                  }
+                  if (block.type === 'header' && block.data?.text) {
+                    return block.data.text;
+                  }
+                  if (block.type === 'list' && block.data?.items) {
+                    return block.data.items.join(' ');
+                  }
+                  return '';
+                })
+                .filter(text => text.length > 0)
+                .join(' ');
+            }
+            return content;
+          } catch {
+            return content;
+          }
+        };
+
         const stripHtml = (html: string) =>
           html
             .replace(/<[^>]*>/g, ' ')               // remove tags
@@ -124,7 +151,8 @@ const Index = () => {
             .trim();
 
         const mapped: NewsCardItem[] = (data || []).map((n: { id: string; title: string; content: string; image_url: string; created_at: string }) => {
-          const plain = stripHtml((n.content ?? '').toString());
+          const textContent = extractTextFromEditorJs(n.content ?? '');
+          const plain = stripHtml(textContent);
           return {
             id: String(n.id),
             title: n.title ?? '-',

@@ -32,6 +32,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import EditorOverviewTab from './editor/EditorOverviewTab';
 import EditorArticlesTab from './editor/EditorArticlesTab';
 import EditorProfileTab from './editor/EditorProfileTab';
+import NewsEditor from '@/components/NewsEditor';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -89,15 +90,26 @@ const EditorDashboard: React.FC = () => {
 
   // New Article (Editor) state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createStep, setCreateStep] = useState(1);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
-  const [newCategoryId, setNewCategoryId] = useState<number | null>(null);
-  const [newChampionId, setNewChampionId] = useState<number | null>(null);
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [createError, setCreateError] = useState('');
   const [creating, setCreating] = useState(false);
-  const [categories, setCategories] = useState<{id:number,name:string,name_ar:string}[]>([]);
-  const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
+  
+  // Nouveaux états pour les compétitions
+  const [newCompetitionInternationaleId, setNewCompetitionInternationaleId] = useState<number | null>(null);
+  const [newCompetitionMondialeId, setNewCompetitionMondialeId] = useState<number | null>(null);
+  const [newCompetitionContinentaleId, setNewCompetitionContinentaleId] = useState<number | null>(null);
+  const [newCompetitionLocaleId, setNewCompetitionLocaleId] = useState<number | null>(null);
+  const [newTransfertNewsId, setNewTransfertNewsId] = useState<number | null>(null);
+  
+  // États pour stocker les options des compétitions
+  const [competitionsInternationales, setCompetitionsInternationales] = useState<{id:number,nom:string}[]>([]);
+  const [competitionsMondiales, setCompetitionsMondiales] = useState<{id:number,nom:string}[]>([]);
+  const [competitionsContinentales, setCompetitionsContinentales] = useState<{id:number,nom:string}[]>([]);
+  const [competitionsLocales, setCompetitionsLocales] = useState<{id:number,nom:string}[]>([]);
+  const [transfertsNews, setTransfertsNews] = useState<{id:number,nom:string}[]>([]);
   const newQuillRef = useRef<ReactQuill | null>(null);
   const buildModules = (ref: React.RefObject<ReactQuill>) => ({
     toolbar: {
@@ -196,26 +208,53 @@ const EditorDashboard: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, activeTab]);
 
-  // Load categories for creation form
-  const fetchCategories = async () => {
+  // Fonctions pour charger les nouvelles compétitions
+  const fetchCompetitionsInternationales = async () => {
     try {
-      const { data, error } = await supabase.from('categories').select('id, name, name_ar').order('id');
+      const { data, error } = await supabase.from('competitions_internationales').select('id, nom').order('id');
       if (error) throw error;
-      setCategories(data || []);
-    } catch (e) { console.error('load categories failed', e); }
+      setCompetitionsInternationales(data || []);
+    } catch (e) { console.error('load competitions internationales failed', e); }
   };
 
-  const fetchChampions = async () => {
+  const fetchCompetitionsMondiales = async () => {
     try {
-      const { data, error } = await supabase.from('champions').select('id, nom, nom_ar').order('id');
+      const { data, error } = await supabase.from('competitions_mondiales').select('id, nom').order('id');
       if (error) throw error;
-      setChampions(data || []);
-    } catch (e) { console.error('load champions failed', e); }
+      setCompetitionsMondiales(data || []);
+    } catch (e) { console.error('load competitions mondiales failed', e); }
+  };
+
+  const fetchCompetitionsContinentales = async () => {
+    try {
+      const { data, error } = await supabase.from('competitions_continentales').select('id, nom').order('id');
+      if (error) throw error;
+      setCompetitionsContinentales(data || []);
+    } catch (e) { console.error('load competitions continentales failed', e); }
+  };
+
+  const fetchCompetitionsLocales = async () => {
+    try {
+      const { data, error } = await supabase.from('competitions_locales').select('id, nom').order('id');
+      if (error) throw error;
+      setCompetitionsLocales(data || []);
+    } catch (e) { console.error('load competitions locales failed', e); }
+  };
+
+  const fetchTransfertsNews = async () => {
+    try {
+      const { data, error } = await supabase.from('transferts_news').select('id, nom').order('id');
+      if (error) throw error;
+      setTransfertsNews(data || []);
+    } catch (e) { console.error('load transferts news failed', e); }
   };
 
   useEffect(() => { 
-    fetchCategories(); 
-    fetchChampions();
+    fetchCompetitionsInternationales();
+    fetchCompetitionsMondiales();
+    fetchCompetitionsContinentales();
+    fetchCompetitionsLocales();
+    fetchTransfertsNews();
   }, []);
 
 
@@ -364,11 +403,15 @@ const EditorDashboard: React.FC = () => {
   };
 
   const resetCreateForm = () => {
+    setCreateStep(1);
     setNewTitle('');
     setNewContent('');
-    setNewCategoryId(null);
-    setNewChampionId(null);
     setNewImageFile(null);
+    setNewCompetitionInternationaleId(null);
+    setNewCompetitionMondialeId(null);
+    setNewCompetitionContinentaleId(null);
+    setNewCompetitionLocaleId(null);
+    setNewTransfertNewsId(null);
     setCreateError('');
   };
 
@@ -382,47 +425,28 @@ const EditorDashboard: React.FC = () => {
       setCreateError(currentLanguage === 'ar' ? 'أدخل العنوان والمحتوى' : 'Entrez le titre et le contenu');
       return;
     }
-    if (!newCategoryId) {
-      setCreateError(currentLanguage === 'ar' ? 'اختر الفئة' : 'Choisissez une catégorie');
-      return;
-    }
     setCreating(true);
     try {
       const imageUrl = await uploadNewImageIfAny();
       
-      // Essayer d'abord la fonction RPC create_news
-      try {
-        const { error } = await supabase.rpc('create_news', {
-          p_user_id: user.id,
-          p_title: newTitle,
-          p_content: newContent,
-          p_status: 'published',
-          p_image_url: imageUrl ?? null,
-          p_category_id: newCategoryId,
-          p_champion_id: newChampionId,
-        });
-        
-        if (error) {
-          console.error('Supabase RPC error details:', error);
-          throw error;
-        }
-      } catch (rpcErr: any) {
-        // Si la fonction RPC n'existe pas ou échoue, utiliser l'insertion directe avec user_id
-        console.log('RPC failed, trying direct insert:', rpcErr);
-        const { error } = await supabase.from('news').insert({
-          title: newTitle,
-          content: newContent,
-          status: 'published',
-          image_url: imageUrl ?? null,
-          category_id: newCategoryId,
-          champion_id: newChampionId,
-          user_id: user.id, // Inclure explicitement user_id
-        }).select();
-        
-        if (error) {
-          console.error('Direct insert error details:', error);
-          throw error;
-        }
+      // Utiliser l'insertion directe avec tous les nouveaux champs
+      const { error } = await supabase.from('news').insert({
+        title: newTitle,
+        content: newContent,
+        status: 'published',
+        image_url: imageUrl ?? null,
+        user_id: user.id,
+        // Nouveaux champs de compétitions
+        competition_internationale_id: newCompetitionInternationaleId,
+        competition_mondiale_id: newCompetitionMondialeId,
+        competition_continentale_id: newCompetitionContinentaleId,
+        competition_locale_id: newCompetitionLocaleId,
+        transfert_news_id: newTransfertNewsId,
+      }).select();
+      
+      if (error) {
+        console.error('Direct insert error details:', error);
+        throw error;
       }
       
       setIsCreateOpen(false);
@@ -578,86 +602,160 @@ const EditorDashboard: React.FC = () => {
                 ) : last24News.length === 0 ? (
                   <div className="text-sm text-muted-foreground">{currentLanguage === 'ar' ? 'لا توجد أخبار حديثة' : 'Aucune actualité récente'}</div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {last24News.map((n, index) => {
-                      // Créer un résumé du contenu
-                      const stripHtml = (html: string) =>
-                        html
-                          .replace(/<[^>]*>/g, ' ')
-                          .replace(/&nbsp;/gi, ' ')
-                          .replace(/&amp;/gi, '&')
-                          .replace(/&lt;/gi, '<')
-                          .replace(/&gt;/gi, '>')
-                          .replace(/\s+/g, ' ')
-                          .trim();
-                      
-                      const summary = stripHtml(n.content || '').slice(0, 120) + (stripHtml(n.content || '').length > 120 ? '...' : '');
-                      
-                      return (
-                        <div key={String(n.id)} className="bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden group">
-                          {/* Image */}
-                          <div className="relative h-48 overflow-hidden">
-                            {n.image_url ? (
-                              <img 
-                                src={n.image_url} 
-                                alt={n.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
-                                <Image className="w-16 h-16 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="absolute top-3 left-3">
-                              <Badge variant="secondary" className="bg-white/90 text-slate-700">
-                                {n.created_at ? new Date(n.created_at).toLocaleDateString('ar-SA') : ''}
-                              </Badge>
-                            </div>
-                          </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {currentLanguage === 'ar' ? 'الصورة' : 'Image'}
+                          </th>
+                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
+                          </th>
+                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {currentLanguage === 'ar' ? 'الوصف' : 'Description'}
+                          </th>
+                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {currentLanguage === 'ar' ? 'المؤلف' : 'Auteur'}
+                          </th>
+                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {currentLanguage === 'ar' ? 'التاريخ' : 'Date'}
+                          </th>
+                          <th className={`text-center p-4 font-semibold text-gray-700 dark:text-gray-300`}>
+                            {currentLanguage === 'ar' ? 'الإجراءات' : 'Actions'}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {last24News.map((n, index) => {
+                          // Fonction pour extraire le contenu textuel depuis le JSON Editor.js
+                          const extractTextFromEditorJs = (content: string) => {
+                            try {
+                              const parsed = JSON.parse(content);
+                              if (parsed.blocks && Array.isArray(parsed.blocks)) {
+                                return parsed.blocks
+                                  .map((block: any) => {
+                                    if (block.type === 'paragraph' && block.data?.text) {
+                                      return block.data.text;
+                                    }
+                                    if (block.type === 'header' && block.data?.text) {
+                                      return block.data.text;
+                                    }
+                                    if (block.type === 'list' && block.data?.items) {
+                                      return block.data.items.join(' ');
+                                    }
+                                    return '';
+                                  })
+                                  .filter(text => text.length > 0)
+                                  .join(' ');
+                              }
+                              return content;
+                            } catch {
+                              return content;
+                            }
+                          };
+
+                          // Créer un résumé du contenu
+                          const stripHtml = (html: string) =>
+                            html
+                              .replace(/<[^>]*>/g, ' ')
+                              .replace(/&nbsp;/gi, ' ')
+                              .replace(/&amp;/gi, '&')
+                              .replace(/&lt;/gi, '<')
+                              .replace(/&gt;/gi, '>')
+                              .replace(/\s+/g, ' ')
+                              .trim();
                           
-                          {/* Content */}
-                          <div className="p-4">
-                            <h3 className="font-bold text-lg text-slate-900 dark:text-white mb-2 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                              {n.title}
-                            </h3>
-                            
-                            {summary && (
-                              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3 line-clamp-3">
-                                {summary}
-                              </p>
-                            )}
-                            
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-xs text-slate-500">
-                                <User className="w-4 h-4" />
-                                <span>{n.author || 'غير محدد'}</span>
-                              </div>
+                          const textContent = extractTextFromEditorJs(n.content || '');
+                          const cleanText = stripHtml(textContent);
+                          const summary = cleanText.slice(0, 150) + (cleanText.length > 150 ? '...' : '');
+                          
+                          return (
+                            <tr 
+                              key={String(n.id)} 
+                              className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200"
+                            >
+                              {/* Image */}
+                              <td className="p-4">
+                                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                                  {n.image_url ? (
+                                    <img 
+                                      src={n.image_url} 
+                                      alt={n.title}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                                      <Image className="w-6 h-6 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
                               
-                              <div className="flex items-center gap-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => navigate(`/news/${n.id}`)}
-                                  className="text-xs"
-                                >
-                                  {currentLanguage === 'ar' ? 'عرض' : 'Voir'}
-                                </Button>
-                                {(['moderator','admin'].includes(String((user as any)?.role || ''))) && (
+                              {/* Title */}
+                              <td className="p-4">
+                                <h3 className={`font-semibold text-gray-900 dark:text-white line-clamp-2 max-w-xs ${isRTL ? 'text-right' : 'text-left'}`}>
+                                  {n.title}
+                                </h3>
+                              </td>
+                              
+                              {/* Description */}
+                              <td className="p-4">
+                                <p className={`text-sm text-gray-600 dark:text-gray-400 line-clamp-3 max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
+                                  {summary || (currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Pas de contenu')}
+                                </p>
+                              </td>
+                              
+                              {/* Author */}
+                              <td className="p-4">
+                                <div className={`flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                  <User className="w-4 h-4" />
+                                  <span>{n.author || (currentLanguage === 'ar' ? 'غير محدد' : 'Non défini')}</span>
+                                </div>
+                              </td>
+                              
+                              {/* Date */}
+                              <td className="p-4">
+                                <Badge variant="secondary" className="text-xs">
+                                  {n.created_at ? new Date(n.created_at).toLocaleDateString(
+                                    currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR',
+                                    { 
+                                      year: 'numeric', 
+                                      month: 'short', 
+                                      day: 'numeric' 
+                                    }
+                                  ) : ''}
+                                </Badge>
+                              </td>
+                              
+                              {/* Actions */}
+                              <td className="p-4">
+                                <div className="flex items-center justify-center gap-2">
                                   <Button 
-                                    variant="destructive" 
+                                    variant="outline" 
                                     size="sm" 
-                                    onClick={() => deleteArticle(String(n.id))}
-                                    className="text-xs"
+                                    onClick={() => navigate(`/news/${n.id}`)}
+                                    className="text-xs h-8 px-3"
                                   >
-                                    {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
+                                    {currentLanguage === 'ar' ? 'عرض' : 'Voir'}
                                   </Button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                                  {(['moderator','admin'].includes(String((user as any)?.role || ''))) && (
+                                    <Button 
+                                      variant="destructive" 
+                                      size="sm" 
+                                      onClick={() => deleteArticle(String(n.id))}
+                                      className="text-xs h-8 px-3"
+                                    >
+                                      {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </CardContent>
@@ -748,150 +846,137 @@ const EditorDashboard: React.FC = () => {
             />
 
             {/* Create Article Dialog */}
-            <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); } }}>
-              <DialogContent className="w-[98vw] sm:w-[95vw] md:w-[85vw] lg:w-[75vw] xl:w-[65vw] 2xl:w-[55vw] max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0">
-                <DialogHeader className="flex-shrink-0 px-6 py-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700">
-                  <DialogTitle className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
-                    {currentLanguage === 'ar' ? 'مقال جديد' : 'Nouvel Article'}
-                  </DialogTitle>
-                  <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
-                    {currentLanguage === 'ar' ? 'أنشئ مقالك وانشره مباشرة' : 'Créez votre article et publiez-le immédiatement'}
+            <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!open) { setIsCreateOpen(false); setCreateStep(1); } }}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{currentLanguage === 'ar' ? 'إنشاء مقال' : 'Créer un article'}</DialogTitle>
+                  <DialogDescription>
+                    {currentLanguage === 'ar' ? 'املأ التفاصيل لإنشاء مقال' : 'Renseignez les détails pour créer un article'}
                   </DialogDescription>
                 </DialogHeader>
-                
-                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-                  {/* Title Section */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      {currentLanguage === 'ar' ? 'العنوان' : 'Titre'} <span className="text-red-500">*</span>
-                    </label>
-                    <Input 
-                      value={newTitle} 
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder={currentLanguage === 'ar' ? 'أدخل عنوان المقال...' : 'Entrez le titre de l\'article...'}
-                      className="w-full text-base h-12 border-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                    />
-                  </div>
-
-                  {/* Category and Championship Row */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'} <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={newCategoryId ?? ''}
-                        onChange={(e) => setNewCategoryId(e.target.value ? Number(e.target.value) : null)}
-                        className="w-full h-12 border-2 border-gray-300 rounded-lg px-3 bg-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
+                {createStep === 1 ? (
+                  <div className="space-y-4">
+                    {/* Step indicator */}
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-white ${createStep === 1 ? 'bg-purple-600' : 'bg-slate-300'}`}>1</div>
+                      <span className={`font-semibold ${createStep === 1 ? 'text-purple-700' : 'text-slate-500'}`}>{currentLanguage === 'ar' ? 'العنوان والمحتوى' : 'Titre & Contenu'}</span>
+                      <div className="w-8 h-1 bg-slate-300 mx-2 rounded" />
+                      <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-white ${createStep === 2 ? 'bg-purple-600' : 'bg-slate-300'}`}>2</div>
+                      <span className={`font-semibold ${createStep === 2 ? 'text-purple-700' : 'text-slate-500'}`}>{currentLanguage === 'ar' ? 'تفاصيل أخرى' : 'Autres détails'}</span>
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</label>
+                      <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}</label>
+                      <div className="border rounded-md">
+                        <NewsEditor
+                          initialData={newContent ? JSON.parse(newContent) : undefined}
+                          onSave={data => setNewContent(JSON.stringify(data))}
+                          placeholder={currentLanguage === 'ar' ? 'اكتب المحتوى هنا...' : 'Écrivez le contenu ici...'}
+                        />
+                      </div>
+                    </div>
+                    {createError && <p className="text-sm text-red-600">{createError}</p>}
+                    <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
+                      <Button variant="outline" onClick={() => { setIsCreateOpen(false); setCreateStep(1); }}>{currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}</Button>
+                      <Button
+                        className="bg-purple-600 hover:bg-purple-700"
+                        onClick={() => {
+                          if (!newTitle || !newContent) {
+                            setCreateError(currentLanguage === 'ar' ? 'أدخل العنوان والمحتوى' : 'Entrez le titre et le contenu');
+                            return;
+                          }
+                          setCreateError('');
+                          setCreateStep(2);
+                        }}
                       >
-                        <option value="">{currentLanguage === 'ar' ? 'اختر فئة' : 'Choisir une catégorie'}</option>
-                        {categories.map(c => (
-                          <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.name_ar || c.name) : c.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        {currentLanguage === 'ar' ? 'البطولة' : 'Championnat'}
-                      </label>
-                      <select
-                        value={newChampionId ?? ''}
-                        onChange={(e) => setNewChampionId(e.target.value ? Number(e.target.value) : null)}
-                        className="w-full h-12 border-2 border-gray-300 rounded-lg px-3 bg-white dark:bg-gray-800 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
-                      >
-                        <option value="">{currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'}</option>
-                        {champions.map(c => (
-                          <option key={c.id} value={c.id}>{currentLanguage === 'ar' ? (c.nom_ar || c.nom) : c.nom}</option>
-                        ))}
-                      </select>
+                        {currentLanguage === 'ar' ? 'التالي' : 'Suivant'}
+                      </Button>
                     </div>
                   </div>
-
-                  {/* Image Upload Section */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      {currentLanguage === 'ar' ? 'الصورة' : 'Image'}
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200">
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => setNewImageFile(e.target.files?.[0] || null)}
-                        className="hidden"
-                        id="image-upload"
-                      />
-                      <label htmlFor="image-upload" className="cursor-pointer block">
-                        <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400 hover:text-blue-500 transition-colors" />
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                          {newImageFile ? newImageFile.name : (currentLanguage === 'ar' ? 'انقر لاختيار صورة' : 'Cliquez pour choisir une image')}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {currentLanguage === 'ar' ? 'PNG, JPG, GIF jusqu\'à 10MB' : 'PNG, JPG, GIF up to 10MB'}
-                        </p>
-                      </label>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Step indicator */}
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-white ${createStep === 1 ? 'bg-purple-600' : 'bg-slate-300'}`}>1</div>
+                      <span className={`font-semibold ${createStep === 1 ? 'text-purple-700' : 'text-slate-500'}`}>{currentLanguage === 'ar' ? 'العنوان والمحتوى' : 'Titre & Contenu'}</span>
+                      <div className="w-8 h-1 bg-slate-300 mx-2 rounded" />
+                      <div className={`w-8 h-8 flex items-center justify-center rounded-full font-bold text-white ${createStep === 2 ? 'bg-purple-600' : 'bg-slate-300'}`}>2</div>
+                      <span className={`font-semibold ${createStep === 2 ? 'text-purple-700' : 'text-slate-500'}`}>{currentLanguage === 'ar' ? 'تفاصيل أخرى' : 'Autres détails'}</span>
                     </div>
-                  </div>
 
-                  {/* Content Editor Section */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
-                      {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'} <span className="text-red-500">*</span>
-                    </label>
-                    <div className="border-2 border-gray-300 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200">
-                      <ReactQuill
-                        ref={newQuillRef as any}
-                        theme="snow"
-                        value={newContent}
-                        onChange={setNewContent}
-                        placeholder={currentLanguage === 'ar' ? 'اكتب المحتوى هنا...' : 'Écrivez le contenu ici...'}
-                        modules={newModules}
-                        className={`${isRTL ? 'rtl' : 'ltr'} min-h-[300px]`}
-                        style={{ height: '300px' }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Error Message */}
-                  {createError && (
-                    <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                          </svg>
+                    {/* **NOUVEAUX CHAMPS POUR LES COMPÉTITIONS** */}
+                    <div className="border-t pt-4">
+                      <h3 className="text-sm font-semibold mb-3 text-purple-700">
+                        {currentLanguage === 'ar' ? 'تفاصيل الكوئتيشن (اختياري)' : 'Détails des compétitions (optionnel)'}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المسابقات الدولية' : 'Compétitions Internationales'}</label>
+                          <select className="w-full border rounded-md h-10 px-2" value={newCompetitionInternationaleId ?? ''} onChange={(e) => setNewCompetitionInternationaleId(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">{currentLanguage === 'ar' ? 'اختياري' : 'Optionnel'}</option>
+                            {competitionsInternationales.map(c => (
+                              <option key={c.id} value={c.id}>{c.nom}</option>
+                            ))}
+                          </select>
                         </div>
-                        <div className="ml-3">
-                          <p className="text-sm text-red-600 font-medium">{createError}</p>
+                        <div>
+                          <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المسابقات العالمية' : 'Compétitions Mondiales'}</label>
+                          <select className="w-full border rounded-md h-10 px-2" value={newCompetitionMondialeId ?? ''} onChange={(e) => setNewCompetitionMondialeId(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">{currentLanguage === 'ar' ? 'اختياري' : 'Optionnel'}</option>
+                            {competitionsMondiales.map(c => (
+                              <option key={c.id} value={c.id}>{c.nom}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المسابقات القارية' : 'Compétitions Continentales'}</label>
+                          <select className="w-full border rounded-md h-10 px-2" value={newCompetitionContinentaleId ?? ''} onChange={(e) => setNewCompetitionContinentaleId(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">{currentLanguage === 'ar' ? 'اختياري' : 'Optionnel'}</option>
+                            {competitionsContinentales.map(c => (
+                              <option key={c.id} value={c.id}>{c.nom}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'المسابقات المحلية' : 'Compétitions Locales'}</label>
+                          <select className="w-full border rounded-md h-10 px-2" value={newCompetitionLocaleId ?? ''} onChange={(e) => setNewCompetitionLocaleId(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">{currentLanguage === 'ar' ? 'اختياري' : 'Optionnel'}</option>
+                            {competitionsLocales.map(c => (
+                              <option key={c.id} value={c.id}>{c.nom}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'أخبار الانتقالات' : 'Actualités Transferts'}</label>
+                          <select className="w-full border rounded-md h-10 px-2" value={newTransfertNewsId ?? ''} onChange={(e) => setNewTransfertNewsId(e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">{currentLanguage === 'ar' ? 'اختياري' : 'Optionnel'}</option>
+                            {transfertsNews.map(c => (
+                              <option key={c.id} value={c.id}>{c.nom}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Action Buttons */}
-                <div className={`flex-shrink-0 flex ${isRTL ? 'justify-start' : 'justify-end'} gap-3 px-6 py-4 border-t bg-gray-50 dark:bg-slate-800`}>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => { setIsCreateOpen(false); }}
-                    className="min-w-[120px] h-11 text-base font-medium"
-                  >
-                    {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
-                  </Button>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700 min-w-[120px] h-11 text-base font-medium" 
-                    disabled={creating} 
-                    onClick={handleCreate}
-                  >
-                    {creating ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        {currentLanguage === 'ar' ? 'نشر...' : 'Publication...'}
-                      </div>
-                    ) : (
-                      currentLanguage === 'ar' ? 'نشر' : 'Publier'
-                    )}
-                  </Button>
-                </div>
+                    <div>
+                      <label className="block text-sm mb-1">{currentLanguage === 'ar' ? 'الصورة' : 'Image'}</label>
+                      <Input type="file" accept="image/*" onChange={(e) => setNewImageFile(e.target.files?.[0] ?? null)} />
+                      {!newImageFile && (
+                        <div className="text-xs text-slate-500 mt-1 flex items-center gap-1"><Image className="w-3 h-3" />{currentLanguage === 'ar' ? 'اختياري' : 'Optionnel'}</div>
+                      )}
+                    </div>
+                    {createError && <p className="text-sm text-red-600">{createError}</p>}
+                    <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'} gap-2`}>
+                      <Button variant="outline" onClick={() => setCreateStep(1)}>{currentLanguage === 'ar' ? 'السابق' : 'Précédent'}</Button>
+                      <Button className="bg-purple-600 hover:bg-purple-700" disabled={creating} onClick={handleCreate}>
+                        {creating ? (currentLanguage === 'ar' ? 'جاري الإنشاء...' : 'Création...') : (currentLanguage === 'ar' ? 'إنشاء' : 'Créer')}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </DialogContent>
             </Dialog>
             {/* Delete Confirm Dialog */}

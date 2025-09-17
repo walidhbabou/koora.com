@@ -1,39 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart3, 
   Users, 
   FileText, 
-  MessageSquare, 
-  Plus, 
-  Eye, 
-  Edit, 
-  Trash2, 
   Calendar,
   TrendingUp,
-  Search,
-  Filter,
-  MoreVertical,
-  Upload,
-  Image,
-  User,
-  Mail,
-  Globe,
-  Settings,
   Crown,
-  Database,
-  Shield,
-  Activity
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
 import '../styles/admin-dashboard.css';
 import { supabase } from '@/lib/supabase';
@@ -44,97 +23,97 @@ import NewsTab from './admin/NewsTab';
 import CategoriesTab from './admin/CategoriesTab';
 import CommentsTab from './admin/CommentsTab';
 import UsersTab from './admin/UsersTab';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
-import DOMPurify from 'dompurify';
+import EditNewsForm from '@/pages/admin/forms/EditNewsForm';
+import type { News as NewsType, CategoryRow, UserRow, CommentRow, NewsTabCommentRow } from '@/types/admin';
 
-interface News {
-  id: string;
-  title: string;
-  content: string;
-  category?: string;
-  author?: string;
-  date?: string;
-  status?: 'published' | 'draft' | 'archived';
-  imageUrl?: string;
-  imageFile?: File;
-}
+type News = NewsType;
 
-interface CategoryRow {
+// Database row helper types (narrowed to fields we select)
+type DBNewsRow = {
   id: number;
-  name: string;
-  name_ar?: string | null;
-  description?: string | null;
-  created_at?: string | null;
-}
+  title: string | null;
+  status: 'published' | 'draft' | 'archived' | null;
+  created_at: string | null;
+  image_url: string | null;
+};
 
+type DBNewsFullRow = {
+  id: number;
+  title: string | null;
+  content: string | null;
+  status: 'published' | 'draft' | 'archived' | null;
+  created_at: string | null;
+  image_url: string | null;
+};
 
-interface User {
+type DBCommentRow = {
+  id: number;
+  news_id: number | null;
+  user_id: string | null;
+  content: string | null;
+  created_at: string | null;
+};
+
+type DBUserRow = {
   id: string;
-  name: string;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
+  name: string | null;
   role: 'admin' | 'editor' | 'author' | 'moderator';
   status: 'active' | 'inactive' | 'banned';
-  joinDate: string;
-  lastLogin: string;
-  avatar?: string;
-}
+  last_login: string | null;
+  created_at: string | null;
+  avatar_url: string | null;
+};
 
-// Types locaux pour éviter les conflits d'import
-interface LocalCommentRow {
-  id: number;
+type EditingNews = {
+  id: string;
+  title: string;
+  titleAr?: string;
   content: string;
-  user_id: string | null;
-  news_id: string | null;
-  created_at?: string | null;
-}
-
-interface LocalNewsTabCommentRow {
-  id: number;
-  content: string;
-  user_id: string | null;
-  news_id: number | null;
-  created_at?: string | null;
-}
+  contentAr?: string;
+  status: 'published' | 'draft' | 'archived';
+  categoryId?: number | null;
+  championId: number | null;
+  imageUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 const AdminDashboard: React.FC = () => {
-  const { t, currentLanguage, isRTL, direction } = useLanguage();
-  const { user, logout, updateUser } = useAuth();
+  const { currentLanguage, isRTL, direction } = useLanguage();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   
-  // ReactQuill modules
-  const quillModules = {
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ script: 'sub' }, { script: 'super' }],
-        ['blockquote', 'code-block'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
-        ['link', 'image'],
-        ['clean'],
-      ],
-    },
+  // Helpers for labels
+  const newsStatusLabel = (status?: 'published' | 'draft' | 'archived') => {
+    if (status === 'published') return currentLanguage === 'ar' ? 'منشور' : 'published';
+    if (status === 'draft') return currentLanguage === 'ar' ? 'مسودة' : 'draft';
+    if (status === 'archived') return currentLanguage === 'ar' ? 'مؤرشف' : 'archived';
+    return '-';
+  };
+  const userStatusLabel = (status: 'active' | 'inactive' | 'banned') => {
+    if (status === 'active') return currentLanguage === 'ar' ? 'نشط' : 'active';
+    if (status === 'inactive') return currentLanguage === 'ar' ? 'غير نشط' : 'inactive';
+    return currentLanguage === 'ar' ? 'محظور' : 'banned';
   };
   const [activeTab, setActiveTab] = useState('overview');
   const [news, setNews] = useState<News[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserRow[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
-  const [comments, setComments] = useState<LocalCommentRow[]>([]);
+  const [comments, setComments] = useState<CommentRow[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [selectedNews, setSelectedNews] = useState<News | null>(null);
   const [loadingSelectedNews, setLoadingSelectedNews] = useState(false);
-  const [selectedNewsComments, setSelectedNewsComments] = useState<LocalNewsTabCommentRow[]>([]);
+  const [selectedNewsComments, setSelectedNewsComments] = useState<NewsTabCommentRow[]>([]);
   const [loadingSelectedComments, setLoadingSelectedComments] = useState(false);
 
   const [isCreateNewsOpen, setIsCreateNewsOpen] = useState(false);
   const [isEditNewsOpen, setIsEditNewsOpen] = useState(false);
-  const [editingNews, setEditingNews] = useState<any>(null);
+  const [editingNews, setEditingNews] = useState<EditingNews | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [creatingNews, setCreatingNews] = useState(false);
   const [newNewsTitle, setNewNewsTitle] = useState('');
@@ -146,6 +125,21 @@ const AdminDashboard: React.FC = () => {
   const [publishMessage, setPublishMessage] = useState('');
   const [newNewsImageFile, setNewNewsImageFile] = useState<File | null>(null);
   const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
+  
+  // **NOUVEAUX ÉTATS POUR LES COMPÉTITIONS**
+  const [competitionsInternationales, setCompetitionsInternationales] = useState<{id:number,nom:string}[]>([]);
+  const [competitionsMondiales, setCompetitionsMondiales] = useState<{id:number,nom:string}[]>([]);
+  const [competitionsContinentales, setCompetitionsContinentales] = useState<{id:number,nom:string}[]>([]);
+  const [competitionsLocales, setCompetitionsLocales] = useState<{id:number,nom:string}[]>([]);
+  const [transfertsNews, setTransfertsNews] = useState<{id:number,nom:string}[]>([]);
+
+  // Nouveaux états pour les formulaires de création
+  const [newCompetitionInternationaleId, setNewCompetitionInternationaleId] = useState<number | null>(null);
+  const [newCompetitionMondialeId, setNewCompetitionMondialeId] = useState<number | null>(null);
+  const [newCompetitionContinentaleId, setNewCompetitionContinentaleId] = useState<number | null>(null);
+  const [newCompetitionLocaleId, setNewCompetitionLocaleId] = useState<number | null>(null);
+  const [newTransfertNewsId, setNewTransfertNewsId] = useState<number | null>(null);
+  
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
   const [creatingUser, setCreatingUser] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState('');
@@ -184,17 +178,18 @@ const AdminDashboard: React.FC = () => {
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
-      const mapped: News[] = (data || []).map((n: any) => ({
+      const rows = (data || []) as DBNewsRow[];
+      const mapped: News[] = rows.map((n) => ({
         id: String(n.id),
-        title: n.title || '-',
+        title: n.title ?? '-',
         content: '',
-        status: (n.status as any) || 'draft',
+        status: (n.status ?? 'draft'),
         date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
-        imageUrl: n.image_url || undefined,
+        imageUrl: n.image_url ?? undefined,
       }));
       setNews(mapped);
       setNewsTotal(count || 0);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to load news:', e);
       setNews([]);
       setNewsTotal(0);
@@ -232,27 +227,22 @@ const submitCreateUser = async () => {
         setNewUserPassword('');
         setNewUserName('');
         setNewUserRole('author');
-    } catch (err: any) {
-        console.error('Unexpected Error:', err);
-        setCreateUserError(err.message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur"));
+   } catch (err: unknown) {
+    console.error('Unexpected Error:', err);
+    const msg = (err as { message?: string }).message || (currentLanguage === 'ar' ? 'فشل إنشاء المستخدم' : "Échec de création d'utilisateur");
+    setCreateUserError(msg);
     } finally {
         setCreatingUser(false);
     }
 };
-// Fonction pour hasher le mot de passe avec bcryptjs
-const hashPassword = async (password: string): Promise<string> => {
-    // Utilisation de bcryptjs pour hasher le mot de passe
-    const bcrypt = await import('bcryptjs');
-    const saltRounds = 12;
-    return await bcrypt.hash(password, saltRounds);
-};
+// removed unused hashPassword helper
 
   const changeUserRole = async (id: string, newRole: string) => {
     try {
       const { error } = await supabase.from('users').update({ role: newRole }).eq('id', id);
       if (error) throw error;
       await fetchUsers();
-    } catch (e:any) { console.error(e); }
+    } catch (e: unknown) { console.error(e); }
   };
 
   const changeUserStatus = async (id: string, newStatus: string) => {
@@ -260,7 +250,7 @@ const hashPassword = async (password: string): Promise<string> => {
       const { error } = await supabase.from('users').update({ status: newStatus }).eq('id', id);
       if (error) throw error;
       await fetchUsers();
-    } catch (e:any) { console.error(e); }
+    } catch (e: unknown) { console.error(e); }
   };
 
   const deleteUser = async (id: string) => {
@@ -269,7 +259,7 @@ const hashPassword = async (password: string): Promise<string> => {
       const { error } = await supabase.from('users').delete().eq('id', id);
       if (error) throw error;
       setUsers((prev) => prev.filter((x) => x.id !== id));
-    } catch (e:any) { console.error(e); }
+    } catch (e: unknown) { console.error(e); }
   };
 
   // Load a single news with full content
@@ -282,17 +272,17 @@ const hashPassword = async (password: string): Promise<string> => {
         .eq('id', newsId)
         .single();
       if (error) throw error;
-      const n = data as any;
+      const n = data as DBNewsFullRow;
       const mapped: News = {
         id: String(n.id),
-        title: n.title || '-',
-        content: n.content || '',
-        status: (n.status as any) || 'draft',
+        title: n.title ?? '-',
+        content: n.content ?? '',
+        status: (n.status ?? 'draft'),
         date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
-        imageUrl: n.image_url || undefined,
+        imageUrl: n.image_url ?? undefined,
       };
       setSelectedNews(mapped);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to load news by id:', e);
       setSelectedNews(null);
     } finally {
@@ -310,8 +300,8 @@ const hashPassword = async (password: string): Promise<string> => {
         .eq('news_id', newsId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setSelectedNewsComments((data || []) as LocalNewsTabCommentRow[]);
-    } catch (e) {
+      setSelectedNewsComments((data || []) as NewsTabCommentRow[]);
+    } catch (e: unknown) {
       console.error('Failed to load comments for news:', e);
       setSelectedNewsComments([]);
     } finally {
@@ -330,7 +320,7 @@ const hashPassword = async (password: string): Promise<string> => {
     try {
       const { error } = await supabase.rpc('delete_comment', { p_comment_id: commentId });
       if (error) throw error;
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to delete comment:', e);
       // revert
       setSelectedNewsComments(prev);
@@ -369,6 +359,72 @@ const hashPassword = async (password: string): Promise<string> => {
     } catch (e) { console.error('load champions failed', e); }
   };
 
+  // **NOUVELLES FONCTIONS POUR CHARGER LES DONNÉES**
+  const fetchCompetitionsInternationales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('competitions_internationales')
+        .select('id, nom')
+        .order('id');
+      if (error) throw error;
+      setCompetitionsInternationales(data || []);
+    } catch(e) { 
+      console.error('load competitions internationales failed', e); 
+    }
+  };
+
+  const fetchCompetitionsMondiales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('competitions_mondiales')
+        .select('id, nom')
+        .order('id');
+      if (error) throw error;
+      setCompetitionsMondiales(data || []);
+    } catch(e) { 
+      console.error('load competitions mondiales failed', e); 
+    }
+  };
+
+  const fetchCompetitionsContinentales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('competitions_continentales')
+        .select('id, nom')
+        .order('id');
+      if (error) throw error;
+      setCompetitionsContinentales(data || []);
+    } catch(e) { 
+      console.error('load competitions continentales failed', e); 
+    }
+  };
+
+  const fetchCompetitionsLocales = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('competitions_locales')
+        .select('id, nom')
+        .order('id');
+      if (error) throw error;
+      setCompetitionsLocales(data || []);
+    } catch(e) { 
+      console.error('load competitions locales failed', e); 
+    }
+  };
+
+  const fetchTransfertsNews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transferts_news')
+        .select('id, nom')
+        .order('id');
+      if (error) throw error;
+      setTransfertsNews(data || []);
+    } catch(e) { 
+      console.error('load transferts news failed', e); 
+    }
+  };
+
   // Load comments from Supabase (paged)
   const fetchComments = async () => {
     setLoadingComments(true);
@@ -381,9 +437,16 @@ const hashPassword = async (password: string): Promise<string> => {
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
-      setComments((data || []).map((c: any) => ({ ...c, news_id: c.news_id ? String(c.news_id) : null })) as LocalCommentRow[]);
+      const rows = (data || []) as DBCommentRow[];
+      setComments(rows.map((c) => ({
+        id: c.id,
+        content: c.content ?? '',
+        user_id: c.user_id,
+        news_id: c.news_id ? String(c.news_id) : null,
+        created_at: c.created_at,
+      })) as CommentRow[]);
       setCommentsTotal(count || 0);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to load comments:', e);
       setComments([]);
       setCommentsTotal(0);
@@ -404,7 +467,8 @@ const hashPassword = async (password: string): Promise<string> => {
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
-      const mapped: User[] = (data || []).map((u: any) => ({
+      const rows = (data || []) as DBUserRow[];
+      const mapped: UserRow[] = rows.map((u) => ({
         id: u.id,
         name: u.name || [u.first_name, u.last_name].filter(Boolean).join(' ') || u.email.split('@')[0],
         email: u.email,
@@ -416,7 +480,7 @@ const hashPassword = async (password: string): Promise<string> => {
       }));
       setUsers(mapped);
       setUsersTotal(count || 0);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to load users:', e);
       setUsers([]);
       setUsersTotal(0);
@@ -431,16 +495,26 @@ const hashPassword = async (password: string): Promise<string> => {
     fetchUsers();
     fetchCategories();
     fetchChampions();
+    // **CHARGER LES NOUVELLES DONNÉES**
+    fetchCompetitionsInternationales();
+    fetchCompetitionsMondiales();
+    fetchCompetitionsContinentales();
+    fetchCompetitionsLocales();
+    fetchTransfertsNews();
     fetchNews();
     fetchComments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refetch on page changes
-  useEffect(() => { fetchNews(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [newsPage]);
-  useEffect(() => { fetchUsers(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [usersPage]);
-  useEffect(() => { fetchCategories(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [categoriesPage]);
-  useEffect(() => { fetchComments(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [commentsPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchNews(); }, [newsPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchUsers(); }, [usersPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchCategories(); }, [categoriesPage]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { fetchComments(); }, [commentsPage]);
 
   // Reset news page when search term changes (client-side filter)
   useEffect(() => { setNewsPage(1); }, [searchTerm]);
@@ -477,22 +551,9 @@ const hashPassword = async (password: string): Promise<string> => {
    
   ];
 
-  const handleCreateNews = (newsData: Partial<News>) => {
-    const newNews: News = {
-      id: Date.now().toString(),
-      title: newsData.title || '',
-      content: newsData.content || '',
-      category: newsData.category || 'General',
-      author: 'Admin',
-      date: new Date().toISOString().split('T')[0],
-      status: 'draft',
-      ...newsData
-    };
-    setNews([newNews, ...news]);
-    setIsCreateNewsOpen(false);
-  };
+  // removed unused handleCreateNews
 
-  const handleEditNews = async (newsData: any) => {
+  const handleEditNews = async (newsData: Partial<EditingNews>) => {
     if (editingNews) {
       try {
         const { error } = await supabase
@@ -501,8 +562,8 @@ const hashPassword = async (password: string): Promise<string> => {
             title: newsData.title,
             content: newsData.content,
             status: newsData.status,
-            category_id: newsData.categoryId || null,
-            champion_id: newsData.championId || null,
+            category_id: (newsData.categoryId ?? null),
+            champion_id: (newsData.championId ?? null),
             updated_at: new Date().toISOString()
           })
           .eq('id', editingNews.id);
@@ -564,11 +625,13 @@ const handlePublishNews = async (id: string | number) => {
       await testDirectUpdate(newsId);
     }
 
-    console.log('Mise à jour réussie');
-    await fetchNews();
+  console.log('Mise à jour réussie');
+  setPublishMessage(currentLanguage === 'ar' ? 'تم النشر بنجاح' : 'Publication réussie');
+  await fetchNews();
     
   } catch (e) {
     console.error('Échec de la publication:', e);
+    setPublishMessage(currentLanguage === 'ar' ? 'فشل النشر' : 'Échec de la publication');
   }
 };
 
@@ -629,13 +692,18 @@ const testDirectUpdate = async (newsId: number) => {
           p_image_url: imageUrl ?? null,
           p_category_id: newNewsCategoryId ?? null,
           p_champion_id: newNewsChampionId ?? null,
+          p_competition_internationale_id: newCompetitionInternationaleId ?? null,
+          p_competition_mondiale_id: newCompetitionMondialeId ?? null,
+          p_competition_continentale_id: newCompetitionContinentaleId ?? null,
+          p_competition_locale_id: newCompetitionLocaleId ?? null,
+          p_transfert_news_id: newTransfertNewsId ?? null,
         });
         
         if (error) {
           console.error('Supabase RPC error details:', error);
           throw error;
         }
-      } catch (rpcErr: any) {
+      } catch (rpcErr: unknown) {
         // Si la fonction RPC n'existe pas ou échoue, utiliser l'insertion directe avec user_id
         console.log('RPC failed, trying direct insert:', rpcErr);
         const { error } = await supabase.from('news').insert({
@@ -643,836 +711,466 @@ const testDirectUpdate = async (newsId: number) => {
           content: newNewsContent,
           status: 'draft',
           image_url: imageUrl ?? null,
-          category_id: newNewsCategoryId,
-          champion_id: newNewsChampionId,
-          user_id: user.id, // Inclure explicitement user_id
-        }).select();
-        
-        if (error) {
-          console.error('Direct insert error details:', error);
-          throw error;
-        }
+          category_id: newNewsCategoryId ?? null,
+          champion_id: newNewsChampionId ?? null,
+          user_id: user.id,
+          competition_internationale_id: newCompetitionInternationaleId ?? null,
+          competition_mondiale_id: newCompetitionMondialeId ?? null,
+          competition_continentale_id: newCompetitionContinentaleId ?? null,
+          competition_locale_id: newCompetitionLocaleId ?? null,
+          transfert_news_id: newTransfertNewsId ?? null,
+        });
+        if (error) throw error;
       }
-      setCreateNewsInfo(currentLanguage === 'ar' ? 'تم إنشاء الخبر' : 'News créée');
-      await fetchNews();
-      setIsCreateNewsOpen(false);
+
+  setCreateNewsInfo(currentLanguage === 'ar' ? 'تم إنشاء الخبر بنجاح' : 'News créée avec succès');
+      // Reset fields
       setNewNewsTitle('');
       setNewNewsContent('');
       setNewNewsCategoryId(null);
       setNewNewsChampionId(null);
       setNewNewsImageFile(null);
-    } catch (e: any) {
-      setCreateNewsError(e.message || (currentLanguage === 'ar' ? 'فشل إنشاء الخبر' : 'Échec de création de la news'));
+      // Reset nouveaux champs
+      setNewCompetitionInternationaleId(null);
+      setNewCompetitionMondialeId(null);
+      setNewCompetitionContinentaleId(null);
+      setNewCompetitionLocaleId(null);
+      setNewTransfertNewsId(null);
+      setIsCreateNewsOpen(false);
+      await fetchNews();
+    } catch (err: unknown) {
+      console.error('Failed to create news:', err);
+      const message = (err as { message?: string }).message || (currentLanguage === 'ar' ? 'فشل إنشاء الخبر' : 'Échec de création de la news');
+      setCreateNewsError(message);
     } finally {
       setCreatingNews(false);
     }
   };
 
-
-  return (
-    <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-lg dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50 shadow-lg">
-        <div className="container mx-auto px-6 py-4">
-          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
-              <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300">
-                  <Crown className="w-6 h-6 text-white" />
-                </div>
-                <div className={isRTL ? 'text-right' : 'text-left'}>
-                  <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    {currentLanguage === 'ar' ? 'لوحة تحكم المدير' : 'Dashboard Admin'}
-                  </h1>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {currentLanguage === 'ar' ? `مرحباً ${user?.name}` : `Bienvenue ${user?.name}`}
-                  </p>
+        return (
+          <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
+            {/* Header */}
+            <div className="bg-white/80 backdrop-blur-lg dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50 shadow-lg">
+              <div className="container mx-auto px-6 py-4">
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center ${isRTL ? 'space-x-reverse' : 'space-x-4'}`}>
+                    <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
+                      <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg transform hover:scale-110 transition-all duration-300">
+                        <Crown className="w-6 h-6 text-white" />
+                      </div>
+                      <div className={isRTL ? 'text-right' : 'text-left'}>
+                        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                          {currentLanguage === 'ar' ? 'لوحة تحكم المدير' : 'Dashboard Admin'}
+                        </h1>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          {currentLanguage === 'ar' ? `مرحباً ${user?.name}` : `Bienvenue ${user?.name}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={async () => { try { await logout(); } finally { navigate('/'); } }}
+                    className="text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    {currentLanguage === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}
+                  </Button>
                 </div>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={async () => { try { await logout(); } finally { navigate('/'); } }}
-              className="text-red-600 border-red-200 hover:bg-red-50"
-            >
-              {currentLanguage === 'ar' ? 'تسجيل الخروج' : 'Déconnexion'}
-            </Button>
+
+            <div className="container mx-auto px-6 py-8">
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                {stats.map((stat, index) => (
+                  <Card 
+                    key={stat.title}
+                    className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                            {stat.title}
+                          </p>
+                          <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                            {stat.value}
+                          </p>
+                        </div>
+                        <div className={`p-3 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:scale-110 transition-transform duration-300`}>
+                          <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                        </div>
+                      </div>
+                      <div className="flex items-center mt-2">
+                        <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
+                        <span className="text-sm text-green-600 font-medium">{stat.change}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Main Content */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                <TabsList className="grid w-full grid-cols-7 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
+                  <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'نظرة عامة' : 'Dashboard'}
+                  </TabsTrigger>
+                  <TabsTrigger value="news" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'إدارة الأخبار' : 'Gestion des News'}
+                  </TabsTrigger>
+                  <TabsTrigger value="categories" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'الأقسام' : 'Catégories'}
+                  </TabsTrigger>
+                  <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'المستخدمين' : 'Utilisateurs'}
+                  </TabsTrigger>
+                  <TabsTrigger value="comments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'التعليقات' : 'Commentaires'}
+                  </TabsTrigger>
+                  <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'التحليلات' : 'Analytics'}
+                  </TabsTrigger>
+                  <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
+                    {currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Profile Tab */}
+                <TabsContent value="profile" className="space-y-6">
+                  <ProfileTab />
+                </TabsContent>
+
+                {/* Overview Tab */}
+                <TabsContent value="overview" className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-blue-900/20 border-0 shadow-lg">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <FileText className="w-5 h-5 text-teal-600" />
+                          <span>{currentLanguage === 'ar' ? 'أحدث الأخبار' : 'News Récentes'}</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {news.slice(0, 3).map((item) => (
+                            <div key={item.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                              <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                                <FileText className="w-6 h-6 text-teal-600" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-slate-900 dark:text-white">{item.title}</h4>
+                                {item.date && (
+                                  <p className="text-sm text-slate-600 dark:text-slate-400">{item.date}</p>
+                                )}
+                              </div>
+                              {item.status && (
+                                <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
+                                  {newsStatusLabel(item.status)}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="hover:shadow-lg transition-all duration-300">
+                      <CardHeader>
+                        <CardTitle className="flex items-center space-x-2">
+                          <Users className="w-5 h-5 text-teal-600" />
+                          <span>{currentLanguage === 'ar' ? 'المستخدمين النشطين' : 'Utilisateurs Actifs'}</span>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {users.slice(0, 3).map((user) => (
+                            <div key={user.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                              <Avatar className="w-10 h-10">
+                                <AvatarImage src={user.avatar} />
+                                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-slate-900 dark:text-white">{user.name}</h4>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">{user.role}</p>
+                              </div>
+                              <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                                {userStatusLabel(user.status)}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* News Management Tab */}
+                <TabsContent value="news" className="space-y-6">
+                  <NewsTab
+                    searchTerm={searchTerm}
+                    onSearchTermChange={setSearchTerm}
+                    isCreateNewsOpen={isCreateNewsOpen}
+                    onChangeCreateNewsOpen={setIsCreateNewsOpen}
+                    newNewsTitle={newNewsTitle}
+                    setNewNewsTitle={setNewNewsTitle}
+                    newNewsContent={newNewsContent}
+                    setNewNewsContent={setNewNewsContent}
+                    newNewsCategoryId={newNewsCategoryId}
+                    setNewNewsCategoryId={setNewNewsCategoryId}
+                    newNewsChampionId={newNewsChampionId}
+                    setNewNewsChampionId={setNewNewsChampionId}
+                    newNewsImageFile={newNewsImageFile}
+                    setNewNewsImageFile={setNewNewsImageFile}
+                    newNewsStatus={newNewsStatus}
+                    setNewNewsStatus={setNewNewsStatus}
+                    newNewsImageUrl={newNewsImageUrl}
+                    setNewNewsImageUrl={setNewNewsImageUrl}
+                    newNewsCreatedAt={newNewsCreatedAt}
+                    setNewNewsCreatedAt={setNewNewsCreatedAt}
+                    newNewsUpdatedAt={newNewsUpdatedAt}
+                    setNewNewsUpdatedAt={setNewNewsUpdatedAt}
+                    categories={categories}
+                    champions={champions}
+                    competitionsInternationales={competitionsInternationales}
+                    competitionsMondiales={competitionsMondiales}
+                    competitionsContinentales={competitionsContinentales}
+                    competitionsLocales={competitionsLocales}
+                    transfertsNews={transfertsNews}
+                    newCompetitionInternationaleId={newCompetitionInternationaleId}
+                    setNewCompetitionInternationaleId={setNewCompetitionInternationaleId}
+                    newCompetitionMondialeId={newCompetitionMondialeId}
+                    setNewCompetitionMondialeId={setNewCompetitionMondialeId}
+                    newCompetitionContinentaleId={newCompetitionContinentaleId}
+                    setNewCompetitionContinentaleId={setNewCompetitionContinentaleId}
+                    newCompetitionLocaleId={newCompetitionLocaleId}
+                    setNewCompetitionLocaleId={setNewCompetitionLocaleId}
+                    newTransfertNewsId={newTransfertNewsId}
+                    setNewTransfertNewsId={setNewTransfertNewsId}
+                    creatingNews={creatingNews}
+                    createNewsError={createNewsError}
+                    createNewsInfo={createNewsInfo}
+                    onCreateNewsSubmit={handleCreateNewsSubmit}
+                    news={news}
+                    loadingNews={loadingNews}
+                    newsPage={newsPage}
+                    newsTotal={newsTotal}
+                    pageSize={pageSize}
+                    onPrevPage={() => setNewsPage(p => Math.max(1, p - 1))}
+                    onNextPage={() => setNewsPage(p => p + 1)}
+                    onEditNews={async (item) => {
+                      setLoadingSelectedNews(true);
+                      try {
+                        const { data, error } = await supabase
+                          .from('news')
+                          .select('id, title, title_ar, content, content_ar, status, image_url, category_id, champion_id, created_at, updated_at')
+                          .eq('id', item.id)
+                          .single();
+                        if (error) throw error;
+                        setEditingNews({
+                          id: String(data.id),
+                          title: data.title || '',
+                          titleAr: data.title_ar || '',
+                          content: data.content || '',
+                          contentAr: data.content_ar || '',
+                          status: data.status || 'draft',
+                          categoryId: data.category_id || '',
+                          championId: data.champion_id || null,
+                          imageUrl: data.image_url || undefined,
+                          createdAt: data.created_at ? new Date(data.created_at).toISOString().slice(0,10) : '',
+                          updatedAt: data.updated_at ? new Date(data.updated_at).toISOString().slice(0,10) : '',
+                        });
+                        setIsEditNewsOpen(true);
+                      } catch (e) {
+                        setEditingNews(null);
+                        setIsEditNewsOpen(false);
+                      } finally {
+                        setLoadingSelectedNews(false);
+                      }
+                    }}
+                    onDeleteNews={handleDeleteNews}
+                    onOpenDetails={openNewsDetails}
+                    selectedNews={selectedNews}
+                    loadingSelectedNews={loadingSelectedNews}
+                    selectedNewsComments={selectedNewsComments}
+                    loadingSelectedComments={loadingSelectedComments}
+                    onDeleteComment={handleDeleteComment}
+                  />
+                </TabsContent>
+
+                {/* Categories Tab */}
+                <TabsContent value="categories" className="space-y-6">
+                  <CategoriesTab
+                    categories={categories}
+                    loadingCategories={loadingCategories}
+                    categoriesPage={categoriesPage}
+                    categoriesTotal={categoriesTotal}
+                    pageSize={pageSize}
+                    onPrevPage={() => setCategoriesPage(p => Math.max(1, p - 1))}
+                    onNextPage={() => setCategoriesPage(p => p + 1)}
+                  />
+                </TabsContent>
+
+                {/* Comments Tab */}
+                <TabsContent value="comments" className="space-y-6">
+                  <CommentsTab
+                    comments={comments}
+                    loadingComments={loadingComments}
+                    commentsPage={commentsPage}
+                    commentsTotal={commentsTotal}
+                    pageSize={pageSize}
+                    onPrevPage={() => setCommentsPage(p => Math.max(1, p - 1))}
+                    onNextPage={() => setCommentsPage(p => p + 1)}
+                  />
+                </TabsContent>
+
+                {/* Users Tab */}
+                <TabsContent value="users" className="space-y-6">
+                  <UsersTab
+                    isCreateUserOpen={isCreateUserOpen}
+                    onChangeCreateUserOpen={setIsCreateUserOpen}
+                    newUserName={newUserName}
+                    setNewUserName={setNewUserName}
+                    newUserEmail={newUserEmail}
+                    setNewUserEmail={setNewUserEmail}
+                    newUserPassword={newUserPassword}
+                    setNewUserPassword={setNewUserPassword}
+                    newUserRole={newUserRole}
+                    setNewUserRole={setNewUserRole}
+                    creatingUser={creatingUser}
+                    createUserError={createUserError}
+                    createUserInfo={createUserInfo}
+                    onSubmitCreateUser={submitCreateUser}
+                    users={users}
+                    loadingUsers={loadingUsers}
+                    onChangeUserRole={changeUserRole}
+                    onChangeUserStatus={changeUserStatus}
+                    onDeleteUser={deleteUser}
+                    usersPage={usersPage}
+                    usersTotal={usersTotal}
+                    pageSize={pageSize}
+                    onPrevPage={() => setUsersPage(p => Math.max(1, p - 1))}
+                    onNextPage={() => setUsersPage(p => p + 1)}
+                  />
+                </TabsContent>
+
+                {/* Analytics Tab */}
+                <TabsContent value="analytics" className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <Card className="hover:shadow-lg transition-all duration-300">
+                      <CardHeader>
+                        <CardTitle>{currentLanguage === 'ar' ? 'إحصائيات الأخبار' : 'Statistiques des News'}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'منشورة' : 'Publiées'}
+                            </span>
+                            <span className="font-semibold text-green-600">
+                              {news.filter(n => n.status === 'published').length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'مسودات' : 'Brouillons'}
+                            </span>
+                            <span className="font-semibold text-yellow-600">
+                              {news.filter(n => n.status === 'draft').length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'مؤرشفة' : 'Archivées'}
+                            </span>
+                            <span className="font-semibold text-gray-600">
+                              {news.filter(n => n.status === 'archived').length}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="hover:shadow-lg transition-all duration-300">
+                      <CardHeader>
+                        <CardTitle>{currentLanguage === 'ar' ? 'إحصائيات المستخدمين' : 'Statistiques des Utilisateurs'}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'المجموع' : 'Total'}
+                            </span>
+                            <span className="font-semibold text-blue-600">{users.length}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'مديرين' : 'Admins'}
+                            </span>
+                            <span className="font-semibold text-purple-600">
+                              {users.filter(u => u.role === 'admin').length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'محررين' : 'Éditeurs'}
+                            </span>
+                            <span className="font-semibold text-green-600">
+                              {users.filter(u => u.role === 'editor').length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'كتاب' : 'Auteurs'}
+                            </span>
+                            <span className="font-semibold text-yellow-600">
+                              {users.filter(u => u.role === 'author').length}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {currentLanguage === 'ar' ? 'مشرفين' : 'Modérateurs'}
+                            </span>
+                            <span className="font-semibold text-orange-600">
+                              {users.filter(u => u.role === 'moderator').length}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            {/* Edit News Dialog */}
+            <Dialog open={isEditNewsOpen && !!editingNews} onOpenChange={setIsEditNewsOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                <DialogHeader>
+                  <DialogTitle>{currentLanguage === 'ar' ? 'تعديل الخبر' : 'Modifier la news'}</DialogTitle>
+                  <DialogDescription>
+                    {currentLanguage === 'ar' ? 'عدل معلومات الخبر' : 'Modifiez les informations de la news'}
+                  </DialogDescription>
+                </DialogHeader>
+                {publishMessage && (
+                  <div className={`p-3 rounded-md text-sm ${
+                    publishMessage.includes('نجاح') || publishMessage.includes('succès') 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                  }`}>
+                    {publishMessage}
+                  </div>
+                )}
+                {editingNews && (
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <EditNewsForm news={editingNews} champions={champions} onSubmit={handleEditNews} onPublish={handlePublishNews} />
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-6 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <Card 
-              key={stat.title}
-              className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
-                      {stat.title}
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {stat.value}
-                    </p>
-                  </div>
-                  <div className={`p-3 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:scale-110 transition-transform duration-300`}>
-                    <stat.icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                </div>
-                <div className="flex items-center mt-2">
-                  <TrendingUp className="w-4 h-4 text-green-600 mr-1" />
-                  <span className="text-sm text-green-600 font-medium">{stat.change}</span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 bg-white/90 backdrop-blur-sm dark:bg-slate-900/90 border border-slate-200/50 dark:border-slate-700/50 shadow-lg rounded-xl p-1">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'نظرة عامة' : 'Dashboard'}
-            </TabsTrigger>
-            <TabsTrigger value="news" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'إدارة الأخبار' : 'Gestion des News'}
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'الأقسام' : 'Catégories'}
-            </TabsTrigger>
-            <TabsTrigger value="users" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'المستخدمين' : 'Utilisateurs'}
-            </TabsTrigger>
-            <TabsTrigger value="comments" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'التعليقات' : 'Commentaires'}
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'التحليلات' : 'Analytics'}
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300 rounded-lg">
-              {currentLanguage === 'ar' ? 'الملف الشخصي' : 'Profil'}
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Profile Tab */}
-          <TabsContent value="profile" className="space-y-6">
-            <ProfileTab />
-          </TabsContent>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-xl transition-all duration-500 bg-gradient-to-br from-white to-blue-50 dark:from-slate-800 dark:to-blue-900/20 border-0 shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <FileText className="w-5 h-5 text-teal-600" />
-                    <span>{currentLanguage === 'ar' ? 'أحدث الأخبار' : 'News Récentes'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {news.slice(0, 3).map((item) => (
-                      <div key={item.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                        <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-teal-600" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white">{item.title}</h4>
-                          {item.date && (
-                            <p className="text-sm text-slate-600 dark:text-slate-400">{item.date}</p>
-                          )}
-                        </div>
-                        {item.status && (
-                          <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
-                            {item.status === 'published' ? (currentLanguage === 'ar' ? 'منشور' : 'published') : 
-                             item.status === 'draft' ? (currentLanguage === 'ar' ? 'مسودة' : 'draft') : 
-                             currentLanguage === 'ar' ? 'مؤرشف' : 'archived'}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Users className="w-5 h-5 text-teal-600" />
-                    <span>{currentLanguage === 'ar' ? 'المستخدمين النشطين' : 'Utilisateurs Actifs'}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {users.slice(0, 3).map((user) => (
-                      <div key={user.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={user.avatar} />
-                          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-900 dark:text-white">{user.name}</h4>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{user.role}</p>
-                        </div>
-                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                          {user.status === 'active' ? (currentLanguage === 'ar' ? 'نشط' : 'active') : 
-                           user.status === 'inactive' ? (currentLanguage === 'ar' ? 'غير نشط' : 'inactive') : 
-                           currentLanguage === 'ar' ? 'محظور' : 'banned'}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* News Management Tab */}
-          <TabsContent value="news" className="space-y-6">
-            <NewsTab
-              searchTerm={searchTerm}
-              onSearchTermChange={setSearchTerm}
-              isCreateNewsOpen={isCreateNewsOpen}
-              onChangeCreateNewsOpen={setIsCreateNewsOpen}
-              newNewsTitle={newNewsTitle}
-              setNewNewsTitle={setNewNewsTitle}
-              newNewsContent={newNewsContent}
-              setNewNewsContent={setNewNewsContent}
-              newNewsCategoryId={newNewsCategoryId}
-              setNewNewsCategoryId={setNewNewsCategoryId}
-              newNewsChampionId={newNewsChampionId}
-              setNewNewsChampionId={setNewNewsChampionId}
-              newNewsImageFile={newNewsImageFile}
-              setNewNewsImageFile={setNewNewsImageFile}
-              newNewsStatus={newNewsStatus}
-              setNewNewsStatus={setNewNewsStatus}
-              newNewsImageUrl={newNewsImageUrl}
-              setNewNewsImageUrl={setNewNewsImageUrl}
-              newNewsCreatedAt={newNewsCreatedAt}
-              setNewNewsCreatedAt={setNewNewsCreatedAt}
-              newNewsUpdatedAt={newNewsUpdatedAt}
-              setNewNewsUpdatedAt={setNewNewsUpdatedAt}
-              categories={categories}
-              champions={champions}
-              creatingNews={creatingNews}
-              createNewsError={createNewsError}
-              createNewsInfo={createNewsInfo}
-              onCreateNewsSubmit={handleCreateNewsSubmit}
-              news={news}
-              loadingNews={loadingNews}
-              newsPage={newsPage}
-              newsTotal={newsTotal}
-              pageSize={pageSize}
-              onPrevPage={() => setNewsPage(p => Math.max(1, p - 1))}
-              onNextPage={() => setNewsPage(p => p + 1)}
-              onEditNews={async (item) => {
-                setLoadingSelectedNews(true);
-                try {
-                  const { data, error } = await supabase
-                    .from('news')
-                    .select('id, title, title_ar, content, content_ar, status, image_url, category_id, champion_id, created_at, updated_at')
-                    .eq('id', item.id)
-                    .single();
-                  if (error) throw error;
-                  setEditingNews({
-                    id: String(data.id),
-                    title: data.title || '',
-                    titleAr: data.title_ar || '',
-                    content: data.content || '',
-                    contentAr: data.content_ar || '',
-                    status: data.status || 'draft',
-                    categoryId: data.category_id || '',
-                    championId: data.champion_id || null,
-                    imageUrl: data.image_url || undefined,
-                    createdAt: data.created_at ? new Date(data.created_at).toISOString().slice(0,10) : '',
-                    updatedAt: data.updated_at ? new Date(data.updated_at).toISOString().slice(0,10) : '',
-                  });
-                  setIsEditNewsOpen(true);
-                } catch (e) {
-                  setEditingNews(null);
-                  setIsEditNewsOpen(false);
-                } finally {
-                  setLoadingSelectedNews(false);
-                }
-              }}
-              onDeleteNews={handleDeleteNews}
-              onOpenDetails={openNewsDetails}
-              selectedNews={selectedNews}
-              loadingSelectedNews={loadingSelectedNews}
-              selectedNewsComments={selectedNewsComments as any}
-              loadingSelectedComments={loadingSelectedComments}
-              onDeleteComment={handleDeleteComment}
-            />
-          </TabsContent>
-
-          {/* Categories Tab */}
-          <TabsContent value="categories" className="space-y-6">
-            <CategoriesTab
-              categories={categories}
-              loadingCategories={loadingCategories}
-              categoriesPage={categoriesPage}
-              categoriesTotal={categoriesTotal}
-              pageSize={pageSize}
-              onPrevPage={() => setCategoriesPage(p => Math.max(1, p - 1))}
-              onNextPage={() => setCategoriesPage(p => p + 1)}
-            />
-          </TabsContent>
-
-          {/* Comments Tab */}
-          <TabsContent value="comments" className="space-y-6">
-            <CommentsTab
-              comments={comments as any}
-              loadingComments={loadingComments}
-              commentsPage={commentsPage}
-              commentsTotal={commentsTotal}
-              pageSize={pageSize}
-              onPrevPage={() => setCommentsPage(p => Math.max(1, p - 1))}
-              onNextPage={() => setCommentsPage(p => p + 1)}
-            />
-          </TabsContent>
-
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-6">
-            <UsersTab
-              isCreateUserOpen={isCreateUserOpen}
-              onChangeCreateUserOpen={setIsCreateUserOpen}
-              newUserName={newUserName}
-              setNewUserName={setNewUserName}
-              newUserEmail={newUserEmail}
-              setNewUserEmail={setNewUserEmail}
-              newUserPassword={newUserPassword}
-              setNewUserPassword={setNewUserPassword}
-              newUserRole={newUserRole}
-              setNewUserRole={setNewUserRole}
-              creatingUser={creatingUser}
-              createUserError={createUserError}
-              createUserInfo={createUserInfo}
-              onSubmitCreateUser={submitCreateUser}
-              users={users}
-              loadingUsers={loadingUsers}
-              onChangeUserRole={changeUserRole}
-              onChangeUserStatus={changeUserStatus}
-              onDeleteUser={deleteUser}
-              usersPage={usersPage}
-              usersTotal={usersTotal}
-              pageSize={pageSize}
-              onPrevPage={() => setUsersPage(p => Math.max(1, p - 1))}
-              onNextPage={() => setUsersPage(p => p + 1)}
-            />
-          </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle>{currentLanguage === 'ar' ? 'إحصائيات الأخبار' : 'Statistiques des News'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'منشورة' : 'Publiées'}
-                      </span>
-                      <span className="font-semibold text-green-600">
-                        {news.filter(n => n.status === 'published').length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'مسودات' : 'Brouillons'}
-                      </span>
-                      <span className="font-semibold text-yellow-600">
-                        {news.filter(n => n.status === 'draft').length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'مؤرشفة' : 'Archivées'}
-                      </span>
-                      <span className="font-semibold text-gray-600">
-                        {news.filter(n => n.status === 'archived').length}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="hover:shadow-lg transition-all duration-300">
-                <CardHeader>
-                  <CardTitle>{currentLanguage === 'ar' ? 'إحصائيات المستخدمين' : 'Statistiques des Utilisateurs'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'المجموع' : 'Total'}
-                      </span>
-                      <span className="font-semibold text-blue-600">{users.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'مديرين' : 'Admins'}
-                      </span>
-                      <span className="font-semibold text-purple-600">
-                        {users.filter(u => u.role === 'admin').length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'محررين' : 'Éditeurs'}
-                      </span>
-                      <span className="font-semibold text-green-600">
-                        {users.filter(u => u.role === 'editor').length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'كتاب' : 'Auteurs'}
-                      </span>
-                      <span className="font-semibold text-yellow-600">
-                        {users.filter(u => u.role === 'author').length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        {currentLanguage === 'ar' ? 'مشرفين' : 'Modérateurs'}
-                      </span>
-                      <span className="font-semibold text-orange-600">
-                        {users.filter(u => u.role === 'moderator').length}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Edit News Dialog */}
-      <Dialog open={isEditNewsOpen && !!editingNews} onOpenChange={setIsEditNewsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>{currentLanguage === 'ar' ? 'تعديل الخبر' : 'Modifier la news'}</DialogTitle>
-            <DialogDescription>
-              {currentLanguage === 'ar' ? 'عدل معلومات الخبر' : 'Modifiez les informations de la news'}
-            </DialogDescription>
-          </DialogHeader>
-          {publishMessage && (
-            <div className={`p-3 rounded-md text-sm ${
-              publishMessage.includes('نجاح') || publishMessage.includes('succès') 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }`}>
-              {publishMessage}
-            </div>
-          )}
-          {editingNews && (
-            <div className="flex-1 overflow-y-auto pr-2">
-              <EditNewsForm news={editingNews} champions={champions} onSubmit={handleEditNews} onPublish={handlePublishNews} />
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-const CreateNewsForm: React.FC<{ onSubmit: (data: Partial<News>) => void }> = ({ onSubmit }) => {
-  const { currentLanguage, isRTL } = useLanguage();
-  const [formData, setFormData] = useState<{
-    title: string;
-    content: string;
-    category: string;
-    status: News['status'];
-    imageFile: File | undefined;
-  }>({
-    title: '',
-    content: '',
-    category: 'General',
-    status: 'draft',
-    imageFile: undefined,
-  });
-  const [imagePreview, setImagePreview] = useState<string>('');
-  
-  // ReactQuill modules
-  const quillModules = {
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ script: 'sub' }, { script: 'super' }],
-        ['blockquote', 'code-block'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
-        ['link', 'image'],
-        ['clean'],
-      ],
-    },
-  };
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData({ ...formData, imageFile: file });
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setImagePreview(e.target?.result as string);
+        );
       };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
-        </label>
-        <Input
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          placeholder={currentLanguage === 'ar' ? 'عنوان الخبر' : 'Titre de la news'}
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
-        </label>
-        <div className="border rounded-md">
-          <ReactQuill
-            theme="snow"
-            value={formData.content}
-            onChange={(content) => setFormData({ ...formData, content })}
-            placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
-            modules={quillModules}
-            className={isRTL ? 'rtl' : 'ltr'}
-          />
-        </div>
-      </div>
-      
-      {/* Image Upload */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          {currentLanguage === 'ar' ? 'صورة الخبر' : 'Image de la news'}
-        </label>
-        <div className="space-y-3">
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={handleImageChange}
-            className="cursor-pointer"
-          />
-          {imagePreview && (
-            <div className="relative w-32 h-32">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full h-full object-cover rounded-lg border"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
-                onClick={() => {
-                  setImagePreview('');
-                  setFormData({ ...formData, imageFile: undefined });
-                }}
-              >
-                ×
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}
-          </label>
-          <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="General">{currentLanguage === 'ar' ? 'عام' : 'Général'}</SelectItem>
-              <SelectItem value="Transfers">{currentLanguage === 'ar' ? 'انتقالات' : 'Transferts'}</SelectItem>
-              <SelectItem value="Matches">{currentLanguage === 'ar' ? 'مباريات' : 'Matchs'}</SelectItem>
-              <SelectItem value="Infrastructure">{currentLanguage === 'ar' ? 'بنية تحتية' : 'Infrastructure'}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'الحالة' : 'Statut'}
-          </label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">{currentLanguage === 'ar' ? 'مسودة' : 'Brouillon'}</SelectItem>
-              <SelectItem value="published">{currentLanguage === 'ar' ? 'منشور' : 'Publié'}</SelectItem>
-              <SelectItem value="archived">{currentLanguage === 'ar' ? 'مؤرشف' : 'Archivé'}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
-          {currentLanguage === 'ar' ? 'إنشاء الخبر' : 'Créer la News'}
-        </Button>
-      </div>
-    </form>
-  );
-};
-
-const EditNewsForm: React.FC<{ 
-  news: any; 
-  champions: {id:number,nom:string,nom_ar:string}[];
-  onSubmit: (data: Partial<News>) => void;
-  onPublish?: (id: string | number) => void; // Change this line
-}> = ({ news, champions, onSubmit, onPublish }) => {
-  const { currentLanguage, isRTL } = useLanguage();
-  const [formData, setFormData] = useState({
-    title: news.title,
-    content: news.content,
-    category: news.category,
-    status: news.status,
-    championId: news.championId || null
-  });
-  
-  // ReactQuill modules
-  const quillModules = {
-    toolbar: {
-      container: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ script: 'sub' }, { script: 'super' }],
-        ['blockquote', 'code-block'],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ direction: isRTL ? 'rtl' : 'ltr' }, { align: [] }],
-        ['link', 'image'],
-        ['clean'],
-      ],
-    },
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
-        </label>
-        <Input
-          value={formData.title}
-          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          placeholder={currentLanguage === 'ar' ? 'عنوان الخبر' : 'Titre de la news'}
-          required
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
-        </label>
-        <div className="border rounded-md">
-          <ReactQuill
-            theme="snow"
-            value={formData.content}
-            onChange={(content) => setFormData({ ...formData, content })}
-            placeholder={currentLanguage === 'ar' ? 'محتوى الخبر' : 'Contenu de la news'}
-            modules={quillModules}
-            className={isRTL ? 'rtl' : 'ltr'}
-          />
-        </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}
-          </label>
-          <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="General">{currentLanguage === 'ar' ? 'عام' : 'Général'}</SelectItem>
-              <SelectItem value="Transfers">{currentLanguage === 'ar' ? 'انتقالات' : 'Transferts'}</SelectItem>
-              <SelectItem value="Matches">{currentLanguage === 'ar' ? 'مباريات' : 'Matchs'}</SelectItem>
-              <SelectItem value="Infrastructure">{currentLanguage === 'ar' ? 'بنية تحتية' : 'Infrastructure'}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'الحالة' : 'Statut'}
-          </label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">{currentLanguage === 'ar' ? 'مسودة' : 'Brouillon'}</SelectItem>
-              <SelectItem value="published">{currentLanguage === 'ar' ? 'منشور' : 'Publié'}</SelectItem>
-              <SelectItem value="archived">{currentLanguage === 'ar' ? 'مؤرشف' : 'Archivé'}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'البطولة' : 'Championnat'} <span className="text-red-500">*</span>
-          </label>
-          <Select 
-            value={formData.championId !== null ? String(formData.championId) : undefined} 
-            onValueChange={(value) => setFormData({ ...formData, championId: value === 'none' ? null : Number(value) })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر البطولة (اختياري)' : 'Choisir un championnat (optionnel)'} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">{currentLanguage === 'ar' ? 'لا شيء' : 'Aucun'}</SelectItem>
-              {champions.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.nom}{c.nom_ar ? ` • ${c.nom_ar}` : ''}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      
-      <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4">
-        <Button 
-          type="button" 
-          variant="outline"
-          onClick={(e) => {
-            e.preventDefault();
-            if (onPublish) {
-              onPublish(news.id); // Pass the ID instead of form data
-            }
-          }}
-          className="w-full sm:w-auto"
-        >
-          {currentLanguage === 'ar' ? 'نشر' : 'Publier'}
-        </Button>
-        <Button type="submit" className="bg-teal-600 hover:bg-teal-700 w-full sm:w-auto">
-          {currentLanguage === 'ar' ? 'تحديث' : 'Mettre à jour'}
-        </Button>
-      </div>
-    </form>
-  );
-};
-
-const NewsForm: React.FC<{
-  formData: { title: string; content: string; category: string; status: string; imageUrl?: string };
-  setFormData: (data: any) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  isEditing: boolean;
-  currentLanguage: string;
-  isRTL: boolean;
-}> = ({ formData, setFormData, onSubmit, isEditing, currentLanguage, isRTL }) => {
-  return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
-          </label>
-          <Input
-            value={formData.title}
-            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder={currentLanguage === 'ar' ? 'أدخل العنوان' : 'Entrez le titre'}
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'الفئة' : 'Catégorie'}
-          </label>
-          <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder={currentLanguage === 'ar' ? 'اختر الفئة' : 'Choisir une catégorie'} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Football">{currentLanguage === 'ar' ? 'كرة القدم' : 'Football'}</SelectItem>
-              <SelectItem value="Basketball">{currentLanguage === 'ar' ? 'كرة السلة' : 'Basketball'}</SelectItem>
-              <SelectItem value="Tennis">{currentLanguage === 'ar' ? 'تنس' : 'Tennis'}</SelectItem>
-              <SelectItem value="Transfers">{currentLanguage === 'ar' ? 'انتقالات' : 'Transferts'}</SelectItem>
-              <SelectItem value="Matches">{currentLanguage === 'ar' ? 'مباريات' : 'Matchs'}</SelectItem>
-              <SelectItem value="Infrastructure">{currentLanguage === 'ar' ? 'بنية تحتية' : 'Infrastructure'}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          {currentLanguage === 'ar' ? 'المحتوى' : 'Contenu'}
-        </label>
-        <textarea
-          className="w-full h-40 p-3 border border-slate-300 dark:border-slate-600 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-transparent resize-none"
-          value={formData.content}
-          onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-          placeholder={currentLanguage === 'ar' ? 'أدخل المحتوى' : 'Entrez le contenu'}
-          required
-        />
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'رابط الصورة' : 'URL de l\'image'}
-          </label>
-          <Input
-            value={formData.imageUrl || ''}
-            onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-            placeholder={currentLanguage === 'ar' ? 'رابط الصورة (اختياري)' : 'URL de l\'image (optionnel)'}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            {currentLanguage === 'ar' ? 'الحالة' : 'Statut'}
-          </label>
-          <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as any })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="draft">{currentLanguage === 'ar' ? 'مسودة' : 'Brouillon'}</SelectItem>
-              <SelectItem value="published">{currentLanguage === 'ar' ? 'منشور' : 'Publié'}</SelectItem>
-              <SelectItem value="archived">{currentLanguage === 'ar' ? 'مؤرشف' : 'Archivé'}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button type="submit" className="bg-teal-600 hover:bg-teal-700">
-          {currentLanguage === 'ar' ? 'تحديث' : 'Mettre à jour'}
-        </Button>
-      </div>
-    </form>
-  );
-};
 
 export default AdminDashboard;
