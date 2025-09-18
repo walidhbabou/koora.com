@@ -317,16 +317,17 @@ const News = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <Header />
-      <TeamsLogos />
-      
-      {/* Header de filtrage (ne s'affiche que si les tables existent) */}
-      <CategoryFilterHeader
+       <CategoryFilterHeader
         selectedHeaderCategory={selectedHeaderCategory}
         setSelectedHeaderCategory={setSelectedHeaderCategory}
         selectedSubCategory={selectedSubCategory}
         setSelectedSubCategory={setSelectedSubCategory}
         currentLanguage={currentLanguage}
       />
+      <TeamsLogos />
+      
+      {/* Header de filtrage (ne s'affiche que si les tables existent) */}
+     
       
       <div className="container mx-auto px-4 py-8">
         <div className="flex gap-8">
