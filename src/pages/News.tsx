@@ -518,17 +518,7 @@ const News = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Filter Button */}
-      <div className="lg:hidden fixed top-4 right-4 z-50">
-        <Button
-          variant="outline"
-          size="icon"
-          className="bg-white dark:bg-[#181a20] border-gray-100 dark:border-[#23262f] shadow-md hover:shadow-lg"
-          onClick={() => setShowLeagueModal(true)}
-        >
-          <Filter className="w-5 h-5 text-gray-800 dark:text-gray-100" />
-        </Button>
-      </div>
+   
     </div>
   );
 };

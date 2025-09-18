@@ -118,8 +118,6 @@ const AdminDashboard: React.FC = () => {
   const [creatingNews, setCreatingNews] = useState(false);
   const [newNewsTitle, setNewNewsTitle] = useState('');
   const [newNewsContent, setNewNewsContent] = useState('');
-  const [newNewsCategoryId, setNewNewsCategoryId] = useState<number | null>(null);
-  const [newNewsChampionId, setNewNewsChampionId] = useState<number | null>(null);
   const [createNewsError, setCreateNewsError] = useState('');
   const [createNewsInfo, setCreateNewsInfo] = useState('');
   const [publishMessage, setPublishMessage] = useState('');
@@ -658,7 +656,9 @@ const testDirectUpdate = async (newsId: number) => {
   const handleCreateNewsSubmit = async () => {
     setCreateNewsError('');
     setCreateNewsInfo('');
-    if (!newNewsTitle || !newNewsContent) {
+    const titleSafe = typeof newNewsTitle === 'string' ? newNewsTitle.trim() : '';
+    const contentSafe = typeof newNewsContent === 'string' ? newNewsContent.trim() : '';
+    if (!titleSafe || !contentSafe) {
       setCreateNewsError(currentLanguage === 'ar' ? 'أدخل العنوان والمحتوى' : 'Entrez le titre et le contenu');
       return;
     }
@@ -690,8 +690,6 @@ const testDirectUpdate = async (newsId: number) => {
           p_content: newNewsContent,
           p_status: 'draft',
           p_image_url: imageUrl ?? null,
-          p_category_id: newNewsCategoryId ?? null,
-          p_champion_id: newNewsChampionId ?? null,
           p_competition_internationale_id: newCompetitionInternationaleId ?? null,
           p_competition_mondiale_id: newCompetitionMondialeId ?? null,
           p_competition_continentale_id: newCompetitionContinentaleId ?? null,
@@ -711,8 +709,6 @@ const testDirectUpdate = async (newsId: number) => {
           content: newNewsContent,
           status: 'draft',
           image_url: imageUrl ?? null,
-          category_id: newNewsCategoryId ?? null,
-          champion_id: newNewsChampionId ?? null,
           user_id: user.id,
           competition_internationale_id: newCompetitionInternationaleId ?? null,
           competition_mondiale_id: newCompetitionMondialeId ?? null,
@@ -917,10 +913,6 @@ const testDirectUpdate = async (newsId: number) => {
                     setNewNewsTitle={setNewNewsTitle}
                     newNewsContent={newNewsContent}
                     setNewNewsContent={setNewNewsContent}
-                    newNewsCategoryId={newNewsCategoryId}
-                    setNewNewsCategoryId={setNewNewsCategoryId}
-                    newNewsChampionId={newNewsChampionId}
-                    setNewNewsChampionId={setNewNewsChampionId}
                     newNewsImageFile={newNewsImageFile}
                     setNewNewsImageFile={setNewNewsImageFile}
                     newNewsStatus={newNewsStatus}
@@ -932,7 +924,6 @@ const testDirectUpdate = async (newsId: number) => {
                     newNewsUpdatedAt={newNewsUpdatedAt}
                     setNewNewsUpdatedAt={setNewNewsUpdatedAt}
                     categories={categories}
-                    champions={champions}
                     competitionsInternationales={competitionsInternationales}
                     competitionsMondiales={competitionsMondiales}
                     competitionsContinentales={competitionsContinentales}
@@ -964,7 +955,7 @@ const testDirectUpdate = async (newsId: number) => {
                       try {
                         const { data, error } = await supabase
                           .from('news')
-                          .select('id, title, title_ar, content, content_ar, status, image_url, category_id, champion_id, created_at, updated_at')
+                          .select('id, title, title_ar, content, content_ar, status, image_url, created_at, updated_at')
                           .eq('id', item.id)
                           .single();
                         if (error) throw error;
@@ -975,8 +966,6 @@ const testDirectUpdate = async (newsId: number) => {
                           content: data.content || '',
                           contentAr: data.content_ar || '',
                           status: data.status || 'draft',
-                          categoryId: data.category_id || '',
-                          championId: data.champion_id || null,
                           imageUrl: data.image_url || undefined,
                           createdAt: data.created_at ? new Date(data.created_at).toISOString().slice(0,10) : '',
                           updatedAt: data.updated_at ? new Date(data.updated_at).toISOString().slice(0,10) : '',
