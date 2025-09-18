@@ -6,6 +6,7 @@ import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
 import NewsCard from "@/components/NewsCard";
 import Footer from "@/components/Footer";
+import { HeaderAd, SidebarAd, MobileAd, SponsorsSection } from "@/components/AdWrapper";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { footballAPI } from "@/config/api";
@@ -183,7 +184,14 @@ const Index = () => {
         canonical="/"
       />
       <Header />
+      
+      {/* Header Ad */}
+      <HeaderAd testMode={process.env.NODE_ENV === 'development'} />
+      
       <TeamsLogos />
+      
+      {/* Mobile Ad */}
+      <MobileAd testMode={process.env.NODE_ENV === 'development'} />
       
       <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row xl:flex-row gap-5 lg:gap-8 xl:gap-10 items-start">
@@ -257,10 +265,18 @@ const Index = () => {
                 </div>
               </div>
             )}
+
+            {/* Sponsors Section */}
+            <SponsorsSection />
           </div>
 
-          {/* Right Sidebar (Today Matches) */}
-          <Sidebar />
+          {/* Right Sidebar (Today Matches + Ads) */}
+          <div className="lg:w-80 xl:w-80 space-y-6">
+            <Sidebar />
+            
+            {/* Sidebar Ad */}
+            <SidebarAd testMode={process.env.NODE_ENV === 'development'} />
+          </div>
 
         </div>
       </div>

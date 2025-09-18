@@ -10,14 +10,36 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+  status: string;
+  created_at?: string;
+  avatar_url: string | null;
+}
+
+interface ProfileFormData {
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 const ModeratorProfileTab: React.FC = () => {
   const { currentLanguage, isRTL } = useLanguage();
   const { user, updateUser } = useAuth();
 
-  const [myProfile, setMyProfile] = useState<Record<string, any> | null>(null);
+  const [myProfile, setMyProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [profileForm, setProfileForm] = useState({
+  const [profileForm, setProfileForm] = useState<ProfileFormData>({
     name: '',
     firstName: '',
     lastName: '',
@@ -41,40 +63,43 @@ const ModeratorProfileTab: React.FC = () => {
           .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
           .eq('id', user.id)
           .maybeSingle();
+        
         if (!error && data) {
           setMyProfile(data);
           setProfileForm({
             name: data.name || '',
-            firstName: data.first_name || (data as any).firstName || '',
-            lastName: data.last_name || (data as any).lastName || '',
+            firstName: data.first_name || '',
+            lastName: data.last_name || '',
             email: data.email || '',
             currentPassword: '',
             newPassword: '',
             confirmPassword: ''
           });
         } else {
-          const minimal = {
+          const minimal: Partial<UserProfile> = {
             id: user.id,
             email: user.email,
             name: user.name ?? [user.firstName, user.lastName].filter(Boolean).join(' '),
-            first_name: (user as any).firstName ?? null,
-            last_name: (user as any).lastName ?? null,
-            role: (user as any).role ?? 'moderator',
-            status: (user as any).status ?? 'active',
-            avatar_url: null as string | null,
+            first_name: user.firstName ?? null,
+            last_name: user.lastName ?? null,
+            role: user.role ?? 'moderator',
+            status: user.status ?? 'active',
+            avatar_url: null,
           };
+          
           await supabase.from('users').upsert(minimal, { onConflict: 'id' });
           const { data: inserted } = await supabase
             .from('users')
             .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
             .eq('id', user.id)
             .maybeSingle();
+          
           if (inserted) {
             setMyProfile(inserted);
             setProfileForm({
               name: inserted.name || '',
-              firstName: (inserted as any).first_name || '',
-              lastName: (inserted as any).last_name || '',
+              firstName: inserted.first_name || '',
+              lastName: inserted.last_name || '',
               email: inserted.email || '',
               currentPassword: '',
               newPassword: '',
@@ -87,7 +112,7 @@ const ModeratorProfileTab: React.FC = () => {
       }
     };
     loadProfile();
-  }, [user?.id]);
+  }, [user?.id, user?.email, user?.name, user?.firstName, user?.lastName, user?.role, user?.status]);
 
   const handleProfileUpdate = async () => {
     setProfileError('');
@@ -111,157 +136,102 @@ const ModeratorProfileTab: React.FC = () => {
         }
       }
 
-      let avatarUrl = myProfile?.avatar_url as string | undefined;
+      let avatarUrl = myProfile?.avatar_url;
 
+      // Handle avatar upload
       if (profileImageFile) {
         setAvatarUploading(true);
         const ext = profileImageFile.name.split('.').pop();
-        const bucketName = (import.meta as any).env?.VITE_SUPABASE_AVATAR_BUCKET || 'avatars';
+        const bucketName = 'avatars';
         const timestamp = Date.now();
         const filePath = `users/${user.id}/avatar_${timestamp}.${ext}`;
+        
         const { error: upErr } = await supabase
           .storage
           .from(bucketName)
           .upload(filePath, profileImageFile, { upsert: true, cacheControl: '3600' });
+        
         setAvatarUploading(false);
+        
         if (upErr) {
           if (String(upErr.message || '').toLowerCase().includes('bucket not found')) {
-            setProfileError(currentLanguage === 'ar' ? 'لم يتم العثور على حاوية الصور "avatars" في Supabase. أنشئها من قسم Storage واجعلها عامة أو أضف سياسات مناسبة.' : 'Le bucket de stockage "avatars" est introuvable dans Supabase. Créez-le dans Storage et rendez-le public ou ajoutez des policies.');
+            setProfileError(currentLanguage === 'ar' 
+              ? 'لم يتم العثور على حاوية الصور "avatars" في Supabase. أنشئها من قسم Storage واجعلها عامة أو أضف سياسات مناسبة.' 
+              : 'Le bucket de stockage "avatars" est introuvable dans Supabase. Créez-le dans Storage et rendez-le public ou ajoutez des policies.');
             return;
           }
           setProfileError((currentLanguage === 'ar' ? 'فشل رفع الصورة: ' : 'Échec de téléversement: ') + (upErr.message || ''));
           return;
         }
+        
         const { data: pub } = supabase.storage.from(bucketName).getPublicUrl(filePath);
         avatarUrl = pub?.publicUrl;
       }
 
-      const nameChanged = profileForm.name !== (myProfile?.name || '');
-      const firstChanged = profileForm.firstName !== (myProfile?.first_name || '');
-      const lastChanged = profileForm.lastName !== (myProfile?.last_name || '');
+      // Simplified update logic - avoid generated name column issues
+      const updateData: Partial<UserProfile> = {
+        first_name: profileForm.firstName,
+        last_name: profileForm.lastName,
+      };
 
-      const updateData: any = {};
-      if (nameChanged) updateData.name = profileForm.name;
-      if (firstChanged) updateData.first_name = profileForm.firstName;
-      if (lastChanged) updateData.last_name = profileForm.lastName;
       if (avatarUrl !== myProfile?.avatar_url) {
         updateData.avatar_url = avatarUrl;
       }
 
+      // Check if we have an active auth session
       const { data: sessionRes } = await supabase.auth.getSession();
       const hasAuthSession = !!sessionRes?.session;
 
-      const onlyAvatarChanged = !!profileImageFile && !nameChanged && !firstChanged && !lastChanged && !profileForm.newPassword;
-
-      if (onlyAvatarChanged && avatarUrl) {
-        setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-        updateUser({ avatarUrl });
-        try {
-          if (hasAuthSession) {
-            const { error: updErr } = await supabase
-              .from('users')
-              .update({ avatar_url: avatarUrl })
-              .eq('id', user.id);
-            if (updErr) throw updErr;
-            setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الصورة الشخصية وتم حفظها في قاعدة البيانات' : 'Avatar mis à jour et enregistré dans la base');
-          } else {
-            if (!profileForm.currentPassword) {
-              setProfileSuccess(currentLanguage === 'ar'
-                ? 'تم تحديث الصورة محلياً. أدخل كلمة المرور الحالية ثم احفظ مرة أخرى لحفظ الرابط في قاعدة البيانات.'
-                : "Avatar mis à jour localement. Saisissez le mot de passe actuel puis enregistrez à nouveau pour l'écrire en base.");
-            } else {
-              const { error: rpcErr } = await supabase.rpc('app_update_user_profile', {
-                p_email: profileForm.email || myProfile?.email || user.email,
-                p_password: profileForm.currentPassword,
-                p_name: null,
-                p_first_name: null,
-                p_last_name: null,
-                p_avatar_url: avatarUrl,
-              });
-              if (rpcErr) throw rpcErr;
-              setProfileSuccess(currentLanguage === 'ar' ? 'تم حفظ رابط الصورة في قاعدة البيانات' : "URL de l'avatar enregistrée en base");
-            }
-          }
-        } catch (e: any) {
-          setProfileError((currentLanguage === 'ar' ? 'تعذر حفظ رابط الصورة في قاعدة البيانات: ' : "Impossible d'enregistrer l'URL de l’avatar en base: ") + (e?.message || ''));
-        }
-        setProfileImageFile(null);
-        return;
-      }
-
       if (hasAuthSession) {
-        let { error: updateErr } = await supabase
+        // Use direct database update when authenticated
+        const { error: updateErr } = await supabase
           .from('users')
           .update(updateData)
           .eq('id', user.id);
+        
         if (updateErr) {
-          const msg = String(updateErr.message || '').toLowerCase();
-          const blocksName = msg.includes('can only be updated to default') && msg.includes('name');
-          if (blocksName && 'name' in updateData) {
-            const { name, ...withoutName } = updateData;
-            const retry = await supabase
-              .from('users')
-              .update(withoutName)
-              .eq('id', user.id);
-            if (retry.error) throw retry.error;
-          } else {
-            const msgLower = String(updateErr.message || '').toLowerCase();
-            const rlsViolation = msgLower.includes('row-level security');
-            if (rlsViolation && avatarUrl && avatarUrl !== myProfile?.avatar_url) {
-              setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-              updateUser({ avatarUrl });
-              setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الصورة الشخصية. لم يتم حفظ معلومات الاسم بسبب صلاحيات قاعدة البيانات.' : 'Avatar mis à jour. Les champs du nom n’ont pas été enregistrés à cause des règles RLS.');
-              setProfileImageFile(null);
-              return;
-            }
-            setProfileError((currentLanguage === 'ar' ? 'فشل تحديث بيانات المستخدم: ' : "Échec de mise à jour de l’utilisateur: ") + (updateErr.message || ''));
-            return;
-          }
+          setProfileError((currentLanguage === 'ar' ? 'فشل تحديث بيانات المستخدم: ' : "Échec de mise à jour de l'utilisateur: ") + (updateErr.message || ''));
+          return;
         }
       } else {
-        const payload: any = {
+        // Use RPC function when no auth session
+        if (!profileForm.currentPassword) {
+          setProfileError(currentLanguage === 'ar' 
+            ? 'يرجى إدخال كلمة المرور الحالية للمتابعة' 
+            : 'Veuillez entrer le mot de passe actuel pour continuer');
+          return;
+        }
+
+        const { error: rpcErr } = await supabase.rpc('app_update_user_profile', {
           p_email: profileForm.email || myProfile?.email || user.email,
-          p_password: profileForm.currentPassword || null,
-          p_name: nameChanged ? profileForm.name : null,
-          p_first_name: firstChanged ? profileForm.firstName : null,
-          p_last_name: lastChanged ? profileForm.lastName : null,
-          p_avatar_url: updateData.avatar_url ?? null,
-        };
-        let { error: rpcErr } = await supabase.rpc('app_update_user_profile', payload);
+          p_password: profileForm.currentPassword,
+          p_name: null, // Don't update generated name column
+          p_first_name: profileForm.firstName,
+          p_last_name: profileForm.lastName,
+          p_avatar_url: avatarUrl,
+        });
+        
         if (rpcErr) {
-          const msg = String(rpcErr.message || '').toLowerCase();
-          const blocksName = msg.includes('can only be updated to default') && msg.includes('name');
-          if (blocksName && payload.p_name !== null) {
-            const { p_name, ...withoutName } = payload;
-            const retry = await supabase.rpc('app_update_user_profile', { ...withoutName, p_name: null });
-            if (retry.error) {
-              setProfileError((currentLanguage === 'ar' ? 'فشل تحديث الملف عبر RPC: ' : 'Échec de mise à jour via RPC: ') + (retry.error.message || ''));
-              return;
-            }
-          } else {
-            setProfileError((currentLanguage === 'ar' ? 'فشل تحديث الملف عبر RPC: ' : 'Échec de mise à jour via RPC: ') + (rpcErr.message || ''));
-            if (msg.includes('function app_update_user_profile')) {
-              setProfileError(currentLanguage === 'ar'
-                ? 'الوظيفة app_update_user_profile غير موجودة. يجب إنشاؤها في Supabase.'
-                : 'La fonction app_update_user_profile est absente. Créez-la dans Supabase.');
-            }
-            return;
-          }
+          setProfileError((currentLanguage === 'ar' ? 'فشل تحديث الملف عبر RPC: ' : 'Échec de mise à jour via RPC: ') + (rpcErr.message || ''));
+          return;
         }
       }
 
+      // Handle password change
       if (profileForm.newPassword) {
-        const { data: sessionRes2 } = await supabase.auth.getSession();
-        const hasAuthSession2 = !!sessionRes2?.session;
-        if (hasAuthSession2) {
+        if (hasAuthSession) {
           const { error: pwErr } = await supabase.auth.updateUser({ password: profileForm.newPassword });
-          if (pwErr) throw pwErr;
+          if (pwErr) {
+            setProfileError((currentLanguage === 'ar' ? 'فشل تغيير كلمة المرور: ' : 'Échec du changement de mot de passe: ') + (pwErr.message || ''));
+            return;
+          }
         } else {
           const { error: cpErr } = await supabase.rpc('app_change_password', {
             p_email: profileForm.email || myProfile?.email || user.email,
             p_current_password: profileForm.currentPassword,
             p_new_password: profileForm.newPassword,
           });
+          
           if (cpErr) {
             setProfileError((currentLanguage === 'ar' ? 'فشل تغيير كلمة المرور عبر RPC: ' : 'Échec du changement de mot de passe via RPC: ') + (cpErr.message || ''));
             return;
@@ -269,36 +239,68 @@ const ModeratorProfileTab: React.FC = () => {
         }
       }
 
+      // Update local state and context
       if (avatarUrl && avatarUrl !== myProfile?.avatar_url) {
-        setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
         updateUser({ avatarUrl });
       }
-      if (nameChanged || firstChanged || lastChanged) {
-        setMyProfile(prev => prev ? {
-          ...prev,
-          name: nameChanged ? profileForm.name : prev.name,
-          first_name: firstChanged ? profileForm.firstName : prev.first_name,
-          last_name: lastChanged ? profileForm.lastName : prev.last_name,
-        } : prev);
-      }
+
+      setMyProfile(prev => prev ? {
+        ...prev,
+        first_name: profileForm.firstName,
+        last_name: profileForm.lastName,
+        avatar_url: avatarUrl,
+      } : null);
 
       setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الملف الشخصي بنجاح' : 'Profil mis à jour avec succès');
-      setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+      setProfileForm(prev => ({ 
+        ...prev, 
+        currentPassword: '', 
+        newPassword: '', 
+        confirmPassword: '' 
+      }));
       setProfileImageFile(null);
 
+      // Refresh profile data
       const { data } = await supabase
         .from('users')
         .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
         .eq('id', user.id)
         .maybeSingle();
+      
       if (data) setMyProfile(data);
 
-    } catch (e: any) {
-      setProfileError((currentLanguage === 'ar' ? 'خطأ غير متوقع: ' : 'Erreur inattendue: ') + (e?.message || (currentLanguage === 'ar' ? 'فشل في تحديث الملف الشخصي' : 'Échec de mise à jour du profil')));
+    } catch (e: unknown) {
+      let errorMessage;
+      if (e instanceof Error) {
+        errorMessage = e.message;
+      } else {
+        errorMessage = currentLanguage === 'ar' ? 'فشل في تحديث الملف الشخصي' : 'Échec de mise à jour du profil';
+      }
+      setProfileError((currentLanguage === 'ar' ? 'خطأ غير متوقع: ' : 'Erreur inattendue: ') + errorMessage);
     } finally {
       setEditingProfile(false);
     }
   };
+
+  const loadingContent = (
+    <div className="text-center py-8">
+      <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'جار التحميل...' : 'Chargement...'}</div>
+    </div>
+  );
+
+  const noProfileContent = (
+    <div className="text-center py-8">
+      <div className="text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا توجد بيانات ملف شخصي' : 'Aucune donnée de profil'}</div>
+    </div>
+  );
+
+  if (loadingProfile) {
+    return loadingContent;
+  }
+
+  if (!myProfile) {
+    return noProfileContent;
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -315,41 +317,76 @@ const ModeratorProfileTab: React.FC = () => {
           <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'} mb-4`}>
             <div className="relative">
               <Avatar className="w-20 h-20 ring-2 ring-orange-200">
-                <AvatarImage src={(myProfile?.avatar_url as string) || (user as any)?.avatar_url || undefined} onError={(e)=>{(e.target as HTMLImageElement).style.display='none';}} />
-                <AvatarFallback>{(myProfile?.name || user?.name || 'U').charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarImage 
+                  src={myProfile.avatar_url || user?.avatarUrl || undefined} 
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} 
+                />
+                <AvatarFallback>{(myProfile.name || user?.name || 'U').charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
               <label htmlFor="avatarUpload" className="absolute bottom-0 right-0 bg-orange-600 hover:bg-orange-700 text-white text-xs px-2 py-1 rounded cursor-pointer flex items-center space-x-1">
                 <Camera className="w-3 h-3" />
                 <span>{avatarUploading ? (currentLanguage === 'ar' ? 'جارٍ…' : 'Charg…') : (currentLanguage === 'ar' ? 'تغيير' : 'Changer')}</span>
               </label>
-              <input id="avatarUpload" type="file" accept="image/*" className="hidden" onChange={(e)=>{ const f=e.target.files?.[0]; if (f) setProfileImageFile(f); e.currentTarget.value=''; }} />
+              <input 
+                id="avatarUpload" 
+                type="file" 
+                accept="image/*" 
+                className="hidden" 
+                onChange={(e) => { 
+                  const f = e.target.files?.[0]; 
+                  if (f) setProfileImageFile(f); 
+                  e.currentTarget.value = ''; 
+                }} 
+              />
             </div>
             <div>
-              <div className="font-bold text-lg">{myProfile?.name || user?.name || '—'}</div>
-              <div className="text-sm text-slate-500">{myProfile?.email || user?.email || '—'}</div>
-              <Badge variant="outline" className="mt-1">{myProfile?.role || (user as any)?.role || 'moderator'}</Badge>
+              <div className="font-bold text-lg">{myProfile.name || user?.name || '—'}</div>
+              <div className="text-sm text-slate-500">{myProfile.email || user?.email || '—'}</div>
+              <Badge variant="outline" className="mt-1">{myProfile.role || user?.role || 'moderator'}</Badge>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
             <div>
               <Label htmlFor="firstName">{currentLanguage === 'ar' ? 'الاسم' : 'Prénom'}</Label>
-              <Input id="firstName" value={profileForm.firstName} onChange={(e)=>setProfileForm(prev => ({ ...prev, firstName: e.target.value }))} placeholder={currentLanguage === 'ar' ? 'أدخل الاسم' : 'Entrez le prénom'} />
+              <Input 
+                id="firstName" 
+                value={profileForm.firstName} 
+                onChange={(e) => setProfileForm(prev => ({ ...prev, firstName: e.target.value }))} 
+                placeholder={currentLanguage === 'ar' ? 'أدخل الاسم' : 'Entrez le prénom'} 
+              />
             </div>
             <div>
               <Label htmlFor="lastName">{currentLanguage === 'ar' ? 'اللقب' : 'Nom'}</Label>
-              <Input id="lastName" value={profileForm.lastName} onChange={(e)=>setProfileForm(prev => ({ ...prev, lastName: e.target.value }))} placeholder={currentLanguage === 'ar' ? 'أدخل اللقب' : 'Entrez le nom'} />
+              <Input 
+                id="lastName" 
+                value={profileForm.lastName} 
+                onChange={(e) => setProfileForm(prev => ({ ...prev, lastName: e.target.value }))} 
+                placeholder={currentLanguage === 'ar' ? 'أدخل اللقب' : 'Entrez le nom'} 
+              />
             </div>
             <div>
               <Label htmlFor="displayName">{currentLanguage === 'ar' ? 'الاسم المعروض' : 'Nom affiché'}</Label>
-              <Input id="displayName" value={profileForm.name} onChange={(e)=>setProfileForm(prev => ({ ...prev, name: e.target.value }))} placeholder={currentLanguage === 'ar' ? 'أدخل الاسم المعروض' : 'Entrez le nom affiché'} />
+              <Input 
+                id="displayName" 
+                value={profileForm.name} 
+                onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))} 
+                placeholder={currentLanguage === 'ar' ? 'أدخل الاسم المعروض' : 'Entrez le nom affiché'} 
+                disabled
+                className="bg-slate-100 dark:bg-slate-800"
+                title={currentLanguage === 'ar' ? 'الاسم المعروض يتم إنشاؤه تلقائياً من الاسم الأول واللقب' : 'Le nom affiché est généré automatiquement à partir du prénom et du nom'}
+              />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
               <Input id="email" value={profileForm.email} disabled className="bg-slate-100 dark:bg-slate-800" />
             </div>
             <div className={`${isRTL ? 'flex-row-reverse' : ''} flex justify-end`}>
-              <Button onClick={handleProfileUpdate} disabled={editingProfile} className="bg-orange-600 hover:bg-orange-700 text-white flex items-center space-x-2">
+              <Button 
+                onClick={handleProfileUpdate} 
+                disabled={editingProfile} 
+                className="bg-orange-600 hover:bg-orange-700 text-white flex items-center space-x-2"
+              >
                 <Save className="w-4 h-4" />
                 <span>
                   {editingProfile ? (currentLanguage === 'ar' ? 'جارٍ الحفظ…' : 'Enregistrement…') : (currentLanguage === 'ar' ? 'حفظ التغييرات' : 'Enregistrer les modifications')}
@@ -373,7 +410,13 @@ const ModeratorProfileTab: React.FC = () => {
           <div className="grid grid-cols-1 gap-4">
             <div>
               <Label htmlFor="currentPassword">{currentLanguage === 'ar' ? 'كلمة المرور الحالية (للتحقق)' : 'Mot de passe actuel (pour vérification)'}</Label>
-              <Input id="currentPassword" type="password" value={profileForm.currentPassword} onChange={(e)=>setProfileForm(prev => ({ ...prev, currentPassword: e.target.value }))} placeholder={currentLanguage === 'ar' ? '••••••••' : '••••••••'} />
+              <Input 
+                id="currentPassword" 
+                type="password" 
+                value={profileForm.currentPassword} 
+                onChange={(e) => setProfileForm(prev => ({ ...prev, currentPassword: e.target.value }))} 
+                placeholder="••••••••" 
+              />
               <p className="text-xs text-slate-500 mt-1">
                 {currentLanguage === 'ar'
                   ? 'ملاحظة: تُستخدم كلمة المرور الحالية عند عدم توفر جلسة دخول لحفظ التغييرات بأمان عبر RPC.'
@@ -382,20 +425,37 @@ const ModeratorProfileTab: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="newPassword">{currentLanguage === 'ar' ? 'كلمة المرور الجديدة' : 'Nouveau mot de passe'}</Label>
-              <Input id="newPassword" type="password" value={profileForm.newPassword} onChange={(e)=>setProfileForm(prev => ({ ...prev, newPassword: e.target.value }))} placeholder={currentLanguage === 'ar' ? '••••••••' : '••••••••'} />
+              <Input 
+                id="newPassword" 
+                type="password" 
+                value={profileForm.newPassword} 
+                onChange={(e) => setProfileForm(prev => ({ ...prev, newPassword: e.target.value }))} 
+                placeholder="••••••••" 
+              />
             </div>
             <div>
               <Label htmlFor="confirmPassword">{currentLanguage === 'ar' ? 'تأكيد كلمة المرور' : 'Confirmer le mot de passe'}</Label>
-              <Input id="confirmPassword" type="password" value={profileForm.confirmPassword} onChange={(e)=>setProfileForm(prev => ({ ...prev, confirmPassword: e.target.value }))} placeholder={currentLanguage === 'ar' ? '••••••••' : '••••••••'} />
+              <Input 
+                id="confirmPassword" 
+                type="password" 
+                value={profileForm.confirmPassword} 
+                onChange={(e) => setProfileForm(prev => ({ ...prev, confirmPassword: e.target.value }))} 
+                placeholder="••••••••" 
+              />
             </div>
             <div className={`${isRTL ? 'flex-row-reverse' : ''} flex justify-end`}>
-              <Button onClick={handleProfileUpdate} disabled={editingProfile} className="bg-red-600 hover:bg-red-700 text-white">
+              <Button 
+                onClick={handleProfileUpdate} 
+                disabled={editingProfile} 
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
                 {editingProfile ? (currentLanguage === 'ar' ? 'جارٍ التغيير…' : 'Modification…') : (currentLanguage === 'ar' ? 'تحديث كلمة المرور' : 'Mettre à jour le mot de passe')}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+      
       {(profileError || profileSuccess || profileImageFile) && (
         <div className="lg:col-span-2 space-y-3">
           {profileError && (

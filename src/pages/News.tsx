@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import NewsCard from "@/components/NewsCard";
 import Footer from "@/components/Footer";
 import CategoryFilterHeader from "@/components/CategoryFilterHeader";
+import { HeaderAd, MobileAd, InArticleAd, SidebarAd } from "../components/AdWrapper";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Filter, TrendingUp, Clock, ChevronLeft, ChevronRight, Flag } from "lucide-react";
@@ -114,8 +116,6 @@ const News = () => {
   const [selectedHeaderCategory, setSelectedHeaderCategory] = useState<number | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
 
-  // No longer fetching champions from database - using hardcoded league mapping
-
   // Simplified categories - removed database dependency
   const categories = [
     {
@@ -203,12 +203,18 @@ const News = () => {
     }
   }, [selectedChampion, pageSize]);
 
-  useEffect(() => { fetchNews(1, false); }, [fetchNews]);
+  useEffect(() => { 
+    fetchNews(1, false); 
+  }, [fetchNews]);
 
   const reportNews = async (newsId: string, description: string) => {
     if (reportingId) return;
     if (!isAuthenticated || !user?.id) {
-      toast({ title: 'يرجى تسجيل الدخول', description: 'يجب تسجيل الدخول لإرسال البلاغ', variant: 'destructive' });
+      toast({ 
+        title: 'يرجى تسجيل الدخول', 
+        description: 'يجب تسجيل الدخول لإرسال البلاغ', 
+        variant: 'destructive' 
+      });
       return;
     }
     setReportingId(newsId);
@@ -241,7 +247,11 @@ const News = () => {
       setReportDesc('');
     } catch (e: unknown) {
       const err = e as { message?: string };
-      toast({ title: 'Erreur', description: err?.message || 'تعذر إرسال البلاغ', variant: 'destructive' });
+      toast({ 
+        title: 'Erreur', 
+        description: err?.message || 'تعذر إرسال البلاغ', 
+        variant: 'destructive' 
+      });
     } finally {
       setReportingId(null);
     }
@@ -315,179 +325,247 @@ const News = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
-      <Header />
-       <CategoryFilterHeader
-        selectedHeaderCategory={selectedHeaderCategory}
-        setSelectedHeaderCategory={setSelectedHeaderCategory}
-        selectedSubCategory={selectedSubCategory}
-        setSelectedSubCategory={setSelectedSubCategory}
-        currentLanguage={currentLanguage}
-      />
-      <TeamsLogos />
-      
-      {/* Header de filtrage (ne s'affiche que si les tables existent) */}
-     
-      
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex gap-8">
-          {/* Left Sidebar (Leagues) */}
-          <div className="hidden lg:block w-80 space-y-6">
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-sport-dark">البطولات</h3>
-                {selectedChampion && (
-                  <Button
-                    variant="outline"
-                    size="sm"
+    <React.Fragment>
+      <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
+        <SEO 
+          title="الأخبار | كورة - آخر أخبار كرة القدم والرياضة"
+          description="تابع آخر أخبار كرة القدم العربية والعالمية، أخبار الانتقالات، تحليلات المباريات، وكل ما يخص عالم الرياضة على كورة."
+          keywords={["أخبار كرة القدم", "أخبار رياضية", "انتقالات لاعبين", "تحليلات رياضية", "أخبار الدوريات", "كورة أخبار"]}
+          type="website"
+        />
+        <Header />
+        
+        {/* Header Ad */}
+        <HeaderAd testMode={process.env.NODE_ENV === 'development'} />
+        
+        <CategoryFilterHeader
+          selectedHeaderCategory={selectedHeaderCategory}
+          setSelectedHeaderCategory={setSelectedHeaderCategory}
+          selectedSubCategory={selectedSubCategory}
+          setSelectedSubCategory={setSelectedSubCategory}
+          currentLanguage={currentLanguage}
+        />
+        <TeamsLogos />
+        
+        {/* Mobile Ad */}
+        <MobileAd testMode={process.env.NODE_ENV === 'development'} />
+        
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex gap-6">
+            {/* Left Sidebar - Leagues Filter */}
+            <div className="hidden lg:block w-64 space-y-4">
+              {/* Leagues Filter */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b pb-2">
+                  {currentLanguage === 'ar' ? 'الدوريات' : 'Ligues'}
+                </h3>
+                <div className="space-y-2">
+                  <button
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
+                      selectedChampion === null
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
                     onClick={() => handleChampionClick(null)}
-                    className="text-xs"
                   >
-                    {currentLanguage === 'ar' ? 'إلغاء التصفية' : 'Clear Filter'}
-                  </Button>
-                )}
-              </div>
-              <ul className="space-y-3">
-                {leagues.map((l, i) => (
-                  <li key={i}>
-                    <div 
-                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 shadow-sm hover:shadow-md cursor-pointer transition-all ${isRTL ? 'flex-row-reverse' : ''} ${
-                        selectedChampion === l.championId 
-                          ? 'bg-sport-green text-white border-sport-green' 
-                          : 'bg-white dark:bg-[#181a20] border-gray-100 dark:border-[#23262f]'
+                    <span className="font-medium text-sm">
+                      {currentLanguage === 'ar' ? 'جميع الأخبار' : 'Toutes les actualités'}
+                    </span>
+                  </button>
+                  {leagues.map((league) => (
+                    <button
+                      key={league.id}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
+                        selectedChampion === league.championId
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
                       }`}
-                      onClick={() => handleChampionClick(l.championId)}
+                      onClick={() => handleChampionClick(league.championId)}
                     >
-                      <div className={`shrink-0 ${selectedChampion === l.championId ? 'text-white' : 'text-gray-400'}`}>
-                        {isRTL ? (
-                          <ChevronRight className="w-4 h-4" />
-                        ) : (
-                          <ChevronLeft className="w-4 h-4" />
-                        )}
-                      </div>
-                      <div className={`flex-1 ${isRTL ? 'text-right pr-3' : 'text-left pl-3'}`}>
-                        <div className={`text-sm font-medium ${selectedChampion === l.championId ? 'text-white' : 'text-gray-800 dark:text-gray-100'}`}>
-                          {l.name}
-                        </div>
-                      </div>
-                      <div className="shrink-0">
-                        <img src={l.logo} alt={l.name} className="w-9 h-9 rounded-md object-contain bg-white" />
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1 space-y-8">
-            {/* Categories */}
-          
-
-            {/* Featured News */}
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-5 h-5 text-sport-green" />
-                <h2 className="text-xl font-bold text-sport-dark">الأخبار المميزة</h2>
+                      <img
+                        src={league.logo}
+                        alt={league.name}
+                        className="w-6 h-6 object-contain"
+                      />
+                      <span className="font-medium text-sm">{league.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
               
-              {(loadingNews ? [] : allNews.slice(0,1)).map((news) => (
-                <Link to={`/news/${news.id}`} key={news.id} className="block space-y-2">
-                  <NewsCard news={news} size="large" />
-                </Link>
-              ))}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {(loadingNews ? [] : allNews.slice(1, 3)).map((news) => (
-                  <Link to={`/news/${news.id}`} key={news.id} className="block space-y-2">
-                    <NewsCard news={news} size="medium" />
-                  </Link>
-                ))}
+              {/* Sidebar Ad */}
+              <SidebarAd testMode={process.env.NODE_ENV === 'development'} />
+              
+              {/* Additional Advertisement Space */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                <img
+                  src="/placeholder.svg"
+                  alt="Advertisement"
+                  className="w-full h-64 object-cover"
+                />
               </div>
             </div>
 
-            {/* Latest News */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Clock className="w-5 h-5 text-sport-green" />
-                <h2 className="text-xl font-bold text-sport-dark">آخر الأخبار</h2>
-              </div>
-
-              <div className="space-y-3">
-                {(loadingNews ? [] : allNews.slice(3)).map((news) => (
-                  <Link to={`/news/${news.id}`} key={news.id} className="block">
-                    <Card className={`p-2 sm:p-3 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all bg-white dark:bg-[#0f1115] border border-slate-200/70 dark:border-slate-800/60`}>
-                      <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {/* Main Content - Grid Layout */}
+            <div className="flex-1">
+              {/* Featured News */}
+              {!loadingNews && allNews.length > 0 && (
+                <div className="mb-6">
+                  <Link to={`/news/${allNews[0].id}`} className="block">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow">
+                      <div className="relative">
                         <img
-                          src={news.imageUrl}
-                          alt={news.title}
-                          className="w-20 h-14 sm:w-24 sm:h-16 object-cover rounded-md flex-shrink-0"
+                          src={allNews[0].imageUrl}
+                          alt={allNews[0].title}
+                          className="w-full h-80 object-cover"
                         />
-                        <div className={`min-w-0 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
-                          <h3 className="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100 line-clamp-2">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                          <h1 className="text-2xl md:text-3xl font-bold mb-3 leading-tight">
+                            {allNews[0].title}
+                          </h1>
+                          <p className="text-gray-200 text-sm md:text-base line-clamp-2 mb-3">
+                            {allNews[0].summary}
+                          </p>
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            <span className="text-sm">{allNews[0].publishedAt}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {loadingNews && allNews.length === 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(6)].map((_, index) => (
+                    <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden animate-pulse">
+                      <div className="w-full h-48 bg-gray-200 dark:bg-gray-700"></div>
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* News Grid - 3 columns - Starting from index 1 to avoid duplicating featured news */}
+              {!loadingNews && allNews.length > 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {allNews.slice(1).map((news, index) => (
+                    <Link to={`/news/${news.id}`} key={news.id} className="block">
+                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow h-full">
+                        <div className="relative">
+                          <img
+                            src={news.imageUrl}
+                            alt={news.title}
+                            className="w-full h-48 object-cover"
+                          />
+                          <button
+                            className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              e.stopPropagation(); 
+                              setReportOpenId(news.id); 
+                            }}
+                            disabled={reportingId === news.id}
+                            title="تبليغ عن الخبر"
+                          >
+                            <Flag className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div className="p-4">
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 leading-tight">
                             {news.title}
                           </h3>
-                          <div className={`mt-1 text-[11px] sm:text-xs text-slate-500 flex items-center gap-2 ${isRTL ? 'flex-row-reverse justify-start' : ''}`}>
-                            <Clock className="w-3 h-3 opacity-70" />
+                          <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
+                            {news.summary}
+                          </p>
+                          <div className="flex items-center gap-2 text-gray-500 text-xs">
+                            <Clock className="w-3 h-3" />
                             <span>{news.publishedAt}</span>
                           </div>
                         </div>
-                        <button
-                          className="shrink-0 inline-flex items-center gap-1 text-slate-500 hover:text-red-600"
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReportOpenId(news.id); }}
-                          disabled={reportingId === news.id}
-                          title="تبليغ عن الخبر"
-                        >
-                          <Flag className="w-4 h-4" />
-                          <span className="text-[11px]">{reportingId === news.id ? '...' : 'تبليغ'}</span>
-                        </button>
                       </div>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
 
-            {/* Load More */}
-            <div className="flex justify-center pt-8">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-sport-green text-sport-green hover:bg-sport-green hover:text-white disabled:opacity-60"
-                onClick={handleLoadMore}
-                disabled={loadingNews || !hasMore}
-              >
-                {loadingNews ? '...جاري التحميل' : hasMore ? 'تحميل المزيد من الأخبار' : 'لا مزيد من الأخبار'}
-              </Button>
-            </div>
-          </div>
+              {/* No news state */}
+              {!loadingNews && allNews.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-gray-500 dark:text-gray-400 text-lg">
+                    {currentLanguage === 'ar' ? 'لا توجد أخبار متاحة حالياً' : 'Aucune actualité disponible'}
+                  </p>
+                </div>
+              )}
 
-          {/* Right Sidebar */}
-          <div className="hidden lg:block w-80 space-y-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-bold text-sport-dark mb-4">المواضيع الأكثر بحثاً</h3>
-              <div className="space-y-3">
-                {trendingTopics.map((topic, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-sport-light/20 cursor-pointer transition-colors"
+              {/* Load More */}
+              {!loadingNews && allNews.length > 0 && (
+                <div className="flex justify-center pt-8">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60 px-8"
+                    onClick={handleLoadMore}
+                    disabled={loadingNews || !hasMore}
                   >
-                    <span className="text-sm font-medium text-sport-green">#{index + 1}</span>
-                    <span className="text-sm">{topic}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+                    {loadingNews ? 'جاري التحميل...' : hasMore ? 'تحميل المزيد من الأخبار' : 'لا مزيد من الأخبار'}
+                  </Button>
+                </div>
+              )}
+            </div>
 
+            {/* Right Sidebar - More Secondary Content */}
+            <div className="hidden xl:block w-64 space-y-4">
+              {/* Trending Topics */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b pb-2">
+                  المواضيع الأكثر بحثاً
+                </h3>
+                <div className="space-y-3">
+                  {trendingTopics.slice(0, 5).map((topic, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+                    >
+                      <span className="text-sm font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 w-6 h-6 rounded-full flex items-center justify-center">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 line-clamp-2 flex-1">
+                        {topic.length > 50 ? topic.substring(0, 50) + '...' : topic}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Advertisement Space */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                <img
+                  src="/placeholder.svg"
+                  alt="Advertisement"
+                  className="w-full h-64 object-cover"
+                />
+              </div>
+            </div>
           </div>
         </div>
+        
+        <Footer />
       </div>
-      
-      <Footer />
-
+        
       {/* Report Dialog */}
-      <Dialog open={!!reportOpenId} onOpenChange={(o) => { setReportOpenId(o ? reportOpenId : null); if (!o) setReportDesc(''); }}>
+      <Dialog open={!!reportOpenId} onOpenChange={(o) => { 
+        setReportOpenId(o ? reportOpenId : null); 
+        if (!o) setReportDesc(''); 
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>سبب التبليغ</DialogTitle>
@@ -500,12 +578,25 @@ const News = () => {
             dir="auto"
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setReportOpenId(null); setReportDesc(''); }} disabled={!!reportingId}>إلغاء</Button>
+            <Button 
+              variant="outline" 
+              onClick={() => { 
+                setReportOpenId(null); 
+                setReportDesc(''); 
+              }} 
+              disabled={!!reportingId}
+            >
+              إلغاء
+            </Button>
             <Button
               onClick={() => {
                 const d = reportDesc.trim();
                 if (!d) {
-                  toast({ title: 'مطلوب وصف', description: 'يرجى كتابة سبب التبليغ', variant: 'destructive' });
+                  toast({ 
+                    title: 'مطلوب وصف', 
+                    description: 'يرجى كتابة سبب التبليغ', 
+                    variant: 'destructive' 
+                  });
                   return;
                 }
                 if (reportOpenId) reportNews(reportOpenId, d);
@@ -517,9 +608,7 @@ const News = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-   
-    </div>
+    </React.Fragment>
   );
 };
 

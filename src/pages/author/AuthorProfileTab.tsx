@@ -9,11 +9,23 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  status: string;
+  created_at: string;
+  avatar_url: string | null;
+}
+
 const AuthorProfileTab: React.FC = () => {
   const { currentLanguage, isRTL } = useLanguage();
   const { user, updateUser } = useAuth();
 
-  const [myProfile, setMyProfile] = useState<Record<string, any> | null>(null);
+  const [myProfile, setMyProfile] = useState<UserProfile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -43,23 +55,23 @@ const AuthorProfileTab: React.FC = () => {
           setMyProfile(data);
           setProfileForm({
             name: data.name || '',
-            firstName: data.first_name || (data as any).firstName || '',
-            lastName: data.last_name || (data as any).lastName || '',
+            firstName: data.first_name || '',
+            lastName: data.last_name || '',
             email: data.email || '',
             currentPassword: '',
             newPassword: '',
             confirmPassword: ''
           });
         } else {
+          // Don't include the generated 'name' field in upsert since it's auto-generated
           const minimal = {
             id: user.id,
             email: user.email,
-            name: user.name ?? [user.firstName, user.lastName].filter(Boolean).join(' '),
             first_name: user.firstName ?? null,
             last_name: user.lastName ?? null,
             role: user.role,
             status: user.status,
-            avatar_url: null as string | null,
+            avatar_url: user.avatarUrl ?? null,
           };
           await supabase.from('users').upsert(minimal, { onConflict: 'id' });
           const { data: inserted } = await supabase
@@ -71,8 +83,8 @@ const AuthorProfileTab: React.FC = () => {
             setMyProfile(inserted);
             setProfileForm({
               name: inserted.name || '',
-              firstName: (inserted as any).first_name || '',
-              lastName: (inserted as any).last_name || '',
+              firstName: inserted.first_name || '',
+              lastName: inserted.last_name || '',
               email: inserted.email || '',
               currentPassword: '',
               newPassword: '',
@@ -85,7 +97,7 @@ const AuthorProfileTab: React.FC = () => {
       }
     };
     loadProfile();
-  }, [user?.id]);
+  }, [user?.id, user?.avatarUrl, user?.email, user?.firstName, user?.lastName, user?.role, user?.status]);
 
   const handleProfileUpdate = async () => {
     setProfileError('');
@@ -109,8 +121,9 @@ const AuthorProfileTab: React.FC = () => {
         }
       }
 
-      let avatarUrl = myProfile?.avatar_url as string | undefined;
+      let avatarUrl = myProfile?.avatar_url;
 
+      // Upload new avatar if selected
       if (profileImageFile) {
         const ext = profileImageFile.name.split('.').pop();
         const bucketName = 'avatars';
@@ -132,128 +145,90 @@ const AuthorProfileTab: React.FC = () => {
         avatarUrl = pub?.publicUrl;
       }
 
-      const nameChanged = profileForm.name !== (myProfile?.name || '');
+      // Only update first_name, last_name, and avatar_url (name is auto-generated)
       const firstChanged = profileForm.firstName !== (myProfile?.first_name || '');
       const lastChanged = profileForm.lastName !== (myProfile?.last_name || '');
+      const avatarChanged = avatarUrl !== myProfile?.avatar_url;
 
-      const updateData: any = {};
-      if (nameChanged) updateData.name = profileForm.name;
+      const updateData: Record<string, string | null> = {};
       if (firstChanged) updateData.first_name = profileForm.firstName;
       if (lastChanged) updateData.last_name = profileForm.lastName;
-      if (avatarUrl !== myProfile?.avatar_url) updateData.avatar_url = avatarUrl;
+      if (avatarChanged && avatarUrl) updateData.avatar_url = avatarUrl;
 
       const { data: sessionRes } = await supabase.auth.getSession();
       const hasAuthSession = !!sessionRes?.session;
 
-      const onlyAvatarChanged = !!profileImageFile &&
-        (profileForm.name === (myProfile?.name || '') &&
-         profileForm.firstName === (myProfile?.first_name || '') &&
-         profileForm.lastName === (myProfile?.last_name || '')) &&
-        !profileForm.newPassword;
-
-      if (onlyAvatarChanged && avatarUrl) {
-        setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-        updateUser({ avatarUrl });
-        try {
-          if (hasAuthSession) {
-            const { error: updErr } = await supabase
-              .from('users')
-              .update({ avatar_url: avatarUrl })
-              .eq('id', user.id);
-            if (updErr) throw updErr;
-            setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الصورة الشخصية وتم حفظها في قاعدة البيانات' : 'Avatar mis à jour et enregistré dans la base');
-          } else {
-            if (!profileForm.currentPassword) {
-              setProfileSuccess(currentLanguage === 'ar'
-                ? 'تم تحديث الصورة محلياً. أدخل كلمة المرور الحالية ثم احفظ مرة أخرى لحفظ الرابط في قاعدة البيانات.'
-                : "Avatar mis à jour localement. Saisissez le mot de passe actuel puis enregistrez à nouveau pour l'écrire en base.");
-            } else {
-              const { error: rpcErr } = await supabase.rpc('app_update_user_profile', {
-                p_email: profileForm.email || myProfile?.email || user.email,
-                p_password: profileForm.currentPassword,
-                p_name: null,
-                p_first_name: null,
-                p_last_name: null,
-                p_avatar_url: avatarUrl,
-              });
-              if (rpcErr) throw rpcErr;
-              setProfileSuccess(currentLanguage === 'ar' ? 'تم حفظ رابط الصورة في قاعدة البيانات' : "URL de l'avatar enregistrée en base");
-            }
-          }
-        } catch (e: any) {
-          setProfileError((currentLanguage === 'ar' ? 'تعذر حفظ رابط الصورة في قاعدة البيانات: ' : "Impossible d'enregistrer l'URL de l’avatar en base: ") + (e?.message || ''));
-        }
-        setProfileImageFile(null);
-        return;
-      }
-
-      if (hasAuthSession) {
-        let { error: updateErr } = await supabase
-          .from('users')
-          .update(updateData)
-          .eq('id', user.id);
-        if (updateErr) {
-          const msg = String(updateErr.message || '').toLowerCase();
-          const blocksName = msg.includes('can only be updated to default') && msg.includes('name');
-          if (blocksName && 'name' in updateData) {
-            const { name, ...withoutName } = updateData;
-            const retry = await supabase
-              .from('users')
-              .update(withoutName)
-              .eq('id', user.id);
-            if (retry.error) throw retry.error;
-          } else {
+      // Always try to update the database if any field changed
+      if (Object.keys(updateData).length > 0) {
+        if (hasAuthSession) {
+          const { error: updateErr } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', user.id);
+          if (updateErr) {
             const msgLower = String(updateErr.message || '').toLowerCase();
             const rlsViolation = msgLower.includes('row-level security');
-            if (rlsViolation && avatarUrl && avatarUrl !== myProfile?.avatar_url) {
+            if (rlsViolation && avatarChanged) {
+              // If RLS blocks update but avatar changed, update local state
               setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
               updateUser({ avatarUrl });
-              setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الصورة الشخصية. لم يتم حفظ معلومات الاسم بسبب صلاحيات قاعدة البيانات.' : 'Avatar mis à jour. Les champs du nom n’ont pas été enregistrés à cause des règles RLS.');
-              setProfileImageFile(null);
-              return;
-            }
-            setProfileError((currentLanguage === 'ar' ? 'فشل تحديث بيانات المستخدم: ' : "Échec de mise à jour de l’utilisateur: ") + (updateErr.message || ''));
-            return;
-          }
-        }
-      } else {
-        const payload: any = {
-          p_email: profileForm.email || myProfile?.email || user.email,
-          p_password: profileForm.currentPassword || null,
-          p_name: nameChanged ? profileForm.name : null,
-          p_first_name: firstChanged ? profileForm.firstName : null,
-          p_last_name: lastChanged ? profileForm.lastName : null,
-          p_avatar_url: updateData.avatar_url ?? null,
-        };
-        let { error: rpcErr } = await supabase.rpc('app_update_user_profile', payload);
-        if (rpcErr) {
-          const msg = String(rpcErr.message || '').toLowerCase();
-          const blocksName = msg.includes('can only be updated to default') && msg.includes('name');
-          if (blocksName && payload.p_name !== null) {
-            const { p_name, ...withoutName } = payload;
-            const retry = await supabase.rpc('app_update_user_profile', { ...withoutName, p_name: null });
-            if (retry.error) {
-              setProfileError((currentLanguage === 'ar' ? 'فشل تحديث الملف عبر RPC: ' : 'Échec de mise à jour via RPC: ') + (retry.error.message || ''));
+              setProfileSuccess(currentLanguage === 'ar' ? 'تم تحديث الصورة الشخصية محلياً. قد تحتاج إلى صلاحيات إضافية لحفظها في قاعدة البيانات.' : 'Avatar mis à jour localement. Des autorisations supplémentaires peuvent être nécessaires pour le sauvegarder en base.');
+            } else {
+              setProfileError((currentLanguage === 'ar' ? 'فشل تحديث بيانات المستخدم: ' : "Échec de mise à jour de l'utilisateur: ") + (updateErr.message || ''));
               return;
             }
           } else {
+            // Success - update was persisted
+            if (avatarChanged && avatarUrl) {
+              setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
+              updateUser({ avatarUrl });
+            }
+          }
+        } else {
+          // Use RPC for users without auth session
+          if (!profileForm.currentPassword) {
+            setProfileError(currentLanguage === 'ar' ? 'كلمة المرور الحالية مطلوبة لحفظ التغييرات' : 'Le mot de passe actuel est requis pour sauvegarder');
+            return;
+          }
+
+          const payload = {
+            p_email: profileForm.email || myProfile?.email || user.email,
+            p_password: profileForm.currentPassword,
+            p_name: null, // Don't update generated name field
+            p_first_name: firstChanged ? profileForm.firstName : null,
+            p_last_name: lastChanged ? profileForm.lastName : null,
+            p_avatar_url: avatarChanged ? avatarUrl : null,
+          };
+          
+          const { error: rpcErr } = await supabase.rpc('app_update_user_profile', payload);
+          if (rpcErr) {
             setProfileError((currentLanguage === 'ar' ? 'فشل تحديث الملف عبر RPC: ' : 'Échec de mise à jour via RPC: ') + (rpcErr.message || ''));
-            if (msg.includes('function app_update_user_profile')) {
+            if (String(rpcErr.message || '').includes('function app_update_user_profile')) {
               setProfileError(currentLanguage === 'ar'
                 ? 'الوظيفة app_update_user_profile غير موجودة. يجب إنشاؤها في Supabase.'
                 : 'La fonction app_update_user_profile est absente. Créez-la dans Supabase.');
             }
             return;
+          } else {
+            // Success - update was persisted via RPC
+            if (avatarChanged && avatarUrl) {
+              setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
+              updateUser({ avatarUrl });
+            }
           }
         }
       }
 
+      // Handle password change
       if (profileForm.newPassword) {
         const { data: sessionRes2 } = await supabase.auth.getSession();
         const hasAuthSession2 = !!sessionRes2?.session;
         if (hasAuthSession2) {
           const { error: pwErr } = await supabase.auth.updateUser({ password: profileForm.newPassword });
-          if (pwErr) throw pwErr;
+          if (pwErr) {
+            setProfileError((currentLanguage === 'ar' ? 'فشل تغيير كلمة المرور: ' : 'Échec du changement de mot de passe: ') + (pwErr.message || ''));
+            return;
+          }
         } else {
           const { error: cpErr } = await supabase.rpc('app_change_password', {
             p_email: profileForm.email || myProfile?.email || user.email,
@@ -267,16 +242,13 @@ const AuthorProfileTab: React.FC = () => {
         }
       }
 
-      if (avatarUrl && avatarUrl !== myProfile?.avatar_url) {
-        setMyProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
-        updateUser({ avatarUrl });
-      }
-      if (nameChanged || firstChanged || lastChanged) {
+      // Update local state for the name field (auto-generated from first_name + last_name)
+      if (firstChanged || lastChanged) {
         setMyProfile(prev => prev ? {
           ...prev,
-          name: nameChanged ? profileForm.name : prev.name,
           first_name: firstChanged ? profileForm.firstName : prev.first_name,
           last_name: lastChanged ? profileForm.lastName : prev.last_name,
+          // The name field will be auto-generated by the database
         } : prev);
       }
 
@@ -284,15 +256,25 @@ const AuthorProfileTab: React.FC = () => {
       setProfileForm(prev => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
       setProfileImageFile(null);
 
-      const { data } = await supabase
+      // Reload profile data to get the updated auto-generated name
+      const { data: refreshedData } = await supabase
         .from('users')
         .select('id, email, name, first_name, last_name, role, status, created_at, avatar_url')
         .eq('id', user.id)
         .maybeSingle();
-      if (data) setMyProfile(data);
+      if (refreshedData) {
+        setMyProfile(refreshedData);
+        setProfileForm(prev => ({
+          ...prev,
+          name: refreshedData.name || '',
+          firstName: refreshedData.first_name || '',
+          lastName: refreshedData.last_name || '',
+        }));
+      }
 
-    } catch (e: any) {
-      setProfileError((currentLanguage === 'ar' ? 'خطأ غير متوقع: ' : 'Erreur inattendue: ') + (e?.message || (currentLanguage === 'ar' ? 'فشل في تحديث الملف الشخصي' : 'Échec de mise à jour du profil')));
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      setProfileError((currentLanguage === 'ar' ? 'خطأ غير متوقع: ' : 'Erreur inattendue: ') + errorMessage);
     } finally {
       setEditingProfile(false);
     }
@@ -352,12 +334,13 @@ const AuthorProfileTab: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  {currentLanguage === 'ar' ? 'الاسم الكامل' : 'Nom complet'}
+                  {currentLanguage === 'ar' ? 'الاسم الكامل (تلقائي)' : 'Nom complet (automatique)'}
                 </label>
                 <Input
                   value={profileForm.name}
-                  onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder={currentLanguage === 'ar' ? 'أدخل الاسم الكامل' : 'Entrez le nom complet'}
+                  disabled
+                  className="bg-slate-100 dark:bg-slate-800"
+                  placeholder={currentLanguage === 'ar' ? 'يتم إنشاؤه تلقائياً من الاسم الأول واسم العائلة' : 'Généré automatiquement à partir du prénom et nom'}
                 />
               </div>
               <div>
@@ -398,7 +381,18 @@ const AuthorProfileTab: React.FC = () => {
                 <Lock className="w-5 h-5" />
                 <span>{currentLanguage === 'ar' ? 'تغيير كلمة المرور' : 'Changer le mot de passe'}</span>
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    {currentLanguage === 'ar' ? 'كلمة المرور الحالية' : 'Mot de passe actuel'}
+                  </label>
+                  <Input
+                    type="password"
+                    value={profileForm.currentPassword}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    placeholder={currentLanguage === 'ar' ? 'أدخل كلمة المرور الحالية' : 'Entrez le mot de passe actuel'}
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                     {currentLanguage === 'ar' ? 'كلمة المرور الجديدة' : 'Nouveau mot de passe'}
@@ -434,11 +428,18 @@ const AuthorProfileTab: React.FC = () => {
                 <p className="text-sm text-green-600">{profileSuccess}</p>
               </div>
             )}
+            {profileImageFile && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-600">
+                  {currentLanguage === 'ar' ? 'صورة جديدة محددة:' : 'Nouvelle image sélectionnée:'} {profileImageFile.name}
+                </p>
+              </div>
+            )}
 
             <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
               <Button onClick={handleProfileUpdate} disabled={editingProfile} className="bg-teal-600 hover:bg-teal-700">
                 <Save className={`${isRTL ? 'ml-2' : 'mr-2'} w-4 h-4`} />
-                {editingProfile ? (currentLanguage === 'ar' ? 'جار الحفظ...' : 'Enregistrement...') : (currentLanguage === 'ar' ? 'حفظ' : 'Enregistrer')}
+                {editingProfile ? (currentLanguage === 'ar' ? 'جار الحفظ...' : 'Enregistrement...') : (currentLanguage === 'ar' ? 'حفظ التغييرات' : 'Enregistrer les modifications')}
               </Button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import DatePicker from "@/components/DatePicker";
@@ -549,6 +550,12 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
 
   return (
     <div dir={direction} className={`min-h-screen bg-[#f6f7fa] dark:bg-[#020617] ${isRTL ? 'rtl' : 'ltr'}`}>
+      <SEO 
+        title="المباريات | كورة - مواعيد ونتائج مباريات كرة القدم"
+        description="تابع مواعيد ونتائج جميع مباريات كرة القدم لحظة بلحظة. جداول المباريات، النتائج المباشرة، والإحصائيات الكاملة للدوريات العربية والأوروبية."
+        keywords={["مباريات كرة القدم", "نتائج مباشرة", "جداول مباريات", "مواعيد المباريات", "دوري المحترفين", "الدوري الإنجليزي", "الدوري الإسباني"]}
+        type="website"
+      />
       <Header />
       <TeamsLogos />
       <div className="container mx-auto px-2 sm:px-3 py-2 sm:py-3 lg:py-4 max-w-[720px] sm:max-w-4xl">

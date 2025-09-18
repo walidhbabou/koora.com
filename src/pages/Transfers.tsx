@@ -1,3 +1,4 @@
+import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 
 import Footer from "@/components/Footer";
@@ -258,6 +259,12 @@ const Transfers = () => {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background ${isRTL ? 'rtl' : 'ltr'}`}>
+      <SEO 
+        title="الانتقالات | كورة - آخر انتقالات اللاعبين والصفقات"
+        description="تابع آخر انتقالات اللاعبين وصفقات الأندية في الدوريات العربية والعالمية. أحدث الأخبار والشائعات حول انتقالات النجوم."
+        keywords={["انتقالات اللاعبين", "صفقات الأندية", "انتقالات كرة القدم", "سوق الانتقالات", "أخبار الانتقالات"]}
+        type="website"
+      />
       <Header />
       <TeamsLogos />
       <div className="w-full max-w-7xl mx-auto px-4 py-3">

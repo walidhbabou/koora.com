@@ -1,3 +1,4 @@
+import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TeamsLogos from "@/components/TeamsLogos";
@@ -253,6 +254,12 @@ const Standings = () => {
 
   return (
     <div className={`min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419] ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
+      <SEO 
+        title="ترتيب الفرق | كورة - جداول ترتيب الدوريات العربية والعالمية"
+        description="تابع ترتيب الفرق في جميع الدوريات العربية والعالمية، جداول النقاط المحدثة لحظة بلحظة، وإحصائيات الفرق والدوريات."
+        keywords={["ترتيب الفرق", "جداول الدوريات", "ترتيب الدوري", "نقاط الفرق", "جدول الدوري الإنجليزي", "جدول الدوري الإسباني", "ترتيب دوري المحترفين"]}
+        type="website"
+      />
       <Header />
       <TeamsLogos />
       <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-7xl">

@@ -1,10 +1,17 @@
 import React from "react";
+import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const Privacy = () => (
   <div className="flex flex-col min-h-screen bg-[#f7f8fa] dark:bg-[#181a1b]" dir="rtl">
-    {/* Header */}
+    <SEO 
+      title="سياسة الخصوصية | كورة - حماية بياناتك"
+      description="اطلع على سياسة الخصوصية الخاصة بموقع كورة وكيفية حماية بياناتك الشخصية عند استخدام خدماتنا."
+      keywords={["سياسة الخصوصية", "حماية البيانات", "الأمان", "خصوصية المستخدم"]}
+      type="website"
+      noindex={false}
+    />
     <Header />
 
     {/* Contenu principal */}

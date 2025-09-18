@@ -647,12 +647,57 @@ const testDirectUpdate = async (newsId: number) => {
   } catch (rpcError) {
     console.error('Échec de la mise à jour via RPC:', rpcError);
   }
-};
-  const handleDeleteNews = (id: string) => {
-    setNews(news.filter(n => n.id !== id));
   };
+  const handleDeleteNews = async (id: string) => {
+    console.log('🗑️ Tentative de suppression de la news ID:', id);
+    try {
+      // Convertir l'ID en number car la DB attend un number
+      const newsId = parseInt(id, 10);
+      if (isNaN(newsId)) {
+        throw new Error(`ID invalide: ${id}`);
+      }
 
-  // Create News submit handler (extracted from inline onClick)
+      // Test de connexion et permissions d'abord
+      console.log('🔍 Test de lecture de la news avant suppression...');
+      const { data: newsToDelete, error: readError } = await supabase
+        .from('news')
+        .select('id, title')
+        .eq('id', newsId)
+        .single();
+      
+      if (readError) {
+        console.error('❌ Impossible de lire la news:', readError);
+        throw new Error(`Impossible de lire la news: ${readError.message}`);
+      }
+      
+      console.log('� News trouvée:', newsToDelete);
+      
+      console.log('�📡 Envoi de la requête DELETE à Supabase...');
+      const { error, count } = await supabase
+        .from('news')
+        .delete({ count: 'exact' })
+        .eq('id', newsId);
+
+      if (error) {
+        console.error('❌ Erreur Supabase:', error);
+        throw error;
+      }
+
+      console.log('📊 Nombre de lignes supprimées:', count);
+      
+      if (count === 0) {
+        throw new Error('Aucune ligne supprimée - vérifiez les permissions RLS');
+      }
+
+      console.log('✅ Suppression réussie, rechargement des données...');
+      // Recharger les données depuis la base de données après la suppression
+      await fetchNews();
+      console.log('🔄 Données rechargées');
+    } catch (error) {
+      console.error('💥 Erreur lors de la suppression:', error);
+      throw error; // Re-throw l'erreur pour que NewsTab puisse l'afficher
+    }
+  };  // Create News submit handler (extracted from inline onClick)
   const handleCreateNewsSubmit = async () => {
     setCreateNewsError('');
     setCreateNewsInfo('');

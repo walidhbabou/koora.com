@@ -1,8 +1,14 @@
+User-agent: *
+Allow: /
+
+# Specific bot rules
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Twitterbot
 Allow: /
@@ -10,6 +16,23 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
-Sitemap: /sitemap.xml
+# Disallow admin areas and APIs
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /reset-password
+Disallow: /*?search=*
+
+# Allow specific files
+Allow: /koora-logo/
+Allow: /*.css
+Allow: /*.js
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.gif
+Allow: /*.svg
+Allow: /*.ico
+
+# Sitemap location
+Sitemap: https://koora.com/sitemap.xml

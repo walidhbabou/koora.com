@@ -1,15 +1,16 @@
-import React, { useRef } from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Filter, Edit, Trash2, Eye, Image as ImageIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Plus, Filter, Edit, Trash2, Eye, Image as ImageIcon, ExternalLink } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import NewsEditor from '../../components/NewsEditor';
 import DOMPurify from 'dompurify';
+import { useToast } from '@/hooks/use-toast';
 import type { CategoryRow, ChampionRow, NewsItem as News, NewsTabCommentRow } from '@/types/admin';
 
 // Using shared types from '@/types/admin'
@@ -28,8 +29,7 @@ interface NewsTabProps {
   setNewNewsTitle: (v: string) => void;
   newNewsContent: string;
   setNewNewsContent: (v: string) => void;
-  newNewsCategoryId: number | null;
-  setNewNewsCategoryId: (v: number | null) => void;
+  
   newNewsChampionId: number | null;
   setNewNewsChampionId: (v: number | null) => void;
   newNewsImageFile: File | null;
@@ -81,7 +81,7 @@ interface NewsTabProps {
 
   // actions
   onEditNews: (item: News) => void;
-  onDeleteNews: (id: string) => void;
+  onDeleteNews: (id: string) => Promise<void>;
   onOpenDetails: (item: News) => void;
 
   // selected news details/comments
@@ -95,7 +95,13 @@ interface NewsTabProps {
 const NewsTab: React.FC<NewsTabProps> = (props) => {
   // Ajout de l'état pour le step du formulaire
   const [createStep, setCreateStep] = React.useState(1);
+  // États pour la modal de suppression
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [deletingNews, setDeletingNews] = useState<News | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const { currentLanguage, isRTL } = useLanguage();
+  const { toast } = useToast();
   
   const {
     searchTerm, onSearchTermChange,
@@ -115,6 +121,54 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
     onEditNews, onDeleteNews, onOpenDetails,
     selectedNews, loadingSelectedNews, selectedNewsComments, loadingSelectedComments, onDeleteComment,
   } = props;
+
+  // Fonction pour supprimer une news de la base de données
+  const handleDeleteNews = async () => {
+    if (!deletingNews) {
+      console.error('❌ Aucune news sélectionnée pour suppression');
+      return;
+    }
+    
+    console.log('🎯 NewsTab: Début de la suppression pour:', deletingNews.id, deletingNews.title);
+    setIsDeleting(true);
+    
+    try {
+      console.log('📞 NewsTab: Appel de onDeleteNews...');
+      
+      // Vérifier que onDeleteNews est bien une fonction
+      if (typeof onDeleteNews !== 'function') {
+        throw new Error('onDeleteNews n\'est pas une fonction');
+      }
+      
+      // Appeler la fonction parent qui gère la suppression de la base de données
+      await onDeleteNews(String(deletingNews.id));
+      
+      console.log('🎉 NewsTab: Suppression réussie');
+      toast({
+        title: currentLanguage === 'ar' ? 'تم الحذف' : 'Supprimé',
+        description: currentLanguage === 'ar' ? 'تم حذف الخبر بنجاح' : 'La news a été supprimée avec succès',
+      });
+      
+      setDeleteConfirmOpen(false);
+      setDeletingNews(null);
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      console.error('❌ NewsTab: Erreur lors de la suppression:', error);
+      toast({
+        title: currentLanguage === 'ar' ? 'خطأ' : 'Erreur',
+        description: err.message || (currentLanguage === 'ar' ? 'فشل في حذف الخبر' : 'Échec de la suppression de la news'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Fonction pour ouvrir la modal de confirmation de suppression
+  const openDeleteConfirm = (newsItem: News) => {
+    setDeletingNews(newsItem);
+    setDeleteConfirmOpen(true);
+  };
 
   // helpers
   const statusLabel = (s?: News['status']) => {
@@ -466,7 +520,7 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onDeleteNews(item.id)}
+                      onClick={() => openDeleteConfirm(item)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -535,7 +589,7 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
         ) : (
           (() => {
             let html = '';
-            let embeds: React.ReactNode[] = [];
+            const embeds: React.ReactNode[] = [];
             const links: string[] = [];
             
             try {
@@ -674,7 +728,7 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                       return `<${tag}>${items.map((item: string) => `<li>${item}</li>`).join('')}</${tag}>`;
                     }
                     case 'image': {
-                      const url = (block.data.file as any)?.url || block.data.url;
+                      const url = (block.data.file as { url?: string })?.url || block.data.url;
                       const caption = block.data.caption || '';
                       return url ? `
                         <div class="my-4 text-center">
@@ -801,6 +855,63 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
   </CardContent>
 </Card>
       )}
+
+      {/* Modal de confirmation de suppression */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {currentLanguage === 'ar' ? 'تأكيد الحذف' : 'Confirmer la suppression'}
+            </DialogTitle>
+            <DialogDescription>
+              {currentLanguage === 'ar' 
+                ? 'هل أنت متأكد من أنك تريد حذف هذا الخبر؟ لا يمكن التراجع عن هذا الإجراء.'
+                : 'Êtes-vous sûr de vouloir supprimer cette news ? Cette action ne peut pas être annulée.'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          {deletingNews && (
+            <div className="py-4">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                {deletingNews.imageUrl && (
+                  <img 
+                    src={deletingNews.imageUrl} 
+                    alt={deletingNews.title} 
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                )}
+                <div className="flex-1">
+                  <h4 className="font-medium text-sm">{deletingNews.title}</h4>
+                  <p className="text-xs text-gray-500">{deletingNews.date}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteConfirmOpen(false)}
+              disabled={isDeleting}
+            >
+              {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteNews}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  {currentLanguage === 'ar' ? 'جاري الحذف...' : 'Suppression...'}
+                </div>
+              ) : (
+                currentLanguage === 'ar' ? 'حذف' : 'Supprimer'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </TabsContentWrapper>
   );
 };

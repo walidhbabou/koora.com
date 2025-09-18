@@ -1,9 +1,16 @@
 import React from "react";
+import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const About = () => (
   <div className="flex flex-col min-h-screen bg-[#f7f8fa] dark:bg-[#181a1b]" dir="rtl">
+    <SEO 
+      title="من نحن | كورة - تعرف على موقع الأخبار الرياضية"
+      description="تعرف على موقع كورة، مصدرك الأول لأخبار كرة القدم العربية والعالمية. رؤيتنا وأهدافنا في خدمة عشاق الرياضة."
+      keywords={["من نحن", "كورة", "موقع رياضي", "أخبار كرة القدم", "رؤية الموقع"]}
+      type="website"
+    />
     <Header />
     <main className="container mx-auto flex-grow py-8 px-4">
       <div className="bg-white dark:bg-[#23272a] rounded-lg shadow p-8 text-right" dir="rtl">
