@@ -688,26 +688,28 @@ const NewsDetails: React.FC = () => {
       </Dialog>
 
       {/* Styles pour les embeds */}
-      <style jsx>{`
-        .embed-container {
-          margin: 20px 0;
-        }
-        
-        .youtube-embed iframe {
-          max-width: 100% !important;
-          width: 100% !important;
-        }
-        
-        @media (max-width: 768px) {
-          .embed-container iframe {
-            height: 300px !important;
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .embed-container {
+            margin: 20px 0;
           }
           
           .youtube-embed iframe {
-            height: 200px !important;
+            max-width: 100% !important;
+            width: 100% !important;
           }
-        }
-      `}</style>
+          
+          @media (max-width: 768px) {
+            .embed-container iframe {
+              height: 300px !important;
+            }
+            
+            .youtube-embed iframe {
+              height: 200px !important;
+            }
+          }
+        `
+      }} />
     </div>
   );
 };

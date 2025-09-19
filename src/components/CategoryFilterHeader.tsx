@@ -29,7 +29,18 @@ const CategoryFilterHeader = ({
 }) => {
   const [subCategories, setSubCategories] = useState({});
   const [loading, setLoading] = useState(true);
-  const [openDropdown, setOpenDropdown] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Détecter si on est sur mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Les 5 catégories avec couleurs adaptées aux deux modes
   const headerCategories = useMemo(() => [
@@ -141,17 +152,14 @@ const CategoryFilterHeader = ({
               const isActive = selectedHeaderCategory === category.id;
               
               return (
-                <DropdownMenu 
-                  key={category.id}
-                  onOpenChange={(open) => setOpenDropdown(open ? category.id : null)}
-                >
+                <DropdownMenu key={category.id}>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       className={`
                         relative group flex items-center gap-2 px-6 py-4 mx-1
                         text-gray-700 dark:text-sport-green font-bold text-base
-                        hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor} hover:text-white
+                        hover:bg-gray-100 dark:hover:bg-slate-700/80 hover:text-gray-800 dark:hover:text-sport-green
                         ${isActive ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-lg` : ''}
                         transition-all duration-300 border-none outline-none
                         rounded-lg backdrop-blur-sm
@@ -160,10 +168,7 @@ const CategoryFilterHeader = ({
                       `}
                     >
                       <div className="transition-transform duration-200">
-                        {openDropdown === category.id ? 
-                          <ChevronUp className="w-4 h-4" /> : 
-                          <ChevronDown className="w-4 h-4" />
-                        }
+                        <ChevronDown className="w-4 h-4" />
                       </div>
                       
                       <span className="whitespace-nowrap font-semibold">
@@ -248,15 +253,15 @@ const CategoryFilterHeader = ({
                             text-gray-700 dark:text-sport-green font-semibold text-sm
                             ${isActive 
                               ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-lg` 
-                              : 'bg-white/95 dark:bg-slate-800/95 hover:bg-gray-50 dark:hover:bg-slate-700'
+                              : 'bg-white/95 dark:bg-slate-800/95'
                             }
-                            hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor} hover:text-white
+                            active:bg-gray-100 dark:active:bg-slate-700
                             transition-all duration-200 rounded-lg 
                             border ${isActive ? 'border-transparent' : 'border-gray-200 dark:border-slate-600/50'}
-                            shadow-sm min-w-[100px]
+                            shadow-sm min-w-[100px] touch-manipulation
                           `}
                         >
-                          <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                          <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200`} />
                           <span className="flex-1 font-medium">
                             {currentLanguage === 'ar' ? category.name_ar : category.name}
                           </span>
@@ -343,43 +348,7 @@ const CategoryFilterHeader = ({
               })}
             </div>
           </div>          {/* Indicateur de filtre actif - Version améliorée */}
-          {selectedHeaderCategory && (
-            <div className="flex justify-center pb-4 px-4">
-              <div className="flex items-center gap-2 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-sport-green/10 dark:to-green-500/10 px-4 py-2.5 rounded-full border border-gray-300 dark:border-sport-green/30 backdrop-blur-sm shadow-lg max-w-[95%] lg:max-w-none">
-                <div className="w-2 h-2 bg-sport-green rounded-full animate-pulse flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-gray-700 dark:text-sport-green text-xs lg:text-sm font-semibold truncate block">
-                    {currentLanguage === 'ar' ? 'فلتر نشط' : 'Filtre actif'}: {
-                      headerCategories.find(c => c.id === selectedHeaderCategory)?.[
-                        currentLanguage === 'ar' ? 'name_ar' : 'name'
-                      ]
-                    }
-                    {selectedSubCategory && subCategories[selectedHeaderCategory] && (
-                      <span className="font-normal text-gray-600 dark:text-sport-green/80 hidden sm:inline"> → {
-                        subCategories[selectedHeaderCategory].find(s => s.id === selectedSubCategory)?.nom
-                      }</span>
-                    )}
-                  </span>
-                  {/* Version mobile pour sous-catégorie */}
-                  {selectedSubCategory && subCategories[selectedHeaderCategory] && (
-                    <span className="text-gray-600 dark:text-sport-green/80 text-xs block sm:hidden truncate">
-                      → {subCategories[selectedHeaderCategory].find(s => s.id === selectedSubCategory)?.nom}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedHeaderCategory(null);
-                    setSelectedSubCategory(null);
-                  }}
-                  className="text-gray-600 dark:text-sport-green hover:text-white hover:bg-red-500 dark:hover:bg-sport-green/20 w-6 h-6 rounded-full flex items-center justify-center transition-all duration-200 text-lg leading-none flex-shrink-0 active:scale-90"
-                  title={currentLanguage === 'ar' ? 'إلغاء الفلتر' : 'Supprimer le filtre'}
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          )}
+          
         </div>
       </div>
     </>

@@ -83,17 +83,18 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         className={`bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center ${className}`}
         style={{
           width: dimensions.width === 'auto' ? '100%' : dimensions.width,
-          height: dimensions.height === 'auto' ? '200px' : dimensions.height,
-          minHeight: format === 'responsive' ? '200px' : 'auto',
+          height: dimensions.height === 'auto' ? '120px' : Math.min(Number(dimensions.height) || 120, 120),
+          minHeight: format === 'responsive' ? '80px' : 'auto',
+          maxHeight: format === 'mobile-banner' ? '60px' : '120px',
           ...style
         }}
       >
-        <div className="text-center p-4">
-          <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+        <div className="text-center p-2">
+          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
             {testMode ? 'Mode Test - Publicité' : 'Espace Publicitaire'}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-500">
-            Format: {format} {dimensions.width !== 'auto' && `(${dimensions.width}x${dimensions.height})`}
+            Format: {format}
           </div>
         </div>
       </div>

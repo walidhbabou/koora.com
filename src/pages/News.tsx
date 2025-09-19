@@ -335,7 +335,7 @@ const News = () => {
         />
         <Header />
         
-        {/* Header Ad */}
+        {/* Header Ad - Hidden on mobile */}
         <HeaderAd testMode={process.env.NODE_ENV === 'development'} />
         
         <CategoryFilterHeader
@@ -347,132 +347,39 @@ const News = () => {
         />
         <TeamsLogos />
         
-        {/* Mobile Ad */}
+        {/* Mobile Ad - Compact version */}
         <MobileAd testMode={process.env.NODE_ENV === 'development'} />
         
-        <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
-          <div className="flex flex-col lg:flex-row gap-3 sm:gap-6">
-            {/* Mobile Leagues Filter - Grid Layout */}
-            <div className="lg:hidden mb-4 sm:mb-6">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4">
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 text-center">
-                  {currentLanguage === 'ar' ? 'اختر الدوري' : 'Choisir une ligue'}
-                </h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  <button
-                    className={`flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors text-center ${
-                      selectedChampion === null
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                    onClick={() => handleChampionClick(null)}
-                  >
-                    <span className="font-medium text-xs sm:text-sm">
-                      {currentLanguage === 'ar' ? 'الكل' : 'Tous'}
-                    </span>
-                  </button>
-                  {leagues.map((league) => (
-                    <button
-                      key={league.id}
-                      className={`flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors text-center ${
-                        selectedChampion === league.championId
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                      onClick={() => handleChampionClick(league.championId)}
-                    >
-                      <img
-                        src={league.logo}
-                        alt={league.name}
-                        className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
-                      />
-                      <span className="font-medium text-xs leading-tight">
-                        {league.name.length > 12 ? league.name.substring(0, 12) + '...' : league.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Desktop Left Sidebar - Leagues Filter */}
-            <div className="hidden lg:block w-64 space-y-4">
-              {/* Leagues Filter */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b pb-2">
-                  {currentLanguage === 'ar' ? 'الدوريات' : 'Ligues'}
-                </h3>
-                <div className="space-y-2">
-                  <button
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
-                      selectedChampion === null
-                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                    onClick={() => handleChampionClick(null)}
-                  >
-                    <span className="font-medium text-sm">
-                      {currentLanguage === 'ar' ? 'جميع الأخبار' : 'Toutes les actualités'}
-                    </span>
-                  </button>
-                  {leagues.map((league) => (
-                    <button
-                      key={league.id}
-                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
-                        selectedChampion === league.championId
-                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                      onClick={() => handleChampionClick(league.championId)}
-                    >
-                      <img
-                        src={league.logo}
-                        alt={league.name}
-                        className="w-6 h-6 object-contain"
-                      />
-                      <span className="font-medium text-sm">{league.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Sidebar Ad */}
-              <SidebarAd testMode={process.env.NODE_ENV === 'development'} />
-              
-              {/* Additional Advertisement Space */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-                <img
-                  src="/placeholder.svg"
-                  alt="Advertisement"
-                  className="w-full h-64 object-cover"
-                />
-              </div>
-            </div>
+        <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
+          <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
+          
+            
 
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
               {/* Featured News - Responsive */}
               {!loadingNews && allNews.length > 0 && (
-                <div className="mb-6">
+                <div className="mb-2 sm:mb-3 lg:mb-4">
                   <Link to={`/news/${allNews[0].id}`} className="block">
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow">
                       <div className="relative">
                         <img
                           src={allNews[0].imageUrl}
                           alt={allNews[0].title}
-                          className="w-full h-48 sm:h-64 md:h-80 object-cover"
+                          className="w-full h-32 sm:h-40 md:h-56 lg:h-80 object-cover"
+                          loading="lazy"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
-                          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 leading-tight">
+                        <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 lg:p-4 text-white">
+                          <h1 className="text-xs sm:text-sm md:text-lg lg:text-xl font-bold mb-1 sm:mb-2 leading-tight">
                             {allNews[0].title}
                           </h1>
-                          <p className="text-gray-200 text-xs sm:text-sm md:text-base line-clamp-2 mb-2 sm:mb-3">
+                          <p className="text-gray-200 text-xs sm:text-sm line-clamp-1 sm:line-clamp-2 mb-1 sm:mb-2">
                             {allNews[0].summary}
                           </p>
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="text-xs sm:text-sm">{allNews[0].publishedAt}</span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span className="text-xs">{allNews[0].publishedAt}</span>
                           </div>
                         </div>
                       </div>
@@ -483,14 +390,14 @@ const News = () => {
 
               {/* Loading state - Responsive Grid */}
               {loadingNews && allNews.length === 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
                   {[...Array(6)].map((_, index) => (
                     <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden animate-pulse">
-                      <div className="w-full h-40 sm:h-48 bg-gray-200 dark:bg-gray-700"></div>
-                      <div className="p-3 sm:p-4 space-y-3">
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      <div className="w-full h-28 sm:h-32 lg:h-40 bg-gray-200 dark:bg-gray-700"></div>
+                      <div className="p-2 sm:p-3 lg:p-4 space-y-1 sm:space-y-2">
+                        <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                        <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                        <div className="h-2 sm:h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
                       </div>
                     </div>
                   ))}
@@ -499,7 +406,7 @@ const News = () => {
 
               {/* News Grid - Responsive - Starting from index 1 to avoid duplicating featured news */}
               {!loadingNews && allNews.length > 1 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
                   {allNews.slice(1).map((news, index) => (
                     <Link to={`/news/${news.id}`} key={news.id} className="block">
                       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow h-full">
@@ -507,10 +414,11 @@ const News = () => {
                           <img
                             src={news.imageUrl}
                             alt={news.title}
-                            className="w-full h-40 sm:h-48 object-cover"
+                            className="w-full h-28 sm:h-32 lg:h-40 object-cover"
+                            loading="lazy"
                           />
                           <button
-                            className="absolute top-2 right-2 bg-black/50 text-white p-1.5 sm:p-1 rounded-full hover:bg-black/70 transition-colors touch-manipulation"
+                            className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-black/50 text-white p-1 sm:p-1.5 rounded-full hover:bg-black/70 transition-colors touch-manipulation"
                             onClick={(e) => { 
                               e.preventDefault(); 
                               e.stopPropagation(); 
@@ -522,14 +430,14 @@ const News = () => {
                             <Flag className="w-3 h-3" />
                           </button>
                         </div>
-                        <div className="p-3 sm:p-4">
-                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 leading-tight">
+                        <div className="p-2 sm:p-3 lg:p-4">
+                          <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-900 dark:text-white mb-1 sm:mb-2 line-clamp-2 leading-tight">
                             {news.title}
                           </h3>
-                          <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm line-clamp-2 mb-2 sm:mb-3">
+                          <p className="text-gray-600 dark:text-gray-300 text-xs line-clamp-1 sm:line-clamp-2 mb-1 sm:mb-2">
                             {news.summary}
                           </p>
-                          <div className="flex items-center gap-2 text-gray-500 text-xs">
+                          <div className="flex items-center gap-1 text-gray-500 text-xs">
                             <Clock className="w-3 h-3" />
                             <span>{news.publishedAt}</span>
                           </div>
@@ -542,8 +450,8 @@ const News = () => {
 
               {/* No news state */}
               {!loadingNews && allNews.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 dark:text-gray-400 text-lg">
+                <div className="text-center py-8 sm:py-12">
+                  <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-lg">
                     {currentLanguage === 'ar' ? 'لا توجد أخبار متاحة حالياً' : 'Aucune actualité disponible'}
                   </p>
                 </div>
@@ -551,11 +459,11 @@ const News = () => {
 
               {/* Load More Button - Mobile Responsive */}
               {!loadingNews && allNews.length > 0 && (
-                <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
+                <div className="flex justify-center pt-2 sm:pt-3 lg:pt-4">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60 px-4 sm:px-6 lg:px-8 text-sm sm:text-base"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm lg:text-base py-1.5 sm:py-2"
                     onClick={handleLoadMore}
                     disabled={loadingNews || !hasMore}
                   >
@@ -609,9 +517,9 @@ const News = () => {
         setReportOpenId(o ? reportOpenId : null); 
         if (!o) setReportDesc(''); 
       }}>
-        <DialogContent className="sm:max-w-md mx-4 sm:mx-auto">
+        <DialogContent className="w-[90vw] max-w-md mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg">
+            <DialogTitle className="text-sm sm:text-base lg:text-lg">
               {currentLanguage === 'ar' ? 'سبب التبليغ' : 'Raison du signalement'}
             </DialogTitle>
           </DialogHeader>
@@ -619,7 +527,7 @@ const News = () => {
             placeholder={currentLanguage === 'ar' ? 'اكتب سبب التبليغ بإيجاز' : 'Décrivez brièvement la raison'}
             value={reportDesc}
             onChange={(e) => setReportDesc(e.target.value)}
-            className="min-h-[100px] sm:min-h-[120px] text-sm sm:text-base"
+            className="min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] text-xs sm:text-sm lg:text-base"
             dir="auto"
           />
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
@@ -630,7 +538,7 @@ const News = () => {
                 setReportDesc(''); 
               }} 
               disabled={!!reportingId}
-              className="order-2 sm:order-1 w-full sm:w-auto text-sm sm:text-base"
+              className="order-2 sm:order-1 w-full sm:w-auto text-xs sm:text-sm lg:text-base py-2"
             >
               {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
             </Button>
@@ -648,7 +556,7 @@ const News = () => {
                 if (reportOpenId) reportNews(reportOpenId, d);
               }}
               disabled={!!reportingId}
-              className="order-1 sm:order-2 w-full sm:w-auto text-sm sm:text-base"
+              className="order-1 sm:order-2 w-full sm:w-auto text-xs sm:text-sm lg:text-base py-2"
             >
               {reportingId ? '...' : (currentLanguage === 'ar' ? 'إرسال البلاغ' : 'Envoyer le signalement')}
             </Button>

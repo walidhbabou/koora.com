@@ -97,14 +97,16 @@ const AdWrapper: React.FC<AdWrapperProps> = ({
 
 // Composants prédéfinis pour différents emplacements
 export const HeaderAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
-  <AdWrapper
-    type="adsense"
-    adFormat="leaderboard"
-    adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_HEADER || ''}
-    title="إعلان"
-    className="mb-4"
-    testMode={testMode}
-  />
+  <div className="hidden md:block">
+    <AdWrapper
+      type="adsense"
+      adFormat="leaderboard"
+      adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_HEADER || ''}
+      title="إعلان"
+      className="mb-2 sm:mb-4"
+      testMode={testMode}
+    />
+  </div>
 );
 
 export const SidebarAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
@@ -119,14 +121,16 @@ export const SidebarAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
 );
 
 export const MobileAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
-  <AdWrapper
-    type="adsense"
-    adFormat="mobile-banner"
-    adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_MOBILE || ''}
-    title="إعلان"
-    className="block lg:hidden mb-4"
-    testMode={testMode}
-  />
+  <div className="block md:hidden mb-2">
+    <AdWrapper
+      type="adsense"
+      adFormat="mobile-banner"
+      adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_MOBILE || ''}
+      title="إعلان"
+      className="w-full"
+      testMode={testMode}
+    />
+  </div>
 );
 
 export const InArticleAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
