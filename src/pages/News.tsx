@@ -381,12 +381,6 @@ const News = () => {
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
           <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
             {/* Mobile Leagues Filter - Grid Layout */}
-      
-
-           
-          
-            
-
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
               {/* Featured News - Responsive */}

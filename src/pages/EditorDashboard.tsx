@@ -40,12 +40,12 @@ import { useToast } from '@/hooks/use-toast';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import DOMPurify from 'dompurify';
+import EditArticleDialog from '@/components/EditArticleDialog';
 
 interface Article {
   id: string;
   title: string;
   content: string;
-  category: string;
   author: string;
   date: string;
   status: 'published' | 'draft' | 'review' | 'scheduled' | 'submitted' | 'rejected' | 'approved';
@@ -82,6 +82,7 @@ const EditorDashboard: React.FC = () => {
   const [editContent, setEditContent] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   // Last 24h published news
@@ -137,17 +138,17 @@ const EditorDashboard: React.FC = () => {
       const to = from + pageSize - 1;
       const { data, error, count } = await supabase
         .from('news_submissions')
-        .select('id, title, content, created_at, status, image_url, user_id, category_id, categories(name, name_ar), users(name)', { count: 'exact' })
+        .select('id, title, content, created_at, status, image_url, user_id, users(name)', { count: 'exact' })
         .in('status', ['submitted', 'draft', 'rejected', 'published'])
         .order('created_at', { ascending: false })
         .range(from, to);
       if (error) throw error;
+      
       const mapped: Article[] = (data || []).map((n: any) => ({
         id: String(n.id),
         title: n.title || '-',
         content: n.content || '',
-        category: n.categories ? (currentLanguage === 'ar' ? n.categories.name_ar || n.categories.name : n.categories.name) : '-',
-        author: n.users?.name || '-',
+        author: n.users?.name || 'غير محدد', // Use actual author name or default
         date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
         status: (n.status as Article['status']) || 'draft',
         imageUrl: n.image_url || undefined,
@@ -174,12 +175,13 @@ const EditorDashboard: React.FC = () => {
         .gte('created_at', since)
         .order('created_at', { ascending: false });
       if (error) throw error;
+      
       const mapped: Last24NewsRow[] = (data || []).map((n: any) => ({
         id: n.id,
         title: n.title || '-',
         created_at: n.created_at,
         status: n.status || 'published',
-        author: n.users?.name || null,
+        author: n.users?.name || null, // Use actual author name
         image_url: n.image_url || null,
         content: n.content || '',
       }));
@@ -287,7 +289,7 @@ const EditorDashboard: React.FC = () => {
     },
     { 
       title: currentLanguage === 'ar' ? 'إجمالي المشاهدات' : 'Total Vues', 
-      value: articles.reduce((sum, a) => sum + (a.views || 0), 0).toLocaleString(), 
+      value: articles.reduce((sum, a) => sum + (a.views || 0), 0) || 0, 
       icon: Eye, 
       change: '+15%', 
       color: 'text-purple-600' 
@@ -330,7 +332,7 @@ const EditorDashboard: React.FC = () => {
       // Load the submission
       const { data: sub, error: loadErr } = await supabase
         .from('news_submissions')
-        .select('id, title, content, image_url, user_id, category_id')
+        .select('id, title, content, image_url, user_id, users(name)')
         .eq('id', Number(id))
         .single();
       if (loadErr) throw loadErr;
@@ -340,8 +342,7 @@ const EditorDashboard: React.FC = () => {
         content: sub?.content,
         image_url: sub?.image_url || null,
         status: 'published',
-        // IMPORTANT: do not send user_id; let DB default auth.uid() satisfy RLS
-        category_id: sub?.category_id ?? null,
+        user_id: sub?.user_id, // Keep the original author
       }).select();
       if (insErr) throw insErr;
       // Mark submission as published
@@ -364,10 +365,24 @@ const EditorDashboard: React.FC = () => {
   };
 
   const openEdit = (article: Article) => {
+    setEditingArticle(article);
     setEditingId(article.id);
     setEditTitle(article.title);
     setEditContent(article.content);
     setEditError('');
+  };
+
+  const closeEdit = () => {
+    setEditingArticle(null);
+    setEditingId(null);
+    setEditTitle('');
+    setEditContent('');
+    setEditError('');
+  };
+
+  const handleEditSave = async () => {
+    await fetchArticles();
+    closeEdit();
   };
 
   const saveEdit = async () => {
@@ -553,7 +568,7 @@ const EditorDashboard: React.FC = () => {
                       {stat.title}
                     </p>
                     <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                      {stat.value}
+                      {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                     </p>
                   </div>
                   <div className={`p-3 rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/50 dark:to-indigo-900/50 group-hover:scale-125 group-hover:rotate-6 transition-all duration-500 shadow-lg`}>
@@ -602,141 +617,123 @@ const EditorDashboard: React.FC = () => {
                 ) : last24News.length === 0 ? (
                   <div className="text-sm text-muted-foreground">{currentLanguage === 'ar' ? 'لا توجد أخبار حديثة' : 'Aucune actualité récente'}</div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
-                            {currentLanguage === 'ar' ? 'الصورة' : 'Image'}
-                          </th>
-                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
-                            {currentLanguage === 'ar' ? 'العنوان' : 'Titre'}
-                          </th>
-                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
-                            {currentLanguage === 'ar' ? 'الوصف' : 'Description'}
-                          </th>
-                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
-                            {currentLanguage === 'ar' ? 'المؤلف' : 'Auteur'}
-                          </th>
-                          <th className={`text-left p-4 font-semibold text-gray-700 dark:text-gray-300 ${isRTL ? 'text-right' : 'text-left'}`}>
-                            {currentLanguage === 'ar' ? 'التاريخ' : 'Date'}
-                          </th>
-                          <th className={`text-center p-4 font-semibold text-gray-700 dark:text-gray-300`}>
-                            {currentLanguage === 'ar' ? 'الإجراءات' : 'Actions'}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {last24News.map((n, index) => {
-                          // Fonction pour extraire le contenu textuel depuis le JSON Editor.js
-                          const extractTextFromEditorJs = (content: string) => {
-                            try {
-                              const parsed = JSON.parse(content);
-                              if (parsed.blocks && Array.isArray(parsed.blocks)) {
-                                return parsed.blocks
-                                  .map((block: any) => {
-                                    if (block.type === 'paragraph' && block.data?.text) {
-                                      return block.data.text;
-                                    }
-                                    if (block.type === 'header' && block.data?.text) {
-                                      return block.data.text;
-                                    }
-                                    if (block.type === 'list' && block.data?.items) {
-                                      return block.data.items.join(' ');
-                                    }
-                                    return '';
-                                  })
-                                  .filter(text => text.length > 0)
-                                  .join(' ');
-                              }
-                              return content;
-                            } catch {
-                              return content;
-                            }
-                          };
+                  <div className="space-y-4">
+                    {last24News.map((n, index) => {
+                      // Fonction pour extraire le contenu textuel depuis le JSON Editor.js
+                      const extractTextFromEditorJs = (content: string) => {
+                        try {
+                          const parsed = JSON.parse(content);
+                          if (parsed.blocks && Array.isArray(parsed.blocks)) {
+                            return parsed.blocks
+                              .map((block: any) => {
+                                if (block.type === 'paragraph' && block.data?.text) {
+                                  return block.data.text;
+                                }
+                                if (block.type === 'header' && block.data?.text) {
+                                  return block.data.text;
+                                }
+                                if (block.type === 'list' && block.data?.items) {
+                                  return block.data.items.join(' ');
+                                }
+                                return '';
+                              })
+                              .filter(text => text.length > 0)
+                              .join(' ');
+                          }
+                          return content;
+                        } catch {
+                          return content;
+                        }
+                      };
 
-                          // Créer un résumé du contenu
-                          const stripHtml = (html: string) =>
-                            html
-                              .replace(/<[^>]*>/g, ' ')
-                              .replace(/&nbsp;/gi, ' ')
-                              .replace(/&amp;/gi, '&')
-                              .replace(/&lt;/gi, '<')
-                              .replace(/&gt;/gi, '>')
-                              .replace(/\s+/g, ' ')
-                              .trim();
-                          
-                          const textContent = extractTextFromEditorJs(n.content || '');
-                          const cleanText = stripHtml(textContent);
-                          const summary = cleanText.slice(0, 150) + (cleanText.length > 150 ? '...' : '');
-                          
-                          return (
-                            <tr 
-                              key={String(n.id)} 
-                              className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors duration-200"
-                            >
-                              {/* Image */}
-                              <td className="p-4">
-                                <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                                  {n.image_url ? (
-                                    <img 
-                                      src={n.image_url} 
-                                      alt={n.title}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
-                                      <Image className="w-6 h-6 text-gray-400" />
+                      // Créer un résumé du contenu
+                      const stripHtml = (html: string) =>
+                        html
+                          .replace(/<[^>]*>/g, ' ')
+                          .replace(/&nbsp;/gi, ' ')
+                          .replace(/&amp;/gi, '&')
+                          .replace(/&lt;/gi, '<')
+                          .replace(/&gt;/gi, '>')
+                          .replace(/\s+/g, ' ')
+                          .trim();
+                      
+                      const textContent = extractTextFromEditorJs(n.content || '');
+                      const cleanText = stripHtml(textContent);
+                      const summary = cleanText.slice(0, 200) + (cleanText.length > 200 ? '...' : '');
+                      
+                      return (
+                        <div 
+                          key={String(n.id)} 
+                          className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 hover:shadow-md transition-all duration-300 overflow-hidden"
+                        >
+                          <div className={`flex gap-4 p-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            {/* Image */}
+                            <div className="flex-shrink-0">
+                              <div className="w-24 h-24 rounded-xl overflow-hidden shadow-md">
+                                {n.image_url ? (
+                                  <img 
+                                    src={n.image_url} 
+                                    alt={n.title}
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center">
+                                    <Image className="w-8 h-8 text-gray-400" />
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className={`flex items-start justify-between gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                <div className="flex-1 min-w-0">
+                                  {/* Title */}
+                                  <h3 className={`text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                    {n.title}
+                                  </h3>
+                                  
+                                  {/* Description */}
+                                  <p className={`text-sm text-gray-600 dark:text-gray-400 line-clamp-3 leading-relaxed mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                                    {summary || (currentLanguage === 'ar' ? 'لا يوجد محتوى متاح للعرض' : 'Aucun contenu disponible')}
+                                  </p>
+                                  
+                                  {/* Meta Info */}
+                                  <div className={`flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                    <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                      <User className="w-3 h-3" />
+                                      <span>{n.author || (currentLanguage === 'ar' ? 'غير محدد' : 'Non défini')}</span>
                                     </div>
-                                  )}
+                                    <div className={`flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                                      <Calendar className="w-3 h-3" />
+                                      <span>
+                                        {n.created_at ? new Date(n.created_at).toLocaleDateString(
+                                          currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR',
+                                          { 
+                                            year: 'numeric', 
+                                            month: 'short', 
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                          }
+                                        ) : ''}
+                                      </span>
+                                    </div>
+                                    <Badge variant="secondary" className="text-xs px-2 py-1">
+                                      {currentLanguage === 'ar' ? 'منشور' : 'Publié'}
+                                    </Badge>
+                                  </div>
                                 </div>
-                              </td>
-                              
-                              {/* Title */}
-                              <td className="p-4">
-                                <h3 className={`font-semibold text-gray-900 dark:text-white line-clamp-2 max-w-xs ${isRTL ? 'text-right' : 'text-left'}`}>
-                                  {n.title}
-                                </h3>
-                              </td>
-                              
-                              {/* Description */}
-                              <td className="p-4">
-                                <p className={`text-sm text-gray-600 dark:text-gray-400 line-clamp-3 max-w-md ${isRTL ? 'text-right' : 'text-left'}`}>
-                                  {summary || (currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Pas de contenu')}
-                                </p>
-                              </td>
-                              
-                              {/* Author */}
-                              <td className="p-4">
-                                <div className={`flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                  <User className="w-4 h-4" />
-                                  <span>{n.author || (currentLanguage === 'ar' ? 'غير محدد' : 'Non défini')}</span>
-                                </div>
-                              </td>
-                              
-                              {/* Date */}
-                              <td className="p-4">
-                                <Badge variant="secondary" className="text-xs">
-                                  {n.created_at ? new Date(n.created_at).toLocaleDateString(
-                                    currentLanguage === 'ar' ? 'ar-SA' : 'fr-FR',
-                                    { 
-                                      year: 'numeric', 
-                                      month: 'short', 
-                                      day: 'numeric' 
-                                    }
-                                  ) : ''}
-                                </Badge>
-                              </td>
-                              
-                              {/* Actions */}
-                              <td className="p-4">
-                                <div className="flex items-center justify-center gap-2">
+                                
+                                {/* Actions */}
+                                <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => navigate(`/news/${n.id}`)}
-                                    className="text-xs h-8 px-3"
+                                    className="text-xs h-8 px-3 hover:bg-blue-50 hover:border-blue-300 dark:hover:bg-blue-900/20"
                                   >
+                                    <Eye className="w-3 h-3 mr-1" />
                                     {currentLanguage === 'ar' ? 'عرض' : 'Voir'}
                                   </Button>
                                   {(['moderator','admin'].includes(String((user as any)?.role || ''))) && (
@@ -744,18 +741,19 @@ const EditorDashboard: React.FC = () => {
                                       variant="destructive" 
                                       size="sm" 
                                       onClick={() => deleteArticle(String(n.id))}
-                                      className="text-xs h-8 px-3"
+                                      className="text-xs h-8 px-3 hover:bg-red-600"
                                     >
+                                      <Trash2 className="w-3 h-3 mr-1" />
                                       {currentLanguage === 'ar' ? 'حذف' : 'Supprimer'}
                                     </Button>
                                   )}
                                 </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
@@ -770,6 +768,92 @@ const EditorDashboard: React.FC = () => {
               {(() => {
                 const art = articles.find(a => a.id === previewId);
                 if (!art) return <div className="p-4 text-sm text-slate-500">{currentLanguage === 'ar' ? 'لا يوجد محتوى' : 'Aucun contenu'}</div>;
+                
+                // Fonction pour extraire et formater le contenu d'Editor.js
+                const renderEditorJsContent = (content: string) => {
+                  try {
+                    const parsed = JSON.parse(content);
+                    if (parsed.blocks && Array.isArray(parsed.blocks)) {
+                      return parsed.blocks.map((block: any, index: number) => {
+                        switch (block.type) {
+                          case 'header': {
+                            const HeaderTag = `h${block.data?.level || 2}` as keyof JSX.IntrinsicElements;
+                            return (
+                              <HeaderTag key={index} className="font-bold mb-4 text-gray-900 dark:text-white">
+                                {block.data?.text || ''}
+                              </HeaderTag>
+                            );
+                          }
+                          case 'paragraph':
+                            return (
+                              <p key={index} className="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {block.data?.text || ''}
+                              </p>
+                            );
+                          case 'list': {
+                            const ListTag = block.data?.style === 'ordered' ? 'ol' : 'ul';
+                            return (
+                              <ListTag key={index} className="mb-4 ml-6 text-gray-700 dark:text-gray-300">
+                                {(block.data?.items || []).map((item: string, itemIndex: number) => (
+                                  <li key={itemIndex} className="mb-1">{item}</li>
+                                ))}
+                              </ListTag>
+                            );
+                          }
+                          case 'quote':
+                            return (
+                              <blockquote key={index} className="border-l-4 border-blue-500 pl-4 italic mb-4 text-gray-600 dark:text-gray-400">
+                                {block.data?.text || ''}
+                                {block.data?.caption && (
+                                  <cite className="block text-sm text-gray-500 mt-2">— {block.data.caption}</cite>
+                                )}
+                              </blockquote>
+                            );
+                          case 'code':
+                            return (
+                              <pre key={index} className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md mb-4 overflow-x-auto">
+                                <code className="text-sm text-gray-800 dark:text-gray-200">{block.data?.code || ''}</code>
+                              </pre>
+                            );
+                          case 'delimiter':
+                            return (
+                              <div key={index} className="text-center my-8">
+                                <span className="text-2xl text-gray-400">* * *</span>
+                              </div>
+                            );
+                          case 'image':
+                            return (
+                              <div key={index} className="my-6">
+                                <img 
+                                  src={block.data?.file?.url || block.data?.url || ''} 
+                                  alt={block.data?.caption || ''} 
+                                  className="w-full rounded-md"
+                                />
+                                {block.data?.caption && (
+                                  <p className="text-sm text-gray-500 text-center mt-2">{block.data.caption}</p>
+                                )}
+                              </div>
+                            );
+                          default: {
+                            // Pour les types non reconnus, afficher le texte brut s'il existe
+                            const text = block.data?.text || JSON.stringify(block.data || {});
+                            return (
+                              <div key={index} className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{text}</p>
+                              </div>
+                            );
+                          }
+                        }
+                      });
+                    }
+                    // Si ce n'est pas du JSON Editor.js valide, essayer d'afficher comme HTML
+                    return <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }} />;
+                  } catch {
+                    // En cas d'erreur de parsing, afficher comme texte brut
+                    return <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{content}</p>;
+                  }
+                };
+
                 return (
                   <div className="flex flex-col max-h-[82vh]">
                     {/* Scrollable content */}
@@ -780,15 +864,13 @@ const EditorDashboard: React.FC = () => {
                       <div className={`flex items-start justify-between gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                         <div className={isRTL ? 'text-right' : 'text-left'}>
                           <h2 className="text-lg sm:text-xl md:text-2xl font-extrabold leading-snug mb-1">{art.title}</h2>
-                          <div className="text-[11px] sm:text-xs text-slate-500">{art.author} • {art.date}{art.category ? ` • ${art.category}` : ''}</div>
+                          <div className="text-[11px] sm:text-xs text-slate-500">{art.author} • {art.date}</div>
                         </div>
                         <Badge variant={getStatusBadge(art.status).variant}>{getStatusBadge(art.status).label}</Badge>
                       </div>
-                      <div
-                        className="prose prose-slate dark:prose-invert max-w-none leading-7 sm:leading-8 mt-4 text-[0.95rem] sm:text-base"
-                        dir="auto"
-                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(art.content) }}
-                      />
+                      <div className="prose prose-slate dark:prose-invert max-w-none leading-7 sm:leading-8 mt-4 text-[0.95rem] sm:text-base">
+                        {renderEditorJsContent(art.content)}
+                      </div>
                     </div>
                     {/* Sticky actions bar */}
                     <div className={`border-t bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 sm:px-6 py-3 flex flex-wrap gap-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
@@ -1059,7 +1141,7 @@ const EditorDashboard: React.FC = () => {
                         {currentLanguage === 'ar' ? 'متوسط المشاهدات' : 'Vues moyennes'}
                       </span>
                       <span className="font-semibold text-blue-600">
-                        {Math.round(articles.reduce((sum, a) => sum + (a.views || 0), 0) / articles.length)}
+                        {articles.length > 0 ? Math.round(articles.reduce((sum, a) => sum + (a.views || 0), 0) / articles.length) : 0}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -1084,6 +1166,14 @@ const EditorDashboard: React.FC = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit Article Dialog */}
+        <EditArticleDialog
+          article={editingArticle}
+          isOpen={!!editingArticle}
+          onClose={closeEdit}
+          onSave={handleEditSave}
+        />
       </div>
     </div>
   );

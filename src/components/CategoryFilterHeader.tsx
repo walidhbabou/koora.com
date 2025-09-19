@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,66 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Styles CSS pour mobile avec scrollbar visible
-const styles = `
-  /* Desktop - masquer la scrollbar */
-  .scrollbar-hide-desktop {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide-desktop::-webkit-scrollbar {
-    display: none;
-  }
-  
-  /* Mobile - afficher la scrollbar */
-  .scrollbar-mobile {
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: #10b981 #f1f5f9;
-  }
-  
-  .scrollbar-mobile::-webkit-scrollbar {
-    height: 8px;
-    display: block;
-  }
-  
-  .scrollbar-mobile::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 4px;
-  }
-  
-  .dark .scrollbar-mobile::-webkit-scrollbar-track {
-    background: #334155;
-  }
-  
-  .scrollbar-mobile::-webkit-scrollbar-thumb {
-    background: #10b981;
-    border-radius: 4px;
-    border: 1px solid #f1f5f9;
-  }
-  
-  .dark .scrollbar-mobile::-webkit-scrollbar-thumb {
-    background: #10b981;
-    border: 1px solid #334155;
-  }
-  
-  .scrollbar-mobile::-webkit-scrollbar-thumb:hover {
-    background: #059669;
-  }
-  
-  /* Container mobile optimisé */
-  .mobile-scroll-container {
-    scroll-behavior: smooth;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 12px; /* Espace pour la scrollbar */
-  }
-  
-  .mobile-category-item {
-    scroll-snap-align: start;
-    flex-shrink: 0;
-  }
-`;
 
 const CategoryFilterHeader = ({ 
   selectedHeaderCategory, 
@@ -79,6 +19,7 @@ const CategoryFilterHeader = ({
   const [subCategories, setSubCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
+  const [currentMobileIndex, setCurrentMobileIndex] = useState(0);
 
   // Les 5 catégories avec couleurs adaptées aux deux modes
   const headerCategories = useMemo(() => [
@@ -159,6 +100,25 @@ const CategoryFilterHeader = ({
     fetchSubCategories();
   }, [headerCategories]);
 
+  // Navigation mobile avec flèches
+  const nextMobileCategory = () => {
+    setCurrentMobileIndex((prev) => (prev + 1) % headerCategories.length);
+  };
+
+  const prevMobileCategory = () => {
+    setCurrentMobileIndex((prev) => (prev - 1 + headerCategories.length) % headerCategories.length);
+  };
+
+  // Auto-navigation vers la catégorie sélectionnée
+  useEffect(() => {
+    if (selectedHeaderCategory) {
+      const index = headerCategories.findIndex(cat => cat.id === selectedHeaderCategory);
+      if (index !== -1) {
+        setCurrentMobileIndex(index);
+      }
+    }
+  }, [selectedHeaderCategory, headerCategories]);
+
   if (loading) {
     return (
       <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-gray-300 dark:border-slate-700/50">
@@ -177,253 +137,260 @@ const CategoryFilterHeader = ({
   }
 
   return (
-    <>
-      {/* Injection des styles CSS */}
-      <style>{styles}</style>
-      
-      {/* Header avec couleurs adaptées au mode */}
-      <div className="bg-gradient-to-r from-white via-gray-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-gray-200 dark:border-slate-700/50 shadow-xl">
-        <div className="container mx-auto px-4">
-          {/* Desktop Version */}
-          <div className="hidden lg:flex justify-center items-center py-4 gap-1">
-            {headerCategories.map((category) => {
-              const isActive = selectedHeaderCategory === category.id;
-              
-              return (
-                <DropdownMenu 
-                  key={category.id}
-                  onOpenChange={(open) => setOpenDropdown(open ? category.id : null)}
-                >
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className={`
-                        relative group flex items-center gap-2 px-6 py-4 mx-1
-                        ${isActive 
-                          ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-lg`
-                          : 'text-gray-700 dark:text-sport-green hover:text-black dark:hover:text-white'
-                        }
-                        font-bold text-base
-                        hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor} hover:text-black dark:hover:text-white
-                        transition-all duration-300 border-none outline-none
-                        rounded-lg backdrop-blur-sm
-                        ${isActive ? 'transform scale-105' : 'hover:transform hover:scale-105'}
-                        bg-white/70 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-600/50
-                      `}
-                    >
-                      <div className="transition-transform duration-200">
-                        {openDropdown === category.id ? 
-                          <ChevronUp className="w-4 h-4" /> : 
-                          <ChevronDown className="w-4 h-4" />
-                        }
-                      </div>
-                      
-                      <span className="whitespace-nowrap font-semibold">
-                        {currentLanguage === 'ar' ? category.name_ar : category.name}
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  
-                  <DropdownMenuContent 
-                    className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-800 border border-gray-200 dark:border-slate-600/50 min-w-[320px] shadow-2xl backdrop-blur-md"
-                    align="center"
-                    sideOffset={12}
+    <div className="bg-gradient-to-r from-white via-gray-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-gray-200 dark:border-slate-700/50 shadow-xl">
+      <div className="container mx-auto px-4">
+        {/* Desktop Version */}
+        <div className="hidden lg:flex justify-center items-center py-4 gap-1">
+          {headerCategories.map((category) => {
+            const isActive = selectedHeaderCategory === category.id;
+            
+            return (
+              <DropdownMenu 
+                key={category.id}
+                onOpenChange={(open) => setOpenDropdown(open ? category.id : null)}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={`
+                      relative group flex items-center gap-2 px-6 py-4 mx-1
+                      ${isActive 
+                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-lg`
+                        : 'text-gray-700 dark:text-sport-green hover:text-black dark:hover:text-white'
+                      }
+                      font-bold text-base
+                      hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor} hover:text-black dark:hover:text-white
+                      transition-all duration-300 border-none outline-none
+                      rounded-lg backdrop-blur-sm
+                      ${isActive ? 'transform scale-105' : 'hover:transform hover:scale-105'}
+                      bg-white/70 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-600/50
+                    `}
                   >
-                    <div className={`px-4 py-3 border-b border-gray-200 dark:border-slate-600/30 bg-gradient-to-r ${category.lightColor} dark:${category.darkColor}`}>
-                      <h4 className="text-white font-bold text-sm">
-                        {currentLanguage === 'ar' ? category.name_ar : category.name}
-                      </h4>
+                    <div className="transition-transform duration-200">
+                      {openDropdown === category.id ? 
+                        <ChevronUp className="w-4 h-4" /> : 
+                        <ChevronDown className="w-4 h-4" />
+                      }
                     </div>
                     
-                    <DropdownMenuItem
-                      className="text-gray-700 dark:text-sport-green hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 hover:text-white cursor-pointer font-medium px-4 py-3 transition-all duration-200"
-                      onClick={() => {
-                        setSelectedHeaderCategory(category.id);
-                        setSelectedSubCategory(null);
-                      }}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <div className="w-2 h-2 bg-sport-green rounded-full"></div>
-                        <span className="flex-1">
-                          {currentLanguage === 'ar' ? `جميع ${category.name_ar}` : `Toutes ${category.name}`}
-                        </span>
-                      </div>
-                    </DropdownMenuItem>
-                    
-                    <div className="max-h-64 overflow-y-auto">
-                      {subCategories[category.id]?.map((subCat, index) => (
-                        <DropdownMenuItem
-                          key={subCat.id}
-                          className="text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-sport-green cursor-pointer px-4 py-2.5 transition-all duration-200"
-                          onClick={() => {
-                            setSelectedHeaderCategory(category.id);
-                            setSelectedSubCategory(subCat.id);
-                          }}
-                        >
-                          <div className="flex items-center gap-3 w-full">
-                            <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-slate-400 rounded-full"></div>
-                            <span className="text-sm flex-1">{subCat.nom}</span>
-                            <span className="text-xs text-gray-400 dark:text-slate-500">#{index + 1}</span>
-                          </div>
-                        </DropdownMenuItem>
-                      ))}
+                    <span className="whitespace-nowrap font-semibold">
+                      {currentLanguage === 'ar' ? category.name_ar : category.name}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                
+                <DropdownMenuContent 
+                  className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-800 border border-gray-200 dark:border-slate-600/50 min-w-[320px] shadow-2xl backdrop-blur-md"
+                  align="center"
+                  sideOffset={12}
+                >
+                  <div className={`px-4 py-3 border-b border-gray-200 dark:border-slate-600/30 bg-gradient-to-r ${category.lightColor} dark:${category.darkColor}`}>
+                    <h4 className="text-white font-bold text-sm">
+                      {currentLanguage === 'ar' ? category.name_ar : category.name}
+                    </h4>
+                  </div>
+                  
+                  <DropdownMenuItem
+                    className="text-gray-700 dark:text-sport-green hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 hover:text-white cursor-pointer font-medium px-4 py-3 transition-all duration-200"
+                    onClick={() => {
+                      setSelectedHeaderCategory(category.id);
+                      setSelectedSubCategory(null);
+                    }}
+                  >
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="w-2 h-2 bg-sport-green rounded-full"></div>
+                      <span className="flex-1">
+                        {currentLanguage === 'ar' ? `جميع ${category.name_ar}` : `Toutes ${category.name}`}
+                      </span>
                     </div>
-                    
-                    {(!subCategories[category.id] || subCategories[category.id].length === 0) && (
-                      <div className="px-4 py-6 text-center text-gray-400 dark:text-slate-400">
-                        <div className="text-sm">
-                          {currentLanguage === 'ar' ? 'لا توجد عناصر متاحة' : 'Aucun élément disponible'}
+                  </DropdownMenuItem>
+                  
+                  <div className="max-h-64 overflow-y-auto">
+                    {subCategories[category.id]?.map((subCat, index) => (
+                      <DropdownMenuItem
+                        key={subCat.id}
+                        className="text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-sport-green cursor-pointer px-4 py-2.5 transition-all duration-200"
+                        onClick={() => {
+                          setSelectedHeaderCategory(category.id);
+                          setSelectedSubCategory(subCat.id);
+                        }}
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-slate-400 rounded-full"></div>
+                          <span className="text-sm flex-1">{subCat.nom}</span>
+                          <span className="text-xs text-gray-400 dark:text-slate-500">#{index + 1}</span>
                         </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                  
+                  {(!subCategories[category.id] || subCategories[category.id].length === 0) && (
+                    <div className="px-4 py-6 text-center text-gray-400 dark:text-slate-400">
+                      <div className="text-sm">
+                        {currentLanguage === 'ar' ? 'لا توجد عناصر متاحة' : 'Aucun élément disponible'}
                       </div>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            })}
+                    </div>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            );
+          })}
+        </div>
+
+        {/* Mobile Version - SEULEMENT Navigation avec flèches */}
+        <div className="lg:hidden py-4">
+          <div className="text-center mb-3">
+            <p className="text-xs text-gray-500 dark:text-slate-400">
+              {currentLanguage === 'ar' ? 'استخدم الأسهم للتنقل بين الفئات' : 'Utilisez les flèches pour naviguer'}
+            </p>
           </div>
 
-          {/* Mobile Version - Avec scrollbar visible */}
-          <div className="lg:hidden py-4">
-            {/* Message d'instruction pour le scroll */}
-            <div className="text-center mb-2">
-              <span className="text-xs text-gray-500 dark:text-slate-400">
-                {currentLanguage === 'ar' ? 'اسحب أفقياً لعرض المزيد' : 'Faites défiler horizontalement'}
-              </span>
-            </div>
-            
-            {/* Container de scroll horizontal avec scrollbar visible */}
-            <div className="overflow-x-auto scrollbar-mobile mobile-scroll-container">
-              <div className="flex gap-3 px-2 py-2" style={{minWidth: 'max-content'}}>
-                {headerCategories.map((category) => {
-                  const isActive = selectedHeaderCategory === category.id;
-                  
-                  return (
-                    <div key={category.id} className="mobile-category-item">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`
-                              flex items-center gap-2 px-4 py-3 whitespace-nowrap text-sm
-                              ${isActive 
-                                ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-lg border-transparent` 
-                                : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-sport-green border-gray-300 dark:border-slate-600 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-slate-700'
-                              }
-                              hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor} hover:text-white
-                              transition-all duration-200 rounded-lg border-2 shadow-md
-                              min-w-[140px] font-semibold
-                              active:scale-95 transform
-                            `}
-                          >
-                            <ChevronDown className="w-4 h-4 flex-shrink-0" />
-                            
-                            <span className="flex-1 text-center">
-                              {currentLanguage === 'ar' ? category.name_ar : category.name}
-                            </span>
-                            
-                            {/* Badge de compteur */}
-                            <span className={`
-                              px-2 py-1 text-xs font-bold rounded-full flex-shrink-0
-                              ${isActive 
-                                ? 'bg-white/30 text-white' 
-                                : 'bg-sport-green/20 text-sport-green dark:bg-sport-green/30 dark:text-sport-green'
-                              }
-                              min-w-[24px] text-center
-                            `}>
-                              {subCategories[category.id]?.length || 0}
-                            </span>
-                          </Button>
-                        </DropdownMenuTrigger>
+          <div className="relative flex items-center">
+            {/* Flèche gauche */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-800/90 hover:bg-sport-green hover:text-white shadow-md rounded-full w-8 h-8"
+              onClick={prevMobileCategory}
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+
+            {/* Catégorie courante */}
+            <div className="mx-10 w-full">
+              {(() => {
+                const category = headerCategories[currentMobileIndex];
+                const isActive = selectedHeaderCategory === category.id;
+                
+                return (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className={`
+                          w-full flex items-center justify-between gap-2 px-4 py-3 text-sm font-semibold rounded-lg border-2 shadow-md transition-all duration-200
+                          ${isActive 
+                            ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white border-transparent` 
+                            : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-sport-green border-gray-300 dark:border-slate-600 hover:border-sport-green'
+                          }
+                          active:scale-95 hover:shadow-lg
+                        `}
+                      >
+                        <div className="flex items-center gap-2">
+                          <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                          <span className="font-bold text-center flex-1">
+                            {currentLanguage === 'ar' ? category.name_ar : category.name}
+                          </span>
+                        </div>
+                        
+                        <span className={`
+                          px-2 py-1 text-xs font-bold rounded-full flex-shrink-0
+                          ${isActive 
+                            ? 'bg-white/30 text-white' 
+                            : 'bg-sport-green/20 text-sport-green'
+                          }
+                          min-w-[24px] text-center
+                        `}>
+                          {subCategories[category.id]?.length || 0}
+                        </span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    
+                    <DropdownMenuContent 
+                      className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-600 w-[85vw] max-w-[300px] shadow-2xl z-50 rounded-lg"
+                      align="center"
+                      sideOffset={8}
+                    >
+                      {/* En-tête */}
+                      <div className={`px-4 py-3 border-b border-gray-200 dark:border-slate-600/30 bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} rounded-t-lg`}>
+                        <h4 className="text-white font-bold text-sm text-center">
+                          {currentLanguage === 'ar' ? category.name_ar : category.name}
+                        </h4>
+                      </div>
                       
-                        <DropdownMenuContent 
-                          className="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-600 w-[85vw] max-w-[300px] shadow-2xl z-50 rounded-lg backdrop-blur-md"
-                          align="center"
-                          sideOffset={8}
-                        >
-                          {/* En-tête mobile */}
-                          <div className={`px-4 py-3 border-b border-gray-200 dark:border-slate-600/30 bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} rounded-t-lg`}>
-                            <h4 className="text-white font-bold text-sm text-center">
-                              {currentLanguage === 'ar' ? category.name_ar : category.name}
-                            </h4>
-                          </div>
-                          
-                          {/* Option "Tous" */}
+                      {/* Option "Tous" */}
+                      <DropdownMenuItem
+                        className="text-gray-700 dark:text-sport-green hover:bg-sport-green hover:text-white cursor-pointer px-4 py-3 font-semibold"
+                        onClick={() => {
+                          setSelectedHeaderCategory(category.id);
+                          setSelectedSubCategory(null);
+                        }}
+                      >
+                        <div className="flex items-center gap-3 w-full">
+                          <div className="w-2 h-2 bg-sport-green rounded-full"></div>
+                          <span className="text-sm flex-1">
+                            {currentLanguage === 'ar' ? `جميع ${category.name_ar}` : `Toutes ${category.name}`}
+                          </span>
+                          <span className="text-xs bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full">
+                            {subCategories[category.id]?.length || 0}
+                          </span>
+                        </div>
+                      </DropdownMenuItem>
+                      
+                      {/* Sous-catégories */}
+                      <div className="max-h-48 overflow-y-auto">
+                        {subCategories[category.id]?.map((subCat, index) => (
                           <DropdownMenuItem
-                            className="text-gray-700 dark:text-sport-green hover:bg-gray-100 dark:hover:bg-sport-green hover:text-sport-green dark:hover:text-white cursor-pointer px-4 py-3 font-semibold transition-all duration-200"
+                            key={subCat.id}
+                            className="text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-sport-green cursor-pointer px-4 py-2.5"
                             onClick={() => {
                               setSelectedHeaderCategory(category.id);
-                              setSelectedSubCategory(null);
+                              setSelectedSubCategory(subCat.id);
                             }}
                           >
                             <div className="flex items-center gap-3 w-full">
-                              <div className="w-2 h-2 bg-sport-green rounded-full flex-shrink-0"></div>
-                              <span className="text-sm flex-1">
-                                {currentLanguage === 'ar' ? `جميع ${category.name_ar}` : `Toutes ${category.name}`}
-                              </span>
-                              <span className="text-xs text-gray-500 bg-gray-100 dark:bg-slate-700 px-2 py-1 rounded-full font-medium">
-                                {subCategories[category.id]?.length || 0}
+                              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+                              <span className="text-sm flex-1 truncate">{subCat.nom}</span>
+                              <span className="text-xs text-gray-400 bg-gray-50 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
+                                #{index + 1}
                               </span>
                             </div>
                           </DropdownMenuItem>
-                          
-                          {/* Sous-catégories avec scroll */}
-                          <div className="max-h-52 overflow-y-auto scrollbar-mobile">
-                            {subCategories[category.id]?.map((subCat, index) => (
-                              <DropdownMenuItem
-                                key={subCat.id}
-                                className="text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-sport-green cursor-pointer px-4 py-2.5 transition-all duration-200"
-                                onClick={() => {
-                                  setSelectedHeaderCategory(category.id);
-                                  setSelectedSubCategory(subCat.id);
-                                }}
-                              >
-                                <div className="flex items-center gap-3 w-full">
-                                  <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-slate-400 rounded-full flex-shrink-0"></div>
-                                  <span className="text-sm flex-1 truncate">{subCat.nom}</span>
-                                  <span className="text-xs text-gray-400 dark:text-slate-500 bg-gray-50 dark:bg-slate-800 px-1.5 py-0.5 rounded-full flex-shrink-0">
-                                    #{index + 1}
-                                  </span>
-                                </div>
-                              </DropdownMenuItem>
-                            ))}
+                        ))}
+                      </div>
+                      
+                      {(!subCategories[category.id] || subCategories[category.id].length === 0) && (
+                        <div className="px-4 py-6 text-center text-gray-400 dark:text-slate-400">
+                          <div className="text-sm">
+                            {currentLanguage === 'ar' ? 'لا توجد عناصر' : 'Aucun élément'}
                           </div>
-                          
-                          {/* Message vide */}
-                          {(!subCategories[category.id] || subCategories[category.id].length === 0) && (
-                            <div className="px-4 py-6 text-center text-gray-400 dark:text-slate-400">
-                              <div className="text-sm">
-                                {currentLanguage === 'ar' ? 'لا توجد عناصر' : 'Aucun élément'}
-                              </div>
-                            </div>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  );
-                })}
-              </div>
+                        </div>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                );
+              })()}
             </div>
-            
-            {/* Indicateur de scroll en bas */}
-            <div className="flex justify-center mt-3">
-              <div className="flex gap-1.5">
-                {headerCategories.map((category, index) => (
-                  <div 
-                    key={category.id}
-                    className={`w-2 h-2 rounded-full transition-all duration-200 ${
-                      selectedHeaderCategory === category.id 
-                        ? 'bg-sport-green scale-125' 
-                        : 'bg-gray-300 dark:bg-slate-600'
-                    }`}
-                  />
-                ))}
-              </div>
+
+            {/* Flèche droite */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 dark:bg-slate-800/90 hover:bg-sport-green hover:text-white shadow-md rounded-full w-8 h-8"
+              onClick={nextMobileCategory}
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Indicateurs de position */}
+          <div className="flex justify-center mt-4">
+            <div className="flex gap-1.5">
+              {headerCategories.map((category, index) => (
+                <button
+                  key={category.id}
+                  className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                    index === currentMobileIndex
+                      ? 'bg-sport-green scale-125' 
+                      : 'bg-gray-300 dark:bg-slate-600 hover:bg-gray-400'
+                  }`}
+                  onClick={() => setCurrentMobileIndex(index)}
+                />
+              ))}
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
