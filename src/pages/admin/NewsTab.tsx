@@ -470,6 +470,7 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
               <TableRow>
                 <TableHead className="w-[80px]">{currentLanguage === 'ar' ? 'صورة' : 'Image'}</TableHead>
                 <TableHead>{currentLanguage === 'ar' ? 'العنوان' : 'Titre'}</TableHead>
+                <TableHead className="w-[140px]">{currentLanguage === 'ar' ? 'المؤلف' : 'Auteur'}</TableHead>
                 <TableHead className="w-[140px]">{currentLanguage === 'ar' ? 'الحالة' : 'Statut'}</TableHead>
                 <TableHead className="w-[140px]">{currentLanguage === 'ar' ? 'التاريخ' : 'Date'}</TableHead>
                 <TableHead className="w-[120px] text-right">{currentLanguage === 'ar' ? 'إجراءات' : 'Actions'}</TableHead>
@@ -484,7 +485,8 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                     (n.title || '').toLowerCase().includes(q) ||
                     (n.content || '').toLowerCase().includes(q) ||
                     (n.status || '').toLowerCase().includes(q) ||
-                    (n.date || '').toLowerCase().includes(q)
+                    (n.date || '').toLowerCase().includes(q) ||
+                    (n.author || '').toLowerCase().includes(q)
                   );
                 })
                 .map((item) => (
@@ -499,6 +501,9 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
                     )}
                   </TableCell>
                   <TableCell className="font-medium">{item.title}</TableCell>
+                  <TableCell className="text-sm text-slate-600 dark:text-slate-400">
+                    {item.author ?? '-'}
+                  </TableCell>
                   <TableCell>
                     {item.status && (
                       <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
@@ -578,7 +583,15 @@ const NewsTab: React.FC<NewsTabProps> = (props) => {
               </Badge>
             )}
           </div>
-          <div className="text-xs text-slate-500">{selectedNews.date ?? '-'}</div>
+          <div className="flex items-center space-x-4 text-xs text-slate-500">
+            {selectedNews.author && (
+              <span>
+                {currentLanguage === 'ar' ? 'بواسطة:' : 'Par:'} <span className="font-medium">{selectedNews.author}</span>
+              </span>
+            )}
+            {selectedNews.date && selectedNews.author && <span>•</span>}
+            {selectedNews.date && <span>{selectedNews.date}</span>}
+          </div>
         </div>
       </div>
       <div 

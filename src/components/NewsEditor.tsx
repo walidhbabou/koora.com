@@ -37,7 +37,7 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ initialData, onSave, placeholde
           holder: holderIdRef.current,
           data: initialData || { blocks: [], time: Date.now(), version: "2.31.0" },
           defaultBlock: 'paragraph',
-          autofocus: true,
+          autofocus: false, // Désactiver l'autofocus pour éviter les conflits de sélection
           minHeight: 300,
           placeholder: placeholder || 'Commencez à écrire votre article...',
           logLevel: 'WARN' as const, // Réduire les logs pour éviter le spam
@@ -72,8 +72,24 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ initialData, onSave, placeholde
                 }
               });
 
-              editorElement.addEventListener('click', () => {
-                console.log('Éditeur cliqué, focus activé');
+              editorElement.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                // Seulement donner le focus si on clique dans une zone vide
+                if (target && (target.classList.contains('codex-editor') || target.id === holderIdRef.current)) {
+                  console.log('Clic dans zone vide, activation du focus');
+                  // Petit délai pour éviter les conflits
+                  setTimeout(() => {
+                    if (editorRef.current) {
+                      try {
+                        editorRef.current.focus();
+                      } catch (error) {
+                        console.warn('Erreur focus retardé:', error);
+                      }
+                    }
+                  }, 100);
+                } else {
+                  console.log('Clic sur élément de contenu, pas de focus forcé');
+                }
               });
 
               // Gestion des raccourcis clavier personnalisés
@@ -95,6 +111,14 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ initialData, onSave, placeholde
           },
           onChange: (api, event) => {
             console.log('Content was changed', event);
+            
+            // Préserver la sélection après les changements
+            setTimeout(() => {
+              const selection = window.getSelection();
+              if (selection && selection.rangeCount > 0) {
+                console.log('Sélection préservée après changement');
+              }
+            }, 10);
           },
           tools: {
             header: {
@@ -112,7 +136,15 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ initialData, onSave, placeholde
               inlineToolbar: ['bold', 'italic', 'marker', 'inlineCode', 'link'],
               config: {
                 placeholder: placeholder || 'Écrivez votre texte ici... Utilisez Ctrl+B pour le gras, Ctrl+I pour l\'italique',
-                preserveBlank: true
+                preserveBlank: true,
+                // Améliorer la sélection
+                actionsClassNames: {
+                  alignment: {
+                    left: 'ce-paragraph--left',
+                    center: 'ce-paragraph--center',
+                    right: 'ce-paragraph--right',
+                  },
+                },
               }
             },
             list: {
@@ -480,7 +512,7 @@ const NewsEditor: React.FC<NewsEditorProps> = ({ initialData, onSave, placeholde
         }
       }
     };
-  }, [initialData, placeholder]);
+  }, [initialData, placeholder]); // handleSave est défini dans le composant et ne change pas
 
   const handleSave = async () => {
     if (editorRef.current) {
@@ -568,7 +600,15 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
   const handleFocus = () => {
     if (editorRef.current) {
       try {
-        editorRef.current.focus();
+        // Vérifier s'il y a déjà une sélection active
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+          // Seulement donner le focus s'il n'y a pas de sélection active
+          editorRef.current.focus();
+          console.log('Focus appliqué - aucune sélection active');
+        } else {
+          console.log('Sélection détectée, focus non appliqué');
+        }
       } catch (error) {
         console.error('Erreur lors du focus:', error);
       }
@@ -609,6 +649,28 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
     }
   };
 
+  // Fonction de débogage pour la sélection
+  const debugSelection = () => {
+    const selection = window.getSelection();
+    if (selection) {
+      console.log('=== Debug Sélection ===');
+      console.log('Nombre de ranges:', selection.rangeCount);
+      console.log('Texte sélectionné:', selection.toString());
+      console.log('Is collapsed:', selection.isCollapsed);
+      
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        console.log('Start container:', range.startContainer);
+        console.log('End container:', range.endContainer);
+        console.log('Start offset:', range.startOffset);
+        console.log('End offset:', range.endOffset);
+      }
+      console.log('======================');
+    } else {
+      console.log('Aucune sélection détectée');
+    }
+  };
+
   return (
     <div className="news-editor-container w-full">
       {/* Éditeur principal */}
@@ -620,11 +682,18 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           color: 'var(--editor-text, #222)',
           borderColor: 'var(--editor-border, #ddd)',
         }}
-        onClick={handleFocus}
+        onMouseDown={(e) => {
+          // Seulement appliquer le focus si on clique dans une zone vide
+          const target = e.target as HTMLElement;
+          if (target && target.id === holderIdRef.current) {
+            // Délai pour permettre à la sélection de se faire naturellement
+            setTimeout(() => handleFocus(), 50);
+          }
+        }}
       ></div>
 
       {/* Styles CSS personnalisés */}
-      <style jsx>{`
+      <style jsx="true">{`
         .news-editor-container {
           --editor-bg: #fff;
           --editor-border: #ddd;
@@ -714,6 +783,39 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           border-radius: 0.25rem;
           border: 1px solid;
         }
+
+        /* Améliorer la sélection de texte */
+        .news-editor-container #${holderIdRef.current} .ce-block {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+        }
+
+        .news-editor-container #${holderIdRef.current} .ce-paragraph,
+        .news-editor-container #${holderIdRef.current} .ce-header {
+          cursor: text !important;
+          user-select: text !important;
+          -webkit-user-select: text !important;
+        }
+
+        /* Améliorer la visibilité de la sélection */
+        .news-editor-container #${holderIdRef.current} ::selection {
+          background-color: rgba(59, 130, 246, 0.3) !important;
+          color: inherit !important;
+        }
+
+        .news-editor-container #${holderIdRef.current} ::-moz-selection {
+          background-color: rgba(59, 130, 246, 0.3) !important;
+          color: inherit !important;
+        }
+
+        /* Empêcher la sélection des éléments de l'interface */
+        .news-editor-container .ce-toolbar,
+        .news-editor-container .ce-inline-toolbar {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+        }
       `}</style>
       
       {/* Barre d'outils principale */}
@@ -752,6 +854,15 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           title="Activer le focus sur l'éditeur"
         >
           🎯 Focus
+        </button>
+
+        <button 
+          type="button" 
+          onClick={debugSelection} 
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-all duration-200 font-medium" 
+          title="Déboguer la sélection (voir console)"
+        >
+          🔍 Debug
         </button>
       </div>
 

@@ -38,14 +38,25 @@ export const LocalSponsors: React.FC<LocalSponsorsProps> = ({
     return result.slice(0, maxCount);
   }, [sponsors, category, maxCount]);
 
-  // Enregistrer les impressions quand les sponsors sont affichés
+  // Memoize sponsor IDs to avoid complex dependency
+  const sponsorIds = React.useMemo(() => 
+    filteredSponsors.map(s => s.id).sort().join(','), 
+    [filteredSponsors]
+  );
+
+  // Track impressions when sponsors are displayed (only track once per sponsor ID)
+  const trackedImpressionsRef = React.useRef<Set<string>>(new Set());
+  
   React.useEffect(() => {
-    if (filteredSponsors.length > 0) {
+    if (!loading && filteredSponsors.length > 0) {
       filteredSponsors.forEach(sponsor => {
-        trackSponsorImpression(sponsor.id);
+        if (!trackedImpressionsRef.current.has(sponsor.id)) {
+          trackedImpressionsRef.current.add(sponsor.id);
+          trackSponsorImpression(sponsor.id);
+        }
       });
     }
-  }, [filteredSponsors, trackSponsorImpression]);
+  }, [loading, sponsorIds, trackSponsorImpression, filteredSponsors]);
 
   const handleSponsorClick = (sponsor: SponsorData) => {
     trackSponsorClick(sponsor.id);

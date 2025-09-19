@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export interface SponsorData {
   id: string;
@@ -134,7 +134,7 @@ export const useSponsors = () => {
     }
   };
 
-  const trackSponsorClick = async (id: string) => {
+  const trackSponsorClick = useCallback(async (id: string) => {
     try {
       // En production, faire un appel API pour tracker les clics
       setSponsors(prev =>
@@ -147,9 +147,9 @@ export const useSponsors = () => {
     } catch (error) {
       console.error('Erreur lors du tracking du clic:', error);
     }
-  };
+  }, []);
 
-  const trackSponsorImpression = async (id: string) => {
+  const trackSponsorImpression = useCallback(async (id: string) => {
     try {
       // En production, faire un appel API pour tracker les impressions
       setSponsors(prev =>
@@ -162,7 +162,7 @@ export const useSponsors = () => {
     } catch (error) {
       console.error('Erreur lors du tracking de l\'impression:', error);
     }
-  };
+  }, []);
 
   // Filtres utiles
   const activeSponsors = sponsors.filter(sponsor => sponsor.active);

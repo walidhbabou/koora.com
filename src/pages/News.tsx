@@ -350,9 +350,52 @@ const News = () => {
         {/* Mobile Ad */}
         <MobileAd testMode={process.env.NODE_ENV === 'development'} />
         
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex gap-6">
-            {/* Left Sidebar - Leagues Filter */}
+        <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-6">
+            {/* Mobile Leagues Filter - Grid Layout */}
+            <div className="lg:hidden mb-4 sm:mb-6">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 text-center">
+                  {currentLanguage === 'ar' ? 'اختر الدوري' : 'Choisir une ligue'}
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button
+                    className={`flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors text-center ${
+                      selectedChampion === null
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                    onClick={() => handleChampionClick(null)}
+                  >
+                    <span className="font-medium text-xs sm:text-sm">
+                      {currentLanguage === 'ar' ? 'الكل' : 'Tous'}
+                    </span>
+                  </button>
+                  {leagues.map((league) => (
+                    <button
+                      key={league.id}
+                      className={`flex flex-col items-center gap-1 sm:gap-2 p-2 sm:p-3 rounded-lg transition-colors text-center ${
+                        selectedChampion === league.championId
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                      onClick={() => handleChampionClick(league.championId)}
+                    >
+                      <img
+                        src={league.logo}
+                        alt={league.name}
+                        className="w-5 h-5 sm:w-6 sm:h-6 object-contain"
+                      />
+                      <span className="font-medium text-xs leading-tight">
+                        {league.name.length > 12 ? league.name.substring(0, 12) + '...' : league.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Left Sidebar - Leagues Filter */}
             <div className="hidden lg:block w-64 space-y-4">
               {/* Leagues Filter */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
@@ -408,7 +451,7 @@ const News = () => {
 
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
-              {/* Featured News */}
+              {/* Featured News - Responsive */}
               {!loadingNews && allNews.length > 0 && (
                 <div className="mb-6">
                   <Link to={`/news/${allNews[0].id}`} className="block">
@@ -417,19 +460,19 @@ const News = () => {
                         <img
                           src={allNews[0].imageUrl}
                           alt={allNews[0].title}
-                          className="w-full h-80 object-cover"
+                          className="w-full h-48 sm:h-64 md:h-80 object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                          <h1 className="text-2xl md:text-3xl font-bold mb-3 leading-tight">
+                        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
+                          <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 sm:mb-3 leading-tight">
                             {allNews[0].title}
                           </h1>
-                          <p className="text-gray-200 text-sm md:text-base line-clamp-2 mb-3">
+                          <p className="text-gray-200 text-xs sm:text-sm md:text-base line-clamp-2 mb-2 sm:mb-3">
                             {allNews[0].summary}
                           </p>
                           <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            <span className="text-sm">{allNews[0].publishedAt}</span>
+                            <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="text-xs sm:text-sm">{allNews[0].publishedAt}</span>
                           </div>
                         </div>
                       </div>
@@ -438,13 +481,13 @@ const News = () => {
                 </div>
               )}
 
-              {/* Loading state */}
+              {/* Loading state - Responsive Grid */}
               {loadingNews && allNews.length === 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[...Array(6)].map((_, index) => (
                     <div key={index} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden animate-pulse">
-                      <div className="w-full h-48 bg-gray-200 dark:bg-gray-700"></div>
-                      <div className="p-4 space-y-3">
+                      <div className="w-full h-40 sm:h-48 bg-gray-200 dark:bg-gray-700"></div>
+                      <div className="p-3 sm:p-4 space-y-3">
                         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
                         <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
@@ -454,9 +497,9 @@ const News = () => {
                 </div>
               )}
 
-              {/* News Grid - 3 columns - Starting from index 1 to avoid duplicating featured news */}
+              {/* News Grid - Responsive - Starting from index 1 to avoid duplicating featured news */}
               {!loadingNews && allNews.length > 1 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {allNews.slice(1).map((news, index) => (
                     <Link to={`/news/${news.id}`} key={news.id} className="block">
                       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow h-full">
@@ -464,10 +507,10 @@ const News = () => {
                           <img
                             src={news.imageUrl}
                             alt={news.title}
-                            className="w-full h-48 object-cover"
+                            className="w-full h-40 sm:h-48 object-cover"
                           />
                           <button
-                            className="absolute top-2 right-2 bg-black/50 text-white p-1 rounded-full hover:bg-black/70 transition-colors"
+                            className="absolute top-2 right-2 bg-black/50 text-white p-1.5 sm:p-1 rounded-full hover:bg-black/70 transition-colors touch-manipulation"
                             onClick={(e) => { 
                               e.preventDefault(); 
                               e.stopPropagation(); 
@@ -479,11 +522,11 @@ const News = () => {
                             <Flag className="w-3 h-3" />
                           </button>
                         </div>
-                        <div className="p-4">
-                          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 leading-tight">
+                        <div className="p-3 sm:p-4">
+                          <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 leading-tight">
                             {news.title}
                           </h3>
-                          <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
+                          <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm line-clamp-2 mb-2 sm:mb-3">
                             {news.summary}
                           </p>
                           <div className="flex items-center gap-2 text-gray-500 text-xs">
@@ -506,17 +549,17 @@ const News = () => {
                 </div>
               )}
 
-              {/* Load More */}
+              {/* Load More Button - Mobile Responsive */}
               {!loadingNews && allNews.length > 0 && (
-                <div className="flex justify-center pt-8">
+                <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60 px-8"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60 px-4 sm:px-6 lg:px-8 text-sm sm:text-base"
                     onClick={handleLoadMore}
                     disabled={loadingNews || !hasMore}
                   >
-                    {loadingNews ? 'جاري التحميل...' : hasMore ? 'تحميل المزيد من الأخبار' : 'لا مزيد من الأخبار'}
+                    {loadingNews ? 'جاري التحميل...' : hasMore ? (currentLanguage === 'ar' ? 'تحميل المزيد' : 'Charger plus') : (currentLanguage === 'ar' ? 'لا مزيد من الأخبار' : 'Plus d\'actualités')}
                   </Button>
                 </div>
               )}
@@ -561,23 +604,25 @@ const News = () => {
         <Footer />
       </div>
         
-      {/* Report Dialog */}
+      {/* Report Dialog - Mobile Responsive */}
       <Dialog open={!!reportOpenId} onOpenChange={(o) => { 
         setReportOpenId(o ? reportOpenId : null); 
         if (!o) setReportDesc(''); 
       }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle>سبب التبليغ</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">
+              {currentLanguage === 'ar' ? 'سبب التبليغ' : 'Raison du signalement'}
+            </DialogTitle>
           </DialogHeader>
           <Textarea
-            placeholder="اكتب سبب التبليغ بإيجاز"
+            placeholder={currentLanguage === 'ar' ? 'اكتب سبب التبليغ بإيجاز' : 'Décrivez brièvement la raison'}
             value={reportDesc}
             onChange={(e) => setReportDesc(e.target.value)}
-            className="min-h-[120px]"
+            className="min-h-[100px] sm:min-h-[120px] text-sm sm:text-base"
             dir="auto"
           />
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
             <Button 
               variant="outline" 
               onClick={() => { 
@@ -585,16 +630,17 @@ const News = () => {
                 setReportDesc(''); 
               }} 
               disabled={!!reportingId}
+              className="order-2 sm:order-1 w-full sm:w-auto text-sm sm:text-base"
             >
-              إلغاء
+              {currentLanguage === 'ar' ? 'إلغاء' : 'Annuler'}
             </Button>
             <Button
               onClick={() => {
                 const d = reportDesc.trim();
                 if (!d) {
                   toast({ 
-                    title: 'مطلوب وصف', 
-                    description: 'يرجى كتابة سبب التبليغ', 
+                    title: currentLanguage === 'ar' ? 'مطلوب وصف' : 'Description requise', 
+                    description: currentLanguage === 'ar' ? 'يرجى كتابة سبب التبليغ' : 'Veuillez écrire la raison du signalement', 
                     variant: 'destructive' 
                   });
                   return;
@@ -602,8 +648,9 @@ const News = () => {
                 if (reportOpenId) reportNews(reportOpenId, d);
               }}
               disabled={!!reportingId}
+              className="order-1 sm:order-2 w-full sm:w-auto text-sm sm:text-base"
             >
-              {reportingId ? '...' : 'إرسال البلاغ'}
+              {reportingId ? '...' : (currentLanguage === 'ar' ? 'إرسال البلاغ' : 'Envoyer le signalement')}
             </Button>
           </DialogFooter>
         </DialogContent>

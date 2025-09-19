@@ -35,6 +35,13 @@ type DBNewsRow = {
   status: 'published' | 'draft' | 'archived' | null;
   created_at: string | null;
   image_url: string | null;
+  user_id: string | null;
+  users?: {
+    first_name: string | null;
+    last_name: string | null;
+    name: string | null;
+    email: string;
+  } | null;
 };
 
 type DBNewsFullRow = {
@@ -44,6 +51,13 @@ type DBNewsFullRow = {
   status: 'published' | 'draft' | 'archived' | null;
   created_at: string | null;
   image_url: string | null;
+  user_id: string | null;
+  users?: {
+    first_name: string | null;
+    last_name: string | null;
+    name: string | null;
+    email: string;
+  } | null;
 };
 
 type DBCommentRow = {
@@ -124,6 +138,10 @@ const AdminDashboard: React.FC = () => {
   const [newNewsImageFile, setNewNewsImageFile] = useState<File | null>(null);
   const [champions, setChampions] = useState<{id:number,nom:string,nom_ar:string}[]>([]);
   
+  // États manquants pour les news
+  const [newNewsCategoryId, setNewNewsCategoryId] = useState<number | null>(null);
+  const [newNewsChampionId, setNewNewsChampionId] = useState<number | null>(null);
+  
   // **NOUVEAUX ÉTATS POUR LES COMPÉTITIONS**
   const [competitionsInternationales, setCompetitionsInternationales] = useState<{id:number,nom:string}[]>([]);
   const [competitionsMondiales, setCompetitionsMondiales] = useState<{id:number,nom:string}[]>([]);
@@ -170,21 +188,66 @@ const AdminDashboard: React.FC = () => {
     try {
       const from = (newsPage - 1) * pageSize;
       const to = from + pageSize - 1;
-      const { data, error, count } = await supabase
+      
+      // D'abord récupérer les news
+      const { data: newsData, error: newsError, count } = await supabase
         .from('news')
-        .select('id, title, status, created_at, image_url', { count: 'exact' })
+        .select('id, title, status, created_at, image_url, user_id', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
-      if (error) throw error;
-      const rows = (data || []) as DBNewsRow[];
-      const mapped: News[] = rows.map((n) => ({
-        id: String(n.id),
-        title: n.title ?? '-',
-        content: '',
-        status: (n.status ?? 'draft'),
-        date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
-        imageUrl: n.image_url ?? undefined,
-      }));
+      
+      if (newsError) throw newsError;
+      console.log('News data:', newsData);
+      
+      // Ensuite récupérer les utilisateurs pour les news qui ont un user_id
+      const userIds = newsData?.map(n => n.user_id).filter(Boolean) || [];
+      let usersMap: Record<string, {id: string, first_name: string | null, last_name: string | null, name: string | null, email: string}> = {};
+      
+      if (userIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, name, email')
+          .in('id', userIds);
+        
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
+        } else {
+          console.log('Users data:', usersData);
+          usersMap = Object.fromEntries(
+            (usersData || []).map(user => [user.id, user])
+          );
+        }
+      }
+      
+      const mapped: News[] = (newsData || []).map((n) => {
+        // Déterminer le nom de l'auteur
+        let authorName = '-';
+        const user = n.user_id ? usersMap[n.user_id] : null;
+        
+        if (user) {
+          console.log('User found for news:', n.id, user);
+          if (user.name) {
+            authorName = user.name;
+          } else if (user.first_name || user.last_name) {
+            authorName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+          } else {
+            authorName = user.email.split('@')[0];
+          }
+        } else {
+          console.log('No user found for news:', n.id, 'user_id:', n.user_id);
+        }
+        
+        return {
+          id: String(n.id),
+          title: n.title ?? '-',
+          content: '',
+          status: (n.status ?? 'draft'),
+          date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
+          imageUrl: n.image_url ?? undefined,
+          author: authorName,
+        };
+      });
+      
       setNews(mapped);
       setNewsTotal(count || 0);
     } catch (e: unknown) {
@@ -264,20 +327,49 @@ const submitCreateUser = async () => {
   const fetchNewsById = async (newsId: string) => {
     setLoadingSelectedNews(true);
     try {
-      const { data, error } = await supabase
+      // Récupérer la news
+      const { data: newsData, error: newsError } = await supabase
         .from('news')
-        .select('id, title, content, status, created_at, image_url')
+        .select('id, title, content, status, created_at, image_url, user_id')
         .eq('id', newsId)
         .single();
-      if (error) throw error;
-      const n = data as DBNewsFullRow;
+      
+      if (newsError) throw newsError;
+      
+      // Récupérer l'utilisateur si user_id existe
+      let user = null;
+      if (newsData.user_id) {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, first_name, last_name, name, email')
+          .eq('id', newsData.user_id)
+          .single();
+        
+        if (!userError && userData) {
+          user = userData;
+        }
+      }
+      
+      // Déterminer le nom de l'auteur
+      let authorName = '-';
+      if (user) {
+        if (user.name) {
+          authorName = user.name;
+        } else if (user.first_name || user.last_name) {
+          authorName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+        } else {
+          authorName = user.email.split('@')[0];
+        }
+      }
+      
       const mapped: News = {
-        id: String(n.id),
-        title: n.title ?? '-',
-        content: n.content ?? '',
-        status: (n.status ?? 'draft'),
-        date: n.created_at ? new Date(n.created_at).toISOString().slice(0,10) : '-',
-        imageUrl: n.image_url ?? undefined,
+        id: String(newsData.id),
+        title: newsData.title ?? '-',
+        content: newsData.content ?? '',
+        status: (newsData.status ?? 'draft'),
+        date: newsData.created_at ? new Date(newsData.created_at).toISOString().slice(0,10) : '-',
+        imageUrl: newsData.image_url ?? undefined,
+        author: authorName,
       };
       setSelectedNews(mapped);
     } catch (e: unknown) {
@@ -902,9 +994,18 @@ const testDirectUpdate = async (newsId: number) => {
                               </div>
                               <div className="flex-1">
                                 <h4 className="font-medium text-slate-900 dark:text-white">{item.title}</h4>
-                                {item.date && (
-                                  <p className="text-sm text-slate-600 dark:text-slate-400">{item.date}</p>
-                                )}
+                                <div className={`flex items-center text-sm text-slate-600 dark:text-slate-400 ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
+                                  {item.author && (
+                                    <span className={`flex items-center ${isRTL ? 'space-x-reverse space-x-1' : 'space-x-1'}`}>
+                                      <User className="w-3 h-3" />
+                                      <span>{currentLanguage === 'ar' ? 'بواسطة' : 'par'} {item.author}</span>
+                                    </span>
+                                  )}
+                                  {item.date && item.author && <span>•</span>}
+                                  {item.date && (
+                                    <span>{item.date}</span>
+                                  )}
+                                </div>
                               </div>
                               {item.status && (
                                 <Badge variant={item.status === 'published' ? 'default' : 'secondary'}>
@@ -969,6 +1070,9 @@ const testDirectUpdate = async (newsId: number) => {
                     newNewsUpdatedAt={newNewsUpdatedAt}
                     setNewNewsUpdatedAt={setNewNewsUpdatedAt}
                     categories={categories}
+                    champions={champions}
+                    newNewsChampionId={newNewsChampionId}
+                    setNewNewsChampionId={setNewNewsChampionId}
                     competitionsInternationales={competitionsInternationales}
                     competitionsMondiales={competitionsMondiales}
                     competitionsContinentales={competitionsContinentales}
@@ -1011,6 +1115,7 @@ const testDirectUpdate = async (newsId: number) => {
                           content: data.content || '',
                           contentAr: data.content_ar || '',
                           status: data.status || 'draft',
+                          championId: null, // Valeur par défaut
                           imageUrl: data.image_url || undefined,
                           createdAt: data.created_at ? new Date(data.created_at).toISOString().slice(0,10) : '',
                           updatedAt: data.updated_at ? new Date(data.updated_at).toISOString().slice(0,10) : '',

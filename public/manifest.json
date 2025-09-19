@@ -17,8 +17,14 @@
       "type": "image/x-icon"
     },
     {
-      "src": "/koora-logo/green-logo.png",
-      "sizes": "192x192",
+      "src": "/koora-logo/kooralogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/koora-logo/16x16.png",
+      "sizes": "16x16",
       "type": "image/png",
       "purpose": "any"
     }
