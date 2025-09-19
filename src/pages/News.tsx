@@ -352,6 +352,102 @@ const News = () => {
         
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
           <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
+            {/* Mobile Leagues Filter - Grid Layout */}
+            <div className="lg:hidden mb-2 sm:mb-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-2 sm:p-3">
+                <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white mb-2 sm:mb-3 text-center">
+                  {currentLanguage === 'ar' ? 'اختر الدوري' : 'Choisir une ligue'}
+                </h3>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-2">
+                  <button
+                    className={`flex flex-col items-center gap-1 p-1 sm:p-2 rounded-lg transition-colors text-center ${
+                      selectedChampion === null
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                    onClick={() => handleChampionClick(null)}
+                  >
+                    <span className="font-medium text-xs leading-tight">
+                      {currentLanguage === 'ar' ? 'الكل' : 'Tous'}
+                    </span>
+                  </button>
+                  {leagues.map((league) => (
+                    <button
+                      key={league.id}
+                      className={`flex flex-col items-center gap-1 p-1 sm:p-2 rounded-lg transition-colors text-center ${
+                        selectedChampion === league.championId
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                      onClick={() => handleChampionClick(league.championId)}
+                    >
+                      <img
+                        src={league.logo}
+                        alt={league.name}
+                        className="w-4 h-4 sm:w-5 sm:h-5 object-contain"
+                      />
+                      <span className="font-medium text-xs leading-tight max-w-full truncate">
+                        {league.name.length > 8 ? league.name.substring(0, 8) + '...' : league.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Left Sidebar - Leagues Filter */}
+            <div className="hidden lg:block w-64 space-y-4">
+              {/* Leagues Filter */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 border-b pb-2">
+                  {currentLanguage === 'ar' ? 'الدوريات' : 'Ligues'}
+                </h3>
+                <div className="space-y-2">
+                  <button
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
+                      selectedChampion === null
+                        ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    }`}
+                    onClick={() => handleChampionClick(null)}
+                  >
+                    <span className="font-medium text-sm">
+                      {currentLanguage === 'ar' ? 'جميع الأخبار' : 'Toutes les actualités'}
+                    </span>
+                  </button>
+                  {leagues.map((league) => (
+                    <button
+                      key={league.id}
+                      className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors text-right ${
+                        selectedChampion === league.championId
+                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                      onClick={() => handleChampionClick(league.championId)}
+                    >
+                      <img
+                        src={league.logo}
+                        alt={league.name}
+                        className="w-6 h-6 object-contain"
+                      />
+                      <span className="font-medium text-sm">{league.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Sidebar Ad */}
+              <SidebarAd testMode={process.env.NODE_ENV === 'development'} />
+              
+              {/* Additional Advertisement Space */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                <img
+                  src="/placeholder.svg"
+                  alt="Advertisement"
+                  className="w-full h-64 object-cover"
+                />
+              </div>
+            </div>
           
             
 

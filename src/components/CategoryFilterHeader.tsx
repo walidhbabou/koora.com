@@ -9,14 +9,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Styles CSS simples pour scroll
+// Styles CSS pour scroll avec barre visible
 const styles = `
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e0 #f7fafc;
   }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+  .mobile-scroll::-webkit-scrollbar {
+    height: 6px;
+  }
+  .mobile-scroll::-webkit-scrollbar-track {
+    background: #f7fafc;
+    border-radius: 3px;
+  }
+  .mobile-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 3px;
+  }
+  .mobile-scroll::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+  }
+  .dark .mobile-scroll::-webkit-scrollbar-track {
+    background: #2d3748;
+  }
+  .dark .mobile-scroll::-webkit-scrollbar-thumb {
+    background: #4a5568;
+  }
+  .dark .mobile-scroll::-webkit-scrollbar-thumb:hover {
+    background: #718096;
   }
 `;
 
@@ -30,6 +51,7 @@ const CategoryFilterHeader = ({
   const [subCategories, setSubCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
 
   // Détecter si on est sur mobile
   useEffect(() => {
@@ -152,7 +174,11 @@ const CategoryFilterHeader = ({
               const isActive = selectedHeaderCategory === category.id;
               
               return (
-                <DropdownMenu key={category.id}>
+                <DropdownMenu 
+                  key={category.id}
+                  open={openDropdown === category.id}
+                  onOpenChange={(open) => setOpenDropdown(open ? category.id : null)}
+                >
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
@@ -168,7 +194,10 @@ const CategoryFilterHeader = ({
                       `}
                     >
                       <div className="transition-transform duration-200">
-                        <ChevronDown className="w-4 h-4" />
+                        {openDropdown === category.id ? 
+                          <ChevronUp className="w-4 h-4" /> : 
+                          <ChevronDown className="w-4 h-4" />
+                        }
                       </div>
                       
                       <span className="whitespace-nowrap font-semibold">
@@ -193,6 +222,7 @@ const CategoryFilterHeader = ({
                       onClick={() => {
                         setSelectedHeaderCategory(category.id);
                         setSelectedSubCategory(null);
+                        setOpenDropdown(null);
                       }}
                     >
                       <div className="flex items-center gap-3 w-full">
@@ -211,6 +241,7 @@ const CategoryFilterHeader = ({
                           onClick={() => {
                             setSelectedHeaderCategory(category.id);
                             setSelectedSubCategory(subCat.id);
+                            setOpenDropdown(null);
                           }}
                         >
                           <div className="flex items-center gap-3 w-full">
@@ -235,16 +266,19 @@ const CategoryFilterHeader = ({
             })}
           </div>
 
-          {/* Mobile Version - Scroll simple naturel comme TeamsLogos */}
+          {/* Mobile Version - Scroll avec barre visible */}
           <div className="lg:hidden py-4">
-            {/* Container de scroll horizontal simple */}
-            <div className="flex gap-3 overflow-x-auto py-2 px-2 -mx-2 scrollbar-hide">
+            {/* Container de scroll horizontal avec barre visible */}
+            <div className="flex gap-3 overflow-x-auto py-2 px-2 -mx-2 mobile-scroll">
               {headerCategories.map((category) => {
                 const isActive = selectedHeaderCategory === category.id;
                 
                 return (
                   <div key={category.id} className="flex-shrink-0">
-                    <DropdownMenu>
+                    <DropdownMenu 
+                      open={openDropdown === category.id}
+                      onOpenChange={(open) => setOpenDropdown(open ? category.id : null)}
+                    >
                       <DropdownMenuTrigger asChild>
                         <Button
                           variant="ghost"
@@ -261,7 +295,7 @@ const CategoryFilterHeader = ({
                             shadow-sm min-w-[100px] touch-manipulation
                           `}
                         >
-                          <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200`} />
+                          <ChevronDown className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${openDropdown === category.id ? 'rotate-180' : ''}`} />
                           <span className="flex-1 font-medium">
                             {currentLanguage === 'ar' ? category.name_ar : category.name}
                           </span>
@@ -298,6 +332,7 @@ const CategoryFilterHeader = ({
                           onClick={() => {
                             setSelectedHeaderCategory(category.id);
                             setSelectedSubCategory(null);
+                            setOpenDropdown(null);
                           }}
                         >
                           <div className="flex items-center gap-2 w-full">
@@ -312,7 +347,7 @@ const CategoryFilterHeader = ({
                         </DropdownMenuItem>
                         
                         {/* Sous-catégories */}
-                        <div className="max-h-40 overflow-y-auto scrollbar-hide">
+                        <div className="max-h-40 overflow-y-auto mobile-scroll">
                           {subCategories[category.id]?.map((subCat, index) => (
                             <DropdownMenuItem
                               key={subCat.id}
@@ -320,6 +355,7 @@ const CategoryFilterHeader = ({
                               onClick={() => {
                                 setSelectedHeaderCategory(category.id);
                                 setSelectedSubCategory(subCat.id);
+                                setOpenDropdown(null);
                               }}
                             >
                               <div className="flex items-center gap-2 w-full">
