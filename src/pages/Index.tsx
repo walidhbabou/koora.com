@@ -116,16 +116,43 @@ const Index = () => {
       if (data) {
         // Fonction pour extraire le contenu textuel depuis le JSON Editor.js
         const extractTextFromEditorJs = (content: string) => {
+          if (!content || content.trim() === '') return '';
+          
           try {
-            const parsed = JSON.parse(content);
+            // Nettoyer le contenu avant le parsing
+            const cleanContent = content
+              .replace(/&quot;/g, '"')           // Remplacer &quot; par "
+              .replace(/&amp;/g, '&')           // Remplacer &amp; par &
+              .replace(/&lt;/g, '<')            // Remplacer &lt; par <
+              .replace(/&gt;/g, '>')            // Remplacer &gt; par >
+              .replace(/&#39;/g, "'")           // Remplacer &#39; par '
+              .replace(/&nbsp;/g, ' ')          // Remplacer &nbsp; par espace
+              .replace(/\\"/g, '"');            // Remplacer \" par "
+            
+            const parsed = JSON.parse(cleanContent);
             if (parsed.blocks && Array.isArray(parsed.blocks)) {
               return parsed.blocks
-                .map((block: any) => {
+                .map((block: { type: string; data?: { text?: string; items?: string[] } }) => {
                   if (block.type === 'paragraph' && block.data?.text) {
-                    return block.data.text;
+                    // Nettoyer le texte des entités HTML
+                    return block.data.text
+                      .replace(/&quot;/g, '"')
+                      .replace(/&amp;/g, '&')
+                      .replace(/&lt;/g, '<')
+                      .replace(/&gt;/g, '>')
+                      .replace(/&#39;/g, "'")
+                      .replace(/&nbsp;/g, ' ')
+                      .replace(/<[^>]*>/g, ' '); // Supprimer les balises HTML pour le résumé
                   }
                   if (block.type === 'header' && block.data?.text) {
-                    return block.data.text;
+                    return block.data.text
+                      .replace(/&quot;/g, '"')
+                      .replace(/&amp;/g, '&')
+                      .replace(/&lt;/g, '<')
+                      .replace(/&gt;/g, '>')
+                      .replace(/&#39;/g, "'")
+                      .replace(/&nbsp;/g, ' ')
+                      .replace(/<[^>]*>/g, ' ');
                   }
                   if (block.type === 'list' && block.data?.items) {
                     return block.data.items.join(' ');

@@ -14,6 +14,7 @@ import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
+import { parseEditorJsToHtml } from "@/utils/parseEditorJs";
 
 // Types for Editor.js content
 interface EditorJsBlock {
@@ -191,104 +192,6 @@ const TwitterFallback: React.FC<{ source: string; caption?: string }> = ({ sourc
       )}
     </div>
   );
-};
-
-// Function to parse Editor.js content and convert to HTML/React
-const parseEditorJsToHtml = (content: string): string => {
-  try {
-    const parsed: EditorJsContent = JSON.parse(content);
-    if (parsed.blocks && Array.isArray(parsed.blocks)) {
-      return parsed.blocks
-        .map((block: EditorJsBlock, index: number) => {
-          switch (block.type) {
-            case 'paragraph':
-              return block.data.text ? `<p>${block.data.text}</p>` : '';
-            
-            case 'header': {
-              const level = block.data.level || 2;
-              return block.data.text ? `<h${level}>${block.data.text}</h${level}>` : '';
-            }
-            
-            case 'list': {
-              if (block.data.items && Array.isArray(block.data.items)) {
-                const listItems = block.data.items.map(item => `<li>${item}</li>`).join('');
-                return `<ul>${listItems}</ul>`;
-              }
-              return '';
-            }
-            
-            case 'quote':
-              return block.data.text ? `<blockquote>${block.data.text}</blockquote>` : '';
-            
-            case 'embed': {
-              const service = block.data.service;
-              const source = block.data.source;
-              const embed = block.data.embed;
-              const caption = block.data.caption;
-              
-              if (service === 'twitter' && source) {
-                const tweetId = extractTweetId(source);
-                
-                if (tweetId) {
-                  // Retourner un placeholder spécial pour Twitter qui sera traité côté React
-                  return `<div class="twitter-embed-placeholder" data-tweet-id="${tweetId}" data-source="${source}" data-embed="${embed || ''}" data-caption="${caption || ''}" data-index="${index}"></div>`;
-                } else {
-                  // Fallback si on ne peut pas extraire l'ID
-                  return `<div class="twitter-fallback-placeholder" data-source="${source}" data-caption="${caption || ''}"></div>`;
-                }
-              }
-              
-              if (service === 'youtube' && source) {
-                const videoId = extractYouTubeId(source);
-                return `
-                  <div class="embed-container youtube-embed" style="margin: 20px 0; text-align: center;">
-                    ${videoId ? 
-                      `<iframe src="https://www.youtube.com/embed/${videoId}" 
-                               width="100%" 
-                               height="315" 
-                               frameborder="0" 
-                               allowfullscreen
-                               style="max-width: 560px; border-radius: 8px;">
-                       </iframe>` 
-                      : 
-                      `<a href="${source}" target="_blank" rel="noopener noreferrer" 
-                          style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; background: #ff0000; color: white; text-decoration: none; border-radius: 8px;">
-                         مشاهدة على YouTube
-                       </a>`
-                    }
-                    ${caption ? `<p style="margin-top: 10px; font-style: italic; color: #666;">${caption}</p>` : ''}
-                  </div>
-                `;
-              }
-              
-              // Pour les autres services
-              if (source) {
-                return `
-                  <div class="embed-container generic-embed" style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <a href="${source}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: bold;">
-                        رابط خارجي - ${service || 'مصدر خارجي'}
-                      </a>
-                    </div>
-                    ${caption ? `<p style="margin-top: 8px; color: #666;">${caption}</p>` : ''}
-                  </div>
-                `;
-              }
-              
-              return '';
-            }
-            
-            default:
-              return block.data.text ? `<p>${block.data.text}</p>` : '';
-          }
-        })
-        .filter(Boolean)
-        .join('');
-    }
-  } catch (e) {
-    return `<p>${content}</p>`;
-  }
-  return `<p>${content}</p>`;
 };
 
 // Helper function to extract YouTube video ID
@@ -609,7 +512,7 @@ const NewsDetails: React.FC = () => {
                   </div>
                   <h1 className="text-2xl md:text-3xl font-extrabold mb-4">{news.title}</h1>
                   <div
-                    className="prose prose-slate dark:prose-invert max-w-none leading-relaxed"
+                    className="news-content prose prose-slate dark:prose-invert max-w-none leading-relaxed"
                     dir="auto"
                     dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parsedContent) }}
                   />
@@ -687,7 +590,7 @@ const NewsDetails: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Styles pour les embeds */}
+      {/* Styles pour les embeds et le contenu */}
       <style dangerouslySetInnerHTML={{
         __html: `
           .embed-container {
@@ -699,6 +602,60 @@ const NewsDetails: React.FC = () => {
             width: 100% !important;
           }
           
+          /* Styles pour le contenu de l'article */
+          .news-content {
+            line-height: 1.8;
+            font-size: 16px;
+            color: #333;
+          }
+          
+          .news-content p {
+            margin: 16px 0;
+            text-align: justify;
+          }
+          
+          .news-content a {
+            color: #0066cc;
+            text-decoration: underline;
+            font-weight: 500;
+            transition: color 0.2s ease;
+          }
+          
+          .news-content a:hover {
+            color: #004499;
+            text-decoration: underline;
+          }
+          
+          .news-content h1, .news-content h2, .news-content h3, 
+          .news-content h4, .news-content h5, .news-content h6 {
+            font-weight: bold;
+            margin: 24px 0 16px 0;
+            color: #222;
+          }
+          
+          .news-content h1 { font-size: 2em; }
+          .news-content h2 { font-size: 1.5em; }
+          .news-content h3 { font-size: 1.3em; }
+          .news-content h4 { font-size: 1.1em; }
+          
+          .news-content ul, .news-content ol {
+            margin: 16px 0;
+            padding-right: 24px;
+          }
+          
+          .news-content li {
+            margin: 8px 0;
+          }
+          
+          .news-content blockquote {
+            border-right: 4px solid #0066cc;
+            padding: 16px 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+            font-style: italic;
+            border-radius: 4px;
+          }
+          
           @media (max-width: 768px) {
             .embed-container iframe {
               height: 300px !important;
@@ -706,6 +663,14 @@ const NewsDetails: React.FC = () => {
             
             .youtube-embed iframe {
               height: 200px !important;
+            }
+            
+            .news-content {
+              font-size: 15px;
+            }
+            
+            .news-content p {
+              margin: 12px 0;
             }
           }
         `
