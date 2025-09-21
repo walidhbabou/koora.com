@@ -117,42 +117,21 @@ const Index = () => {
         // Fonction pour extraire le contenu textuel depuis le JSON Editor.js
         const extractTextFromEditorJs = (content: string) => {
           if (!content || content.trim() === '') return '';
-          
           try {
-            // Nettoyer le contenu avant le parsing
             const cleanContent = content
-              .replace(/&quot;/g, '"')           // Remplacer &quot; par "
-              .replace(/&amp;/g, '&')           // Remplacer &amp; par &
-              .replace(/&lt;/g, '<')            // Remplacer &lt; par <
-              .replace(/&gt;/g, '>')            // Remplacer &gt; par >
-              .replace(/&#39;/g, "'")           // Remplacer &#39; par '
-              .replace(/&nbsp;/g, ' ')          // Remplacer &nbsp; par espace
-              .replace(/\\"/g, '"');            // Remplacer \" par "
-            
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&#39;/g, "'")
+              .replace(/&nbsp;/g, ' ')
+              .replace(/\\"/g, '"');
             const parsed = JSON.parse(cleanContent);
             if (parsed.blocks && Array.isArray(parsed.blocks)) {
               return parsed.blocks
                 .map((block: { type: string; data?: { text?: string; items?: string[] } }) => {
-                  if (block.type === 'paragraph' && block.data?.text) {
-                    // Nettoyer le texte des entités HTML
-                    return block.data.text
-                      .replace(/&quot;/g, '"')
-                      .replace(/&amp;/g, '&')
-                      .replace(/&lt;/g, '<')
-                      .replace(/&gt;/g, '>')
-                      .replace(/&#39;/g, "'")
-                      .replace(/&nbsp;/g, ' ')
-                      .replace(/<[^>]*>/g, ' '); // Supprimer les balises HTML pour le résumé
-                  }
-                  if (block.type === 'header' && block.data?.text) {
-                    return block.data.text
-                      .replace(/&quot;/g, '"')
-                      .replace(/&amp;/g, '&')
-                      .replace(/&lt;/g, '<')
-                      .replace(/&gt;/g, '>')
-                      .replace(/&#39;/g, "'")
-                      .replace(/&nbsp;/g, ' ')
-                      .replace(/<[^>]*>/g, ' ');
+                  if ((block.type === 'paragraph' || block.type === 'header') && block.data?.text) {
+                    return block.data.text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
                   }
                   if (block.type === 'list' && block.data?.items) {
                     return block.data.items.join(' ');
@@ -162,9 +141,14 @@ const Index = () => {
                 .filter(text => text.length > 0)
                 .join(' ');
             }
-            return content;
+            return '';
           } catch {
-            return content;
+            // Fallback: try to extract text from raw JSON or string
+            const textMatches = content.match(/"text":\s*"([^"]+)"/g);
+            if (textMatches && textMatches.length > 0) {
+              return textMatches.map(match => match.replace(/"text":\s*"([^"]+)"/, '$1')).join(' ');
+            }
+            return '';
           }
         };
 

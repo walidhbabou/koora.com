@@ -39,11 +39,8 @@ const parseEditorJsContent = (content: string): string => {
     if (parsed.blocks && Array.isArray(parsed.blocks)) {
       return parsed.blocks
         .map((block: EditorJsBlock) => {
-          if (block.type === 'paragraph' && block.data && block.data.text) {
-            return block.data.text;
-          }
-          if (block.type === 'header' && block.data && block.data.text) {
-            return block.data.text;
+          if ((block.type === 'paragraph' || block.type === 'header') && block.data && block.data.text) {
+            return block.data.text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
           }
           if (block.type === 'list' && block.data && block.data.items) {
             return block.data.items.join(' ');
@@ -53,11 +50,15 @@ const parseEditorJsContent = (content: string): string => {
         .filter(Boolean)
         .join(' ');
     }
+    return '';
   } catch (e) {
-    // If it's not JSON or has a different format, return as is
-    return content;
+    // Fallback: try to extract text from raw JSON or string
+    const textMatches = content.match(/"text":\s*"([^"]+)"/g);
+    if (textMatches && textMatches.length > 0) {
+      return textMatches.map(match => match.replace(/"text":\s*"([^"]+)"/, '$1')).join(' ');
+    }
+    return '';
   }
-  return content;
 };
 
 const News = () => {
