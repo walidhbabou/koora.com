@@ -1,282 +1,234 @@
-// Utility function to parse Editor.js content
-interface EditorJsBlock {
-  type: string;
-  data: {
-    text?: string;
-    items?: string[];
-    level?: number;
-    source?: string;
-    embed?: string;
-    caption?: string;
-    content?: string[][];
-    [key: string]: unknown;
-  };
-}
-
-interface EditorJsContent {
-  blocks: EditorJsBlock[];
-  version?: string;
-  time?: number;
-}
-
-// Fonction pour nettoyer les URLs et liens échappés
-const cleanUrl = (url: string): string => {
-  if (!url) return '';
-  
-  // Nettoyer les échappements multiples et guillemets
-  let cleanedUrl = url
-    .replace(/^["\\&quot;]+|["\\&quot;]+$/g, '') // Supprimer les guillemets au début et à la fin
-    .replace(/\\&quot;/g, '') // Supprimer \&quot;
-    .replace(/&quot;/g, '') // Supprimer &quot;
-    .replace(/\\"/g, '') // Supprimer \"
-    .replace(/^"|"$/g, '') // Supprimer les guillemets simples
-    .replace(/\\+$/g, '') // Supprimer les backslashes à la fin
-    .replace(/\\\\/g, '/') // Remplacer les doubles backslash
-    .replace(/^\/+|\/+$/g, '') // Supprimer les slashes au début/fin
-    .trim();
-  
-  // Vérifier si l'URL est valide
-  try {
-    new URL(cleanedUrl);
-    return cleanedUrl;
-  } catch {
-    // Si l'URL n'est pas valide, essayer de la réparer
-    if (!cleanedUrl.startsWith('http') && cleanedUrl.includes('://')) {
-      return cleanedUrl;
-    }
-    if (!cleanedUrl.startsWith('http')) {
-      cleanedUrl = 'https://' + cleanedUrl;
-    }
-    return cleanedUrl;
-  }
-};
-
-// Fonction pour nettoyer le texte HTML et corriger les liens
-const cleanHtmlText = (htmlText: string): string => {
-  if (!htmlText) return '';
-  
-  // Nettoyer le texte de base
-  let cleaned = htmlText
-    .replace(/&nbsp;/g, ' ') // Remplacer les espaces insécables
-    .replace(/\\n/g, ' ') // Remplacer les sauts de ligne échappés
-    .replace(/\\\\/g, '\\') // Corriger les doubles backslashes
-    .replace(/\r\n|\r|\n/g, ' ') // Remplacer tous les types de sauts de ligne
-    .replace(/\t/g, ' ') // Remplacer les tabulations
-    .replace(/&lt;/g, '<') // Décoder les entités HTML
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
-  
-  // Corriger les liens avec des href malformés - regex plus précise pour gérer tous les cas
-  cleaned = cleaned.replace(/href=["']?\\?&quot;([^"&\\]+)\\?&quot;["']?/g, (match, url) => {
-    const cleanedUrl = cleanUrl(url);
-    return `href="${cleanedUrl}" target="_blank" rel="noopener noreferrer"`;
-  });
-  
-  // Corriger les autres formats de liens échappés
-  cleaned = cleaned.replace(/href=["']([^"']*\\&quot;[^"']*)["']/g, (match, url) => {
-    const cleanedUrl = cleanUrl(url);
-    return `href="${cleanedUrl}" target="_blank" rel="noopener noreferrer"`;
-  });
-  
-  // Cas spéciaux pour les guillemets simples autour des URLs
-  cleaned = cleaned.replace(/href=["']\\?"([^"]+)\\"?["']/g, (match, url) => {
-    const cleanedUrl = cleanUrl(url);
-    return `href="${cleanedUrl}" target="_blank" rel="noopener noreferrer"`;
-  });
-  
-  // Ajouter target="_blank" aux liens qui n'en ont pas
-  cleaned = cleaned.replace(/<a\s+([^>]*href="[^"]*"[^>]*)>/g, (match, attributes) => {
-    if (!attributes.includes('target=')) {
-      return `<a ${attributes} target="_blank" rel="noopener noreferrer">`;
-    }
-    return match;
-  });
-  
-  // Nettoyer les espaces multiples et normaliser
-  cleaned = cleaned
-    .replace(/\s+/g, ' ') // Remplacer les espaces multiples par un seul
-    .trim(); // Supprimer les espaces au début et à la fin
-  
-  return cleaned;
-};
-
+// Fonction de parsing robuste et simplifiée
 export const parseEditorJsToHtml = (content: string): string => {
-  if (!content) return '';
+  console.log('🔍 Parsing content, length:', content?.length);
   
-  console.log('Parsing content:', content.substring(0, 200) + '...');
+  if (!content || typeof content !== 'string') {
+    return '<p class="error">Aucun contenu à afficher</p>';
+  }
+
+  // Fonction pour nettoyer et réparer le JSON
+  const cleanJson = (jsonStr: string): string => {
+    return jsonStr
+      // Nettoyer les échappements de base
+      .replace(/\\\\/g, '\\')
+      .replace(/\\"/g, '"')
+      
+      // Corriger les entités HTML
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      
+      // Corriger les échappements d'entités
+      .replace(/\\&quot;/g, '"')
+      .replace(/\\&amp;/g, '&')
+      
+      // Réparer les URLs dans les attributs
+      .replace(/href=\\"([^"]+)\\"/g, 'href="$1"')
+      .replace(/src=\\"([^"]+)\\"/g, 'src="$1"')
+      
+      // Corriger les guillemets orphelins
+      .replace(/([^\\])\\"/g, '$1"')
+      .replace(/^\\"/g, '"');
+  };
+
+  // Fonction pour parser un bloc Editor.js
+  const parseBlock = (block: any): string => {
+    if (!block || !block.type) return '';
+
+    try {
+      switch (block.type) {
+        case 'paragraph':
+          const text = block.data?.text || '';
+          if (!text) return '';
+          return `<p style="margin: 16px 0; direction: rtl; text-align: justify;">${text}</p>`;
+
+        case 'header':
+          const headerText = block.data?.text || '';
+          if (!headerText) return '';
+          const level = Math.min(Math.max(block.data?.level || 1, 1), 6);
+          const fontSize = level === 1 ? '2em' : level === 2 ? '1.5em' : level === 3 ? '1.3em' : '1.1em';
+          return `<h${level} style="font-weight: bold; margin: 24px 0 16px 0; direction: rtl; font-size: ${fontSize};">${headerText}</h${level}>`;
+
+        case 'list':
+          const items = block.data?.items || [];
+          if (!Array.isArray(items) || items.length === 0) return '';
+          const listTag = block.data?.style === 'ordered' ? 'ol' : 'ul';
+          const itemsHtml = items.map(item => `<li style="margin: 8px 0;">${item}</li>`).join('');
+          return `<${listTag} style="margin: 16px 0; padding-right: 24px; direction: rtl;">${itemsHtml}</${listTag}>`;
+
+        case 'quote':
+          const quoteText = block.data?.text || '';
+          if (!quoteText) return '';
+          const caption = block.data?.caption ? `<cite>${block.data.caption}</cite>` : '';
+          return `<blockquote style="border-right: 4px solid #0066cc; padding: 16px 20px; margin: 20px 0; background: #f8f9fa; font-style: italic; border-radius: 4px; direction: rtl;">${quoteText}${caption}</blockquote>`;
+
+        case 'code':
+          const code = block.data?.code || '';
+          if (!code) return '';
+          
+          // Vérifier si c'est un embed Twitter
+          if (code.includes('twitter-tweet') || code.includes('platform.twitter.com')) {
+            const urlMatch = code.match(/href="([^"]*(?:twitter|x)\.com[^"]*)"/);
+            if (urlMatch) {
+              const tweetUrl = urlMatch[1];
+              return `
+                <div style="margin: 20px 0; padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px; background: #f7f9fa; text-align: center;">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#1da1f2">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span style="font-weight: bold; color: #1da1f2;">منشور من X (تويتر)</span>
+                  </div>
+                  <p style="margin-bottom: 15px; color: #666;">اضغط للعرض على الموقع الأصلي:</p>
+                  <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" 
+                     style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #1da1f2; color: white; text-decoration: none; border-radius: 25px; font-weight: bold;">
+                    عرض المنشور
+                  </a>
+                </div>`;
+            }
+          }
+          
+          return `<pre style="background: #f4f4f4; border: 1px solid #ddd; border-radius: 4px; padding: 16px; margin: 16px 0; overflow-x: auto; font-family: monospace;"><code>${code}</code></pre>`;
+
+        case 'image':
+          const imageUrl = block.data?.file?.url || block.data?.url || '';
+          if (!imageUrl) return '';
+          const imageCaption = block.data?.caption || '';
+          return `
+            <div style="margin: 20px 0; text-align: center;">
+              <img src="${imageUrl}" alt="${imageCaption}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+              ${imageCaption ? `<p style="margin-top: 8px; font-size: 14px; color: #666; font-style: italic;">${imageCaption}</p>` : ''}
+            </div>`;
+
+        case 'delimiter':
+          return '<hr style="margin: 30px 0; border: none; height: 2px; background: linear-gradient(to right, transparent, #ddd, transparent);" />';
+
+        default:
+          console.log(`Type de bloc non supporté: ${block.type}`);
+          return `<p style="color: #999; font-style: italic; margin: 10px 0;">[Contenu de type "${block.type}"]</p>`;
+      }
+    } catch (error) {
+      console.error('Erreur parsing bloc:', error, block);
+      return '';
+    }
+  };
 
   try {
-    let parsed: EditorJsContent;
+    // Essayer d'abord de parser comme un seul JSON
+    let cleanContent = cleanJson(content.trim());
     
-    // Nettoyer le contenu avant le parsing
-    let cleanContent = content.trim();
-    
-    // Détecter si c'est du JSON brut malformé avec des échappements
-    if (cleanContent.includes('\\"') || cleanContent.includes('&quot;') || cleanContent.includes('&nbsp;')) {
-      console.log('Détection de JSON malformé, nettoyage agressif...');
-      
-      cleanContent = cleanContent
-        .replace(/\\&quot;/g, '"')
-        .replace(/&quot;/g, '"')
-        .replace(/\\&amp;/g, '&')
-        .replace(/&amp;/g, '&')
-        .replace(/\\&lt;/g, '<')
-        .replace(/&lt;/g, '<')
-        .replace(/\\&gt;/g, '>')
-        .replace(/&gt;/g, '>')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/\\"/g, '"')
-        .replace(/\\n/g, '')
-        .replace(/\\\\/g, '\\')
-        // Corrections supplémentaires pour JSON malformé
-        .replace(/,\s*}/g, '}') // Enlever les virgules avant les }
-        .replace(/,\s*]/g, ']') // Enlever les virgules avant les ]
-        .replace(/"\s*,\s*,/g, '",'); // Corriger les doubles virgules
-        
-      console.log('Contenu nettoyé:', cleanContent.substring(0, 200) + '...');
-    }
-    
-    // Tentative de parsing principal
     try {
-      parsed = JSON.parse(cleanContent);
-      console.log('Parse JSON réussi, blocks trouvés:', parsed.blocks?.length || 0);
-    } catch (parseError) {
-      console.warn('Tentative de parsing échouée, fallback vers extraction manuelle...', parseError);
+      const singleJson = JSON.parse(cleanContent);
+      if (singleJson.blocks && Array.isArray(singleJson.blocks)) {
+        console.log('✅ JSON unique parsé, blocs:', singleJson.blocks.length);
+        const html = singleJson.blocks.map(parseBlock).filter(Boolean).join('');
+        return html || '<p>Contenu vide</p>';
+      }
+    } catch (singleError) {
+      console.log('❌ Échec parsing JSON unique, tentative de séparation...');
+    }
+
+    // Si ça échoue, essayer de séparer les objets multiples
+    const jsonObjects: string[] = [];
+    let braceCount = 0;
+    let currentObject = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < cleanContent.length; i++) {
+      const char = cleanContent[i];
       
-      // Extraction manuelle robuste pour les cas les plus complexes
-      const textBlocks: string[] = [];
+      if (escapeNext) {
+        escapeNext = false;
+        currentObject += char;
+        continue;
+      }
       
-      // Méthode 1: Rechercher tous les blocs de type "paragraph" avec leur contenu
-      const blockPattern = /"type":\s*"paragraph"[^}]*"text":\s*"([^"]*(?:[^"\\]|\\.)*)"/g;
-      let match;
+      if (char === '\\') {
+        escapeNext = true;
+        currentObject += char;
+        continue;
+      }
       
-      while ((match = blockPattern.exec(content)) !== null) {
-        if (match[1]) {
-          const text = cleanHtmlText(match[1]);
-          
-          if (text.length > 0) {
-            textBlocks.push(text);
-          }
+      if (char === '"') {
+        inString = !inString;
+      }
+      
+      if (!inString) {
+        if (char === '{') {
+          braceCount++;
+        } else if (char === '}') {
+          braceCount--;
         }
       }
       
-      console.log('Blocs de texte extraits manuellement:', textBlocks.length);
+      currentObject += char;
       
-      // Si on a trouvé du contenu, le retourner formaté
-      if (textBlocks.length > 0) {
-        return textBlocks
-          .filter(text => text && text.trim().length > 2) // Filtrer les textes vides ou trop courts
-          .map(text => 
-            `<p style="margin-bottom: 18px; line-height: 1.8; text-align: justify; font-size: 16px; color: #333;">${text}</p>`
-          ).join('');
+      if (braceCount === 0 && currentObject.trim() && currentObject.includes('{')) {
+        jsonObjects.push(currentObject.trim());
+        currentObject = '';
       }
-      
-      return '<p>Contenu non disponible en raison d\'un problème de format.</p>';
     }
     
-    // Si le parsing a réussi, traiter normalement
-    if (parsed.blocks && Array.isArray(parsed.blocks)) {
-      const htmlBlocks = parsed.blocks
-        .map((block: EditorJsBlock) => {
-          switch (block.type) {
-            case 'paragraph': {
-              const text = block.data?.text || '';
-              if (!text) return '';
-              
-              // Nettoyer et simplifier le texte pour un affichage optimal
-              let cleanedText = cleanHtmlText(text);
-              
-              // Supprimer les espaces multiples et normaliser
-              cleanedText = cleanedText
-                .replace(/\s+/g, ' ') // Remplacer les espaces multiples par un seul
-                .replace(/^\s+|\s+$/g, '') // Supprimer les espaces au début et à la fin
-                .replace(/\s*<\/?\s*br\s*\/?\s*>\s*/gi, ' ') // Remplacer les <br> par des espaces
-                .trim();
-              
-              // Ne retourner le paragraphe que s'il contient du contenu valide
-              if (!cleanedText || cleanedText.length < 2) return '';
-              
-              return `<p style="margin-bottom: 18px; line-height: 1.8; text-align: justify; font-size: 16px; color: #333;">${cleanedText}</p>`;
-            }
-            
-            case 'header': {
-              const level = block.data?.level || 2;
-              const text = block.data?.text || '';
-              if (!text) return '';
-              const cleanedText = cleanHtmlText(text);
-              return `<h${level} style="margin: 24px 0 16px 0; font-weight: bold;">${cleanedText}</h${level}>`;
-            }
-            
-            case 'list': {
-              if (Array.isArray(block.data?.items)) {
-                const items = block.data.items.map(item => {
-                  const cleanedItem = cleanHtmlText(String(item));
-                  return `<li style="margin-bottom: 8px;">${cleanedItem}</li>`;
-                }).join('');
-                return `<ul style="margin: 16px 0; padding-right: 20px;">${items}</ul>`;
-              }
-              return '';
-            }
-            
-            case 'quote': {
-              const text = block.data?.text || '';
-              if (!text) return '';
-              const cleanedText = cleanHtmlText(text);
-              return `<blockquote style="border-right: 4px solid #e9ecef; padding: 16px; margin: 16px 0; background-color: #f8f9fa; font-style: italic;"><p>${cleanedText}</p></blockquote>`;
-            }
-            
-            case 'table': {
-              if (Array.isArray(block.data?.content)) {
-                let tableHTML = '<div style="overflow-x: auto; margin: 20px 0;"><table style="width: 100%; border-collapse: collapse; border: 1px solid #ddd; background: white; min-width: 500px;">';
-                
-                block.data.content.forEach((row: string[], index: number) => {
-                  if (Array.isArray(row)) {
-                    const isHeader = index === 0 && block.data?.withHeadings;
-                    const cellTag = isHeader ? 'th' : 'td';
-                    const cellStyle = isHeader 
-                      ? 'background-color: #f8f9fa; font-weight: bold; padding: 12px; border: 1px solid #ddd; text-align: center; color: #333;'
-                      : 'padding: 12px; border: 1px solid #ddd; text-align: center; color: #333;';
-                    
-                    tableHTML += '<tr>';
-                    row.forEach(cell => {
-                      const cleanCell = String(cell || '')
-                        .replace(/&nbsp;/g, ' ')
-                        .replace(/&quot;/g, '"')
-                        .replace(/&amp;/g, '&')
-                        .replace(/<[^>]*>/g, '')
-                        .trim();
-                      tableHTML += `<${cellTag} style="${cellStyle}">${cleanCell}</${cellTag}>`;
-                    });
-                    tableHTML += '</tr>';
-                  }
-                });
-                
-                tableHTML += '</table></div>';
-                return tableHTML;
-              }
-              return '';
-            }
-            
-            default: {
-              const text = block.data?.text;
-              if (!text) return '';
-              const cleanedText = cleanHtmlText(text);
-              return `<p style="margin-bottom: 16px; line-height: 1.6;">${cleanedText}</p>`;
-            }
+    if (currentObject.trim()) {
+      jsonObjects.push(currentObject.trim());
+    }
+
+    console.log(`📦 ${jsonObjects.length} objets JSON détectés`);
+
+    // Parser chaque objet JSON
+    const results: string[] = [];
+    
+    for (let i = 0; i < jsonObjects.length; i++) {
+      const jsonStr = jsonObjects[i];
+      try {
+        const cleanedJsonStr = cleanJson(jsonStr);
+        const parsed = JSON.parse(cleanedJsonStr);
+        
+        if (parsed.blocks && Array.isArray(parsed.blocks)) {
+          console.log(`✅ Objet ${i + 1} parsé: ${parsed.blocks.length} blocs`);
+          const html = parsed.blocks.map(parseBlock).filter(Boolean).join('');
+          if (html) {
+            results.push(html);
           }
-        })
-        .filter(Boolean);
-      
-      const html = htmlBlocks.join('');
-      return html || '<p>Aucun contenu disponible.</p>';
+        }
+      } catch (parseError) {
+        console.error(`❌ Erreur objet ${i + 1}:`, parseError);
+        // Essayer d'extraire du texte brut
+        const textMatch = jsonStr.match(/"text":\s*"([^"]+)"/g);
+        if (textMatch) {
+          textMatch.forEach(match => {
+            const text = match.replace(/"text":\s*"([^"]+)"/, '$1');
+            if (text && text.length > 5) {
+              results.push(`<p style="margin: 16px 0; direction: rtl;">${text}</p>`);
+            }
+          });
+        }
+      }
     }
     
-    return '<p>Format de contenu non reconnu.</p>';
+    const finalHtml = results.join('\n');
+    console.log('🎯 HTML final généré, length:', finalHtml.length);
+    
+    return finalHtml || '<p style="color: #999;">Impossible de parser le contenu</p>';
     
   } catch (error) {
-    console.error('Erreur lors du parsing du contenu Editor.js:', error);
-    return '<p>Erreur lors du chargement du contenu.</p>';
+    console.error('💥 Erreur fatale:', error);
+    
+    // Fallback ultime: extraire tout texte visible
+    const textMatches = content.match(/"text":\s*"([^"]+)"/g);
+    if (textMatches && textMatches.length > 0) {
+      const texts = textMatches.map(match => {
+        return match.replace(/"text":\s*"([^"]+)"/, '$1');
+      }).filter(text => text && text.length > 5);
+      
+      if (texts.length > 0) {
+        return texts.map(text => `<p style="margin: 16px 0; direction: rtl;">${text}</p>`).join('');
+      }
+    }
+    
+    return '<p style="color: #c33; background: #fee; padding: 10px; border-radius: 4px;">خطأ في تحميل المحتوى</p>';
   }
 };

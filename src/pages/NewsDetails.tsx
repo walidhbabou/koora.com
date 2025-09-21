@@ -8,197 +8,281 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, ArrowRight, Flag, ExternalLink } from "lucide-react";
+import { Clock, ArrowRight, Flag } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
-import { parseEditorJsToHtml } from "@/utils/parseEditorJs";
 
-// Types for Editor.js content
-interface EditorJsBlock {
-  type: string;
-  data: {
-    text?: string;
-    items?: string[];
-    level?: number;
-    service?: string;
-    source?: string;
-    embed?: string;
-    width?: number;
-    height?: number;
-    caption?: string;
-    [key: string]: unknown;
+// Fonction de parsing robuste et simplifiée
+const parseEditorJsToHtml = (content: string): string => {
+  console.log('🔍 Parsing content, length:', content?.length);
+  
+  if (!content || typeof content !== 'string') {
+    return '<p class="error">Aucun contenu à afficher</p>';
+  }
+
+  // Fonction pour nettoyer et réparer le JSON
+  const cleanJson = (jsonStr: string): string => {
+    return jsonStr
+      // Nettoyer les échappements de base
+      .replace(/\\\\/g, '\\')
+      .replace(/\\"/g, '"')
+      
+      // Corriger les entités HTML
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      
+      // Corriger les échappements d'entités
+      .replace(/\\&quot;/g, '"')
+      .replace(/\\&amp;/g, '&')
+      
+      // Réparer les URLs dans les attributs
+      .replace(/href=\\"([^"]+)\\"/g, 'href="$1"')
+      .replace(/src=\\"([^"]+)\\"/g, 'src="$1"')
+      
+      // Corriger les guillemets orphelins
+      .replace(/([^\\])\\"/g, '$1"')
+      .replace(/^\\"/g, '"');
   };
-}
 
-interface EditorJsContent {
-  blocks: EditorJsBlock[];
-  version?: string;
-  time?: number;
-}
+  // Fonction pour parser un bloc Editor.js
+  const parseBlock = (block: any): string => {
+    if (!block || !block.type) return '';
 
-// Fonction pour extraire l'ID du tweet depuis l'URL
-const extractTweetId = (url: string): string | null => {
-  // Formats possibles:
-  // https://twitter.com/user/status/1234567890
-  // https://x.com/user/status/1234567890
-  // https://mobile.twitter.com/user/status/1234567890
-  const match = url.match(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/);
-  return match ? match[1] : null;
-};
+    try {
+      switch (block.type) {
+        case 'paragraph':
+          const text = block.data?.text || '';
+          if (!text) return '';
+          return `<p style="margin: 16px 0; direction: rtl; text-align: justify; line-height: 1.8;">${text}</p>`;
 
-// Fonction pour extraire le nom d'utilisateur depuis l'URL
-const extractTwitterUsername = (url: string): string | null => {
-  const match = url.match(/(?:twitter\.com|x\.com)\/(\w+)\/status\/\d+/);
-  return match ? match[1] : null;
-};
+        case 'header':
+          const headerText = block.data?.text || '';
+          if (!headerText) return '';
+          const level = Math.min(Math.max(block.data?.level || 1, 1), 6);
+          const fontSize = level === 1 ? '2em' : level === 2 ? '1.5em' : level === 3 ? '1.3em' : '1.1em';
+          return `<h${level} style="font-weight: bold; margin: 24px 0 16px 0; direction: rtl; font-size: ${fontSize}; color: #222;">${headerText}</h${level}>`;
 
-// Composant pour afficher un tweet avec iframe direct
-const TwitterEmbedIframe: React.FC<{ 
-  tweetId: string; 
-  source: string; 
-  embed?: string;
-  caption?: string;
-}> = ({ tweetId, source, embed, caption }) => {
-  const [iframeError, setIframeError] = useState(false);
-  
-  // URL de l'iframe Twitter avec paramètres optimisés
-  const embedUrl = embed || `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=light&width=550&dnt=true&chrome=nofooter`;
-  
-  return (
-    <div className="twitter-embed-container" style={{ 
-      margin: '20px 0', 
-      textAlign: 'center' as const,
-      maxWidth: '100%'
-    }}>
-      {!iframeError ? (
-        <>
-          <iframe
-            src={embedUrl}
-            width="100%"
-            height="400"
-            frameBorder="0"
-            scrolling="no"
-            allowFullScreen
-            onError={() => setIframeError(true)}
-            style={{
-              maxWidth: '550px',
-              border: '1px solid #e1e8ed',
-              borderRadius: '12px',
-              margin: '0 auto',
-              display: 'block'
-            }}
-            title={`Tweet ${tweetId}`}
-          />
-          {caption && (
-            <p style={{ 
-              marginTop: '10px', 
-              fontStyle: 'italic', 
-              color: '#666',
-              fontSize: '14px'
-            }}>
-              {caption}
-            </p>
-          )}
-        </>
-      ) : (
-        <TwitterFallback source={source} caption={caption} />
-      )}
-    </div>
-  );
-};
+        case 'list':
+          const items = block.data?.items || [];
+          if (!Array.isArray(items) || items.length === 0) return '';
+          const listTag = block.data?.style === 'ordered' ? 'ol' : 'ul';
+          const itemsHtml = items.map(item => `<li style="margin: 8px 0; line-height: 1.6;">${item}</li>`).join('');
+          return `<${listTag} style="margin: 16px 0; padding-right: 24px; direction: rtl;">${itemsHtml}</${listTag}>`;
 
-// Composant de fallback pour Twitter
-const TwitterFallback: React.FC<{ source: string; caption?: string }> = ({ source, caption }) => {
-  const username = extractTwitterUsername(source);
-  
-  return (
-    <div style={{ 
-      padding: '20px', 
-      border: '1px solid #e1e8ed', 
-      borderRadius: '12px', 
-      background: '#f7f9fa',
-      textAlign: 'center' as const,
-      margin: '20px 0'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        gap: '8px', 
-        marginBottom: '15px' 
-      }}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="#1da1f2">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-        </svg>
-        <span style={{ fontWeight: 'bold', color: '#1da1f2', fontSize: '16px' }}>
-          منشور من X (تويتر)
-        </span>
-      </div>
+        case 'quote':
+          const quoteText = block.data?.text || '';
+          if (!quoteText) return '';
+          const caption = block.data?.caption ? `<cite>${block.data.caption}</cite>` : '';
+          return `<blockquote style="border-right: 4px solid #0066cc; padding: 16px 20px; margin: 20px 0; background: #f8f9fa; font-style: italic; border-radius: 4px; direction: rtl;">${quoteText}${caption}</blockquote>`;
+
+        case 'code':
+          const code = block.data?.code || '';
+          if (!code) return '';
+          
+          // Vérifier si c'est un embed Twitter
+          if (code.includes('twitter-tweet') || code.includes('platform.twitter.com')) {
+            const urlMatch = code.match(/href="([^"]*(?:twitter|x)\.com[^"]*)"/);
+            if (urlMatch) {
+              const tweetUrl = urlMatch[1];
+              return `
+                <div style="margin: 20px 0; padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px; background: #f7f9fa; text-align: center;">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#1da1f2">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                    </svg>
+                    <span style="font-weight: bold; color: #1da1f2;">منشور من X (تويتر)</span>
+                  </div>
+                  <p style="margin-bottom: 15px; color: #666;">اضغط للعرض على الموقع الأصلي:</p>
+                  <a href="${tweetUrl}" target="_blank" rel="noopener noreferrer" 
+                     style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #1da1f2; color: white; text-decoration: none; border-radius: 25px; font-weight: bold;">
+                    عرض المنشور
+                  </a>
+                </div>`;
+            }
+          }
+          
+          return `<pre style="background: #f4f4f4; border: 1px solid #ddd; border-radius: 4px; padding: 16px; margin: 16px 0; overflow-x: auto; font-family: monospace; font-size: 14px;"><code>${code}</code></pre>`;
+
+        case 'image':
+          const imageUrl = block.data?.file?.url || block.data?.url || '';
+          if (!imageUrl) return '';
+          const imageCaption = block.data?.caption || '';
+          return `
+            <div style="margin: 20px 0; text-align: center;">
+              <img src="${imageUrl}" alt="${imageCaption}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" />
+              ${imageCaption ? `<p style="margin-top: 8px; font-size: 14px; color: #666; font-style: italic;">${imageCaption}</p>` : ''}
+            </div>`;
+
+        case 'delimiter':
+          return '<hr style="margin: 30px 0; border: none; height: 2px; background: linear-gradient(to right, transparent, #ddd, transparent);" />';
+
+        case 'embed':
+          const source = block.data?.source || '';
+          if (!source) return '';
+          
+          // Gestion des embeds YouTube
+          if (source.includes('youtube.com') || source.includes('youtu.be')) {
+            const videoIdMatch = source.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+            if (videoIdMatch) {
+              const videoId = videoIdMatch[1];
+              const embedCaption = block.data?.caption || '';
+              return `
+                <div style="margin: 20px 0; text-align: center;">
+                  <div style="position: relative; width: 100%; max-width: 560px; margin: 0 auto;">
+                    <iframe 
+                      src="https://www.youtube.com/embed/${videoId}" 
+                      width="100%" 
+                      height="315" 
+                      frameborder="0" 
+                      allowfullscreen
+                      style="border-radius: 8px;"
+                      title="YouTube video">
+                    </iframe>
+                  </div>
+                  ${embedCaption ? `<p style="margin-top: 10px; font-size: 14px; color: #666; font-style: italic;">${embedCaption}</p>` : ''}
+                </div>`;
+            }
+          }
+          
+          return `
+            <div style="margin: 20px 0; padding: 16px; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; text-align: center;">
+              <a href="${source}" target="_blank" rel="noopener noreferrer" style="color: #0066cc; text-decoration: none; font-weight: 500;">
+                ${block.data?.caption || 'رابط خارجي'}
+              </a>
+            </div>`;
+
+        default:
+          console.log(`Type de bloc non supporté: ${block.type}`);
+          return `<p style="color: #999; font-style: italic; margin: 10px 0;">[Contenu de type "${block.type}"]</p>`;
+      }
+    } catch (error) {
+      console.error('Erreur parsing bloc:', error, block);
+      return '';
+    }
+  };
+
+  try {
+    // Essayer d'abord de parser comme un seul JSON
+    let cleanContent = cleanJson(content.trim());
+    
+    try {
+      const singleJson = JSON.parse(cleanContent);
+      if (singleJson.blocks && Array.isArray(singleJson.blocks)) {
+        console.log('✅ JSON unique parsé, blocs:', singleJson.blocks.length);
+        const html = singleJson.blocks.map(parseBlock).filter(Boolean).join('');
+        return html || '<p>Contenu vide</p>';
+      }
+    } catch (singleError) {
+      console.log('❌ Échec parsing JSON unique, tentative de séparation...');
+    }
+
+    // Si ça échoue, essayer de séparer les objets multiples
+    const jsonObjects: string[] = [];
+    let braceCount = 0;
+    let currentObject = '';
+    let inString = false;
+    let escapeNext = false;
+
+    for (let i = 0; i < cleanContent.length; i++) {
+      const char = cleanContent[i];
       
-      {username && (
-        <p style={{ 
-          margin: '10px 0', 
-          color: '#666',
-          fontSize: '14px'
-        }}>
-          @{username}
-        </p>
-      )}
+      if (escapeNext) {
+        escapeNext = false;
+        currentObject += char;
+        continue;
+      }
       
-      <p style={{ marginBottom: '15px', color: '#666' }}>
-        اضغط للعرض على الموقع الأصلي:
-      </p>
+      if (char === '\\') {
+        escapeNext = true;
+        currentObject += char;
+        continue;
+      }
       
-      <a 
-        href={source} 
-        target="_blank" 
-        rel="noopener noreferrer" 
-        style={{ 
-          display: 'inline-flex', 
-          alignItems: 'center', 
-          gap: '8px', 
-          padding: '12px 24px', 
-          background: '#1da1f2', 
-          color: 'white', 
-          textDecoration: 'none', 
-          borderRadius: '25px',
-          fontWeight: 'bold',
-          fontSize: '14px',
-          transition: 'background 0.2s ease'
-        }}
-        onMouseOver={(e) => {
-          (e.target as HTMLElement).style.background = '#0d8bd9';
-        }}
-        onMouseOut={(e) => {
-          (e.target as HTMLElement).style.background = '#1da1f2';
-        }}
-      >
-        عرض المنشور
-        <ExternalLink size={16} />
-      </a>
+      if (char === '"') {
+        inString = !inString;
+      }
       
-      {caption && (
-        <p style={{ 
-          marginTop: '15px', 
-          fontStyle: 'italic', 
-          color: '#666',
-          fontSize: '14px'
-        }}>
-          {caption}
-        </p>
-      )}
-    </div>
-  );
-};
+      if (!inString) {
+        if (char === '{') {
+          braceCount++;
+        } else if (char === '}') {
+          braceCount--;
+        }
+      }
+      
+      currentObject += char;
+      
+      if (braceCount === 0 && currentObject.trim() && currentObject.includes('{')) {
+        jsonObjects.push(currentObject.trim());
+        currentObject = '';
+      }
+    }
+    
+    if (currentObject.trim()) {
+      jsonObjects.push(currentObject.trim());
+    }
 
-// Helper function to extract YouTube video ID
-const extractYouTubeId = (url: string): string | null => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+    console.log(`📦 ${jsonObjects.length} objets JSON détectés`);
+
+    // Parser chaque objet JSON
+    const results: string[] = [];
+    
+    for (let i = 0; i < jsonObjects.length; i++) {
+      const jsonStr = jsonObjects[i];
+      try {
+        const cleanedJsonStr = cleanJson(jsonStr);
+        const parsed = JSON.parse(cleanedJsonStr);
+        
+        if (parsed.blocks && Array.isArray(parsed.blocks)) {
+          console.log(`✅ Objet ${i + 1} parsé: ${parsed.blocks.length} blocs`);
+          const html = parsed.blocks.map(parseBlock).filter(Boolean).join('');
+          if (html) {
+            results.push(html);
+          }
+        }
+      } catch (parseError) {
+        console.error(`❌ Erreur objet ${i + 1}:`, parseError);
+        // Essayer d'extraire du texte brut
+        const textMatch = jsonStr.match(/"text":\s*"([^"]+)"/g);
+        if (textMatch) {
+          textMatch.forEach(match => {
+            const text = match.replace(/"text":\s*"([^"]+)"/, '$1');
+            if (text && text.length > 5) {
+              results.push(`<p style="margin: 16px 0; direction: rtl;">${text}</p>`);
+            }
+          });
+        }
+      }
+    }
+    
+    const finalHtml = results.join('\n');
+    console.log('🎯 HTML final généré, length:', finalHtml.length);
+    
+    return finalHtml || '<p style="color: #999;">Impossible de parser le contenu</p>';
+    
+  } catch (error) {
+    console.error('💥 Erreur fatale:', error);
+    
+    // Fallback ultime: extraire tout texte visible
+    const textMatches = content.match(/"text":\s*"([^"]+)"/g);
+    if (textMatches && textMatches.length > 0) {
+      const texts = textMatches.map(match => {
+        return match.replace(/"text":\s*"([^"]+)"/, '$1');
+      }).filter(text => text && text.length > 5);
+      
+      if (texts.length > 0) {
+        return texts.map(text => `<p style="margin: 16px 0; direction: rtl;">${text}</p>`).join('');
+      }
+    }
+    
+    return '<p style="color: #c33; background: #fee; padding: 10px; border-radius: 4px;">خطأ في تحميل المحتوى</p>';
+  }
 };
 
 interface NewsRow {
@@ -234,19 +318,30 @@ const NewsDetails: React.FC = () => {
     if (!id) return;
     setLoading(true);
     setError(null);
+    
+    console.log('🚀 Chargement des nouvelles pour ID:', id);
+    
     try {
       const { data, error } = await supabase
         .from('news')
         .select('id, title, content, created_at, image_url, status, competition_internationale_id, competition_mondiale_id, competition_continentale_id, competition_locale_id')
         .eq('id', Number(id))
         .single();
+        
       if (error) throw error;
+      
+      console.log('📰 Données récupérées:', data);
       setNews(data as NewsRow);
 
       // Parse content immediately
       if (data?.content) {
+        console.log('🔄 Début du parsing du contenu...');
         const parsed = parseEditorJsToHtml(data.content);
+        console.log('✅ Contenu parsé:', parsed);
         setParsedContent(parsed);
+      } else {
+        console.log('⚠️ Aucun contenu trouvé');
+        setParsedContent('<p>Aucun contenu disponible</p>');
       }
 
       // Fetch related news
@@ -283,164 +378,52 @@ const NewsDetails: React.FC = () => {
           setRelatedNews(related || []);
         }
       }
+
     } catch (e: unknown) {
       const error = e as { message?: string };
+      console.error('❌ Erreur chargement:', error);
       setError(error?.message || 'Failed to load news');
     } finally {
       setLoading(false);
     }
   }, [id]);
 
-  // Effect pour remplacer les placeholders Twitter après le rendu
-  useEffect(() => {
-    if (parsedContent) {
-      setTimeout(() => {
-        // Remplacer les placeholders Twitter par les composants React
-        const twitterPlaceholders = document.querySelectorAll('.twitter-embed-placeholder');
-        
-        twitterPlaceholders.forEach((placeholder) => {
-          const tweetId = placeholder.getAttribute('data-tweet-id');
-          const source = placeholder.getAttribute('data-source');
-          const embed = placeholder.getAttribute('data-embed');
-          const caption = placeholder.getAttribute('data-caption');
-          
-          if (tweetId && source) {
-            // Créer le conteneur pour l'iframe
-            const container = document.createElement('div');
-            container.style.margin = '20px 0';
-            container.style.textAlign = 'center';
-            container.style.maxWidth = '100%';
-            
-            // URL de l'iframe avec paramètres optimisés
-            const embedUrl = embed || `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=light&width=550&dnt=true&chrome=nofooter`;
-            
-            // Créer l'iframe
-            const iframe = document.createElement('iframe');
-            iframe.src = embedUrl;
-            iframe.width = '100%';
-            iframe.height = '400';
-            iframe.frameBorder = '0';
-            iframe.scrolling = 'no';
-            iframe.allowFullscreen = true;
-            iframe.title = `Tweet ${tweetId}`;
-            iframe.style.maxWidth = '550px';
-            iframe.style.border = '1px solid #e1e8ed';
-            iframe.style.borderRadius = '12px';
-            iframe.style.margin = '0 auto';
-            iframe.style.display = 'block';
-            
-            // Gestion d'erreur pour l'iframe
-            iframe.onerror = () => {
-              container.innerHTML = `
-                <div style="padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px; background: #f7f9fa; text-align: center;">
-                  <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#1da1f2">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                    </svg>
-                    <span style="font-weight: bold; color: #1da1f2;">منشور من X (تويتر)</span>
-                  </div>
-                  <p style="margin-bottom: 15px; color: #666;">اضغط للعرض على الموقع الأصلي:</p>
-                  <a href="${source}" target="_blank" rel="noopener noreferrer" 
-                     style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #1da1f2; color: white; text-decoration: none; border-radius: 25px; font-weight: bold;">
-                    عرض المنشور
-                  </a>
-                  ${caption ? `<p style="margin-top: 15px; font-style: italic; color: #666;">${caption}</p>` : ''}
-                </div>
-              `;
-            };
-            
-            container.appendChild(iframe);
-            
-            // Ajouter la caption si elle existe
-            if (caption) {
-              const captionEl = document.createElement('p');
-              captionEl.style.marginTop = '10px';
-              captionEl.style.fontStyle = 'italic';
-              captionEl.style.color = '#666';
-              captionEl.style.fontSize = '14px';
-              captionEl.textContent = caption;
-              container.appendChild(captionEl);
-            }
-            
-            // Remplacer le placeholder
-            placeholder.parentNode?.replaceChild(container, placeholder);
-          }
-        });
-
-        // Traiter les fallbacks Twitter
-        const fallbackPlaceholders = document.querySelectorAll('.twitter-fallback-placeholder');
-        fallbackPlaceholders.forEach((placeholder) => {
-          const source = placeholder.getAttribute('data-source');
-          const caption = placeholder.getAttribute('data-caption');
-          
-          if (source) {
-            const username = extractTwitterUsername(source);
-            placeholder.innerHTML = `
-              <div style="padding: 20px; border: 1px solid #e1e8ed; border-radius: 12px; background: #f7f9fa; text-align: center; margin: 20px 0;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 15px;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#1da1f2">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                  <span style="font-weight: bold; color: #1da1f2;">منشور من X (تويتر)</span>
-                </div>
-                ${username ? `<p style="margin: 10px 0; color: #666;">@${username}</p>` : ''}
-                <p style="margin-bottom: 15px; color: #666;">اضغط للعرض على الموقع الأصلي:</p>
-                <a href="${source}" target="_blank" rel="noopener noreferrer" 
-                   style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #1da1f2; color: white; text-decoration: none; border-radius: 25px; font-weight: bold;">
-                  عرض المنشور
-                </a>
-                ${caption ? `<p style="margin-top: 15px; font-style: italic; color: #666;">${caption}</p>` : ''}
-              </div>
-            `;
-          }
-        });
-      }, 100);
-    }
-  }, [parsedContent]);
-
   useEffect(() => { 
     load(); 
   }, [id, load]);
 
   const reportThisNews = async (description: string) => {
-    if (!id) return;
-    if (reporting) return;
-    if (!isAuthenticated || !user?.id) {
-      toast({ title: 'يرجى تسجيل الدخول', description: 'يجب تسجيل الدخول لإرسال البلاغ', variant: 'destructive' });
+    if (!id || reporting || !isAuthenticated || !user?.id) {
+      toast({ 
+        title: 'يرجى تسجيل الدخول', 
+        description: 'يجب تسجيل الدخول لإرسال البلاغ', 
+        variant: 'destructive' 
+      });
       return;
     }
+    
     setReporting(true);
     try {
-      try {
-        const { error } = await supabase.rpc('create_report', {
-          p_type: 'content',
-          p_target: `news:${id}`,
-          p_reason: 'inappropriate',
-          p_description: description,
-          p_reported_by: user.id
-        });
-        if (error) throw error;
-      } catch (rpcErr: unknown) {
-        const err = rpcErr as { message?: string; code?: string };
-        const msg: string = err?.message || '';
-        const code: string | undefined = err?.code;
-        const fnMissing = (code === '42883') || /function\s+create_report\s*\(.*\)\s+does not exist/i.test(msg) || /does not exist/i.test(msg);
-        if (!fnMissing) throw rpcErr;
-        const { error: insErr } = await supabase.from('reports').insert({
-          type: 'content',
-          target: `news:${id}`,
-          reason: 'inappropriate',
-          description,
-          reported_by: user.id
-        });
-        if (insErr) throw insErr;
-      }
+      const { error } = await supabase.from('reports').insert({
+        type: 'content',
+        target: `news:${id}`,
+        reason: 'inappropriate',
+        description,
+        reported_by: user.id
+      });
+      
+      if (error) throw error;
+      
       toast({ description: 'تم إرسال البلاغ بنجاح' });
       setReportOpen(false);
       setReportDesc('');
     } catch (e: unknown) {
       const err = e as { message?: string };
-      toast({ title: 'Erreur', description: err?.message || 'تعذر إرسال البلاغ', variant: 'destructive' });
+      toast({ 
+        title: 'خطأ', 
+        description: err?.message || 'تعذر إرسال البلاغ', 
+        variant: 'destructive' 
+      });
     } finally {
       setReporting(false);
     }
@@ -488,9 +471,11 @@ const NewsDetails: React.FC = () => {
         {loading && (
           <div className="text-sm text-muted-foreground">جار التحميل…</div>
         )}
+        
         {error && (
           <div className="text-sm text-red-600">{error}</div>
         )}
+        
         {news && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
@@ -507,14 +492,23 @@ const NewsDetails: React.FC = () => {
                 <div className="p-5">
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">{news.created_at ? new Date(news.created_at).toISOString().slice(0,10) : ''}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {news.created_at ? new Date(news.created_at).toISOString().slice(0,10) : ''}
+                    </span>
                     <Badge variant="secondary">أخبار</Badge>
                   </div>
                   <h1 className="text-2xl md:text-3xl font-extrabold mb-4">{news.title}</h1>
+                  
+                  {/* Contenu principal */}
                   <div
                     className="news-content prose prose-slate dark:prose-invert max-w-none leading-relaxed"
+                    style={{ 
+                      fontFamily: 'Cairo, Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
+                    }}
                     dir="auto"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parsedContent) }}
+                    dangerouslySetInnerHTML={{ 
+                      __html: DOMPurify.sanitize(parsedContent || '<p>Aucun contenu disponible</p>') 
+                    }}
                   />
                 </div>
               </Card>
@@ -589,92 +583,6 @@ const NewsDetails: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Styles pour les embeds et le contenu */}
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          .embed-container {
-            margin: 20px 0;
-          }
-          
-          .youtube-embed iframe {
-            max-width: 100% !important;
-            width: 100% !important;
-          }
-          
-          /* Styles pour le contenu de l'article */
-          .news-content {
-            line-height: 1.8;
-            font-size: 16px;
-            color: #333;
-          }
-          
-          .news-content p {
-            margin: 16px 0;
-            text-align: justify;
-          }
-          
-          .news-content a {
-            color: #0066cc;
-            text-decoration: underline;
-            font-weight: 500;
-            transition: color 0.2s ease;
-          }
-          
-          .news-content a:hover {
-            color: #004499;
-            text-decoration: underline;
-          }
-          
-          .news-content h1, .news-content h2, .news-content h3, 
-          .news-content h4, .news-content h5, .news-content h6 {
-            font-weight: bold;
-            margin: 24px 0 16px 0;
-            color: #222;
-          }
-          
-          .news-content h1 { font-size: 2em; }
-          .news-content h2 { font-size: 1.5em; }
-          .news-content h3 { font-size: 1.3em; }
-          .news-content h4 { font-size: 1.1em; }
-          
-          .news-content ul, .news-content ol {
-            margin: 16px 0;
-            padding-right: 24px;
-          }
-          
-          .news-content li {
-            margin: 8px 0;
-          }
-          
-          .news-content blockquote {
-            border-right: 4px solid #0066cc;
-            padding: 16px 20px;
-            margin: 20px 0;
-            background: #f8f9fa;
-            font-style: italic;
-            border-radius: 4px;
-          }
-          
-          @media (max-width: 768px) {
-            .embed-container iframe {
-              height: 300px !important;
-            }
-            
-            .youtube-embed iframe {
-              height: 200px !important;
-            }
-            
-            .news-content {
-              font-size: 15px;
-            }
-            
-            .news-content p {
-              margin: 12px 0;
-            }
-          }
-        `
-      }} />
     </div>
   );
 };

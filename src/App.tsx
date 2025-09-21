@@ -16,6 +16,7 @@ import Transfers from "./pages/Transfers";
 import LanguageTest from "./pages/LanguageTest";
 import TranslationDemo from "./pages/TranslationDemo";
 import TeamDetails from "./pages/TeamDetails";
+import TestPage from "./pages/TestPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import EditorDashboard from "./pages/EditorDashboard";
 import AuthorDashboard from "./pages/AuthorDashboard";
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/transfers" element={<Transfers />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/team/:teamId" element={<TeamDetails />} />
+              <Route path="/test" element={<TestPage />} />
               <Route path="/language-test" element={<LanguageTest />} />
               <Route path="/translation-demo" element={<TranslationDemo />} />
               <Route path="/login" element={<LoginPage />} />

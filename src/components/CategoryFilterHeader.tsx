@@ -219,11 +219,7 @@ const CategoryFilterHeader = ({
 
         {/* Mobile Version - TOUTES les catégories visibles avec scroll horizontal */}
         <div className="lg:hidden py-4">
-          <div className="text-center mb-3">
-            <p className="text-xs text-gray-500 dark:text-slate-400">
-              {currentLanguage === 'ar' ? 'استخدم الأسهم للتنقل بين الفئات' : 'Utilisez les flèches pour naviguer'}
-            </p>
-          </div>
+          
 
           <div className="relative">
             {/* Flèche gauche */}
