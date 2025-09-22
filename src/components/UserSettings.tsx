@@ -16,17 +16,20 @@ interface UserSettingsProps {
 }
 
 export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) => {
-  const { t, isRTL } = useTranslation();
-  const { currentLanguage, setLanguage } = useLanguage();
+  // Force Arabic only
+  const isRTL = true;
+  const currentLanguage = 'ar';
+  const setLanguage = () => {};
   const { timezone, setTimezone, hourFormat, setHourFormat } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
-  const [tempLanguage, setTempLanguage] = useState(currentLanguage);
+  const [tempLanguage, setTempLanguage] = useState('ar');
   const [tempTimezone, setTempTimezone] = useState<string>(timezone);
   const [tempHourFormat, setTempHourFormat] = useState<'12' | '24'>(hourFormat);
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState<boolean>(false);
-  const [showLangList, setShowLangList] = useState<boolean>(false);
+  // Remove language list
+  // const [showLangList, setShowLangList] = useState<boolean>(false);
 
   // sync theme switch with document
   React.useEffect(() => {
@@ -165,32 +168,7 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
             <hr className="border-slate-200 dark:border-slate-800" />
           </div>
 
-          {/* Language Selection compact row */}
-          <div className="mt-3">
-            <div className="flex items-center justify-between py-3">
-              <div className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'اللغة' : 'Langue'}</div>
-              <button onClick={() => setShowLangList(!showLangList)} className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <span className="text-emerald-600 font-semibold">{LANGUAGES[tempLanguage].name}</span>
-                <ChevronLeft className={`w-4 h-4 text-slate-400 transition-transform ${showLangList ? 'rotate-90' : ''}`} />
-              </button>
-            </div>
-            {showLangList && (
-              <div className="pb-3">
-                <div className="grid grid-cols-1 gap-2">
-                  {Object.entries(LANGUAGES).map(([code, language]) => (
-                    <button
-                      key={code}
-                      className={`text-sm rounded-lg px-3 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 ${isRTL ? 'text-right' : 'text-left'} ${tempLanguage === code ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20' : ''}`}
-                      onClick={() => setTempLanguage(code as LanguageCode)}
-                    >
-                      {language.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <hr className="border-slate-200 dark:border-slate-800" />
-          </div>
+          {/* Language Selection removed: Arabic only */}
 
           {/* Timezone */}
           <div className="mt-3">
