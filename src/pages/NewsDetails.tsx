@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import ReactDOM from "react-dom";
 import SEO from "@/components/SEO";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -136,49 +137,134 @@ const cleanJsonString = (jsonString: string): string => {
   }
 };
 
-// Fonction pour améliorer les liens Twitter dans le texte
-const enhanceTwitterLinks = (text: string): string => {
-  const twitterLinkRegex = /(https?:\/\/(?:twitter\.com|x\.com)\/\w+\/status\/\d+)/g;
-  
-  return text.replace(twitterLinkRegex, (url) => {
-    const tweetId = extractTweetId(url);
-    const username = extractTwitterUsername(url);
-    
-    if (tweetId && username) {
-      return `<div class="twitter-simple-card">
-        <div class="twitter-simple-header">
-          <div class="twitter-simple-logo">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-            </svg>
-          </div>
-          <div class="twitter-simple-info">
-            <span class="twitter-simple-platform">تغريدة على X</span>
-            <span class="twitter-simple-username">@${username}</span>
-          </div>
-        </div>
-        <div class="twitter-simple-content">
-          <p class="twitter-simple-text">انقر لعرض التغريدة</p>
-        </div>
-        <div class="twitter-simple-footer">
-          <a href="${url}" target="_blank" rel="noopener noreferrer" class="twitter-simple-button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-            </svg>
-            عرض على X
-          </a>
-        </div>
-      </div>`;
-    }
-    
-    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="twitter-inline-link">${url}</a>`;
-  });
-};
-export const XEmbed: React.FC<{ url: string }> = ({ url }) => {
+// Composant Twitter amélioré
+export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, caption }) => {
   const tweetId = extractTweetId(url);
-  if (!tweetId) return null;
-  return <TwitterTweetEmbed tweetId={tweetId} />;
+  const username = extractTwitterUsername(url);
+  
+  if (!tweetId) {
+    return (
+      <div className="twitter-error-card" style={{
+        padding: '20px',
+        textAlign: 'center',
+        border: '1px solid #fecaca',
+        borderRadius: '8px',
+        background: '#fef2f2',
+        color: '#dc2626',
+        margin: '20px 0',
+        direction: 'rtl'
+      }}>
+        <p>لا يمكن تحميل التغريدة</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" style={{
+          color: '#1d9bf0',
+          textDecoration: 'none',
+          display: 'inline-block',
+          padding: '8px 16px',
+          background: '#1d9bf0',
+          color: 'white',
+          borderRadius: '20px',
+          fontSize: '14px',
+          marginTop: '10px'
+        }}>
+          عرض على X
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="twitter-embed-container" style={{
+      margin: '20px 0',
+      maxWidth: '550px',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+      border: '1px solid #e1e8ed',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      backgroundColor: 'white',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+    }}>
+      <div className="twitter-embed-header" style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '12px 16px',
+        background: '#f7f9fa',
+        borderBottom: '1px solid #e1e8ed',
+        fontSize: '14px',
+        color: '#536471',
+        direction: 'rtl'
+      }}>
+        <span>تغريدة من @{username}</span>
+        <div className="twitter-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1d9bf0">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div className="twitter-embed-content" style={{
+        minHeight: '200px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'white'
+      }}>
+        <TwitterTweetEmbed 
+          tweetId={tweetId} 
+          options={{
+            theme: 'light',
+            conversation: 'none',
+            cards: 'visible',
+            align: 'center',
+            dnt: true,
+            width: 500
+          }}
+        />
+      </div>
+      
+      {caption && (
+        <div className="twitter-embed-caption" style={{
+          padding: '12px 16px',
+          borderTop: '1px solid #e1e8ed',
+          background: '#f7f9fa',
+          fontSize: '14px',
+          color: '#536471',
+          fontStyle: 'italic',
+          textAlign: 'center',
+          direction: 'rtl'
+        }}>
+          {caption}
+        </div>
+      )}
+      
+      <div className="twitter-embed-footer" style={{
+        padding: '8px 16px',
+        borderTop: '1px solid #e1e8ed',
+        textAlign: 'center'
+      }}>
+        <a href={url} target="_blank" rel="noopener noreferrer" style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 12px',
+          background: '#1d9bf0',
+          color: 'white',
+          textDecoration: 'none',
+          borderRadius: '16px',
+          fontSize: '12px',
+          fontWeight: '500'
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+          </svg>
+          عرض على X
+        </a>
+      </div>
+    </div>
+  );
 };
+
 // Parser Editor.js amélioré avec nettoyage JSON
 const parseEditorJsToHtml = (content: string): string => {
   try {
@@ -189,7 +275,7 @@ const parseEditorJsToHtml = (content: string): string => {
     return data.blocks.map((block) => {
       switch (block.type) {
         case 'paragraph':
-          return `<div class="news-paragraph">${DOMPurify.sanitize(enhanceTwitterLinks(block.data.text || ''))}</div>`;
+          return `<div class="news-paragraph">${DOMPurify.sanitize(block.data.text || '')}</div>`;
           
         case 'header': {
           const level = block.data.level || 1;
@@ -198,13 +284,13 @@ const parseEditorJsToHtml = (content: string): string => {
           
         case 'list': {
           const listItems = block.data.items?.map(item => 
-            `<li class="news-list-item">${DOMPurify.sanitize(enhanceTwitterLinks(item))}</li>`
+            `<li class="news-list-item">${DOMPurify.sanitize(item)}</li>`
           ).join('') || '';
           return `<ul class="news-list">${listItems}</ul>`;
         }
           
         case 'quote':
-          return `<blockquote class="news-quote">${DOMPurify.sanitize(enhanceTwitterLinks(block.data.text || ''))}</blockquote>`;
+          return `<blockquote class="news-quote">${DOMPurify.sanitize(block.data.text || '')}</blockquote>`;
           
         case 'table': {
           const tableRows = block.data.content?.map((row, rowIndex) => {
@@ -259,43 +345,12 @@ const parseEditorJsToHtml = (content: string): string => {
             }
           } else if ((service === 'twitter' || service === 'x') && source) {
             const tweetId = extractTweetId(source);
-            const username = extractTwitterUsername(source);
-            if (tweetId && username) {
-              return `<div class="twitter-embed-container" 
-                data-tweet-id="${tweetId}" 
-                data-username="${username}"
-                data-source="${source}"
-                data-embed="${embed}"
+            if (tweetId) {
+              // Créer un placeholder pour monter le composant React
+              return `<div class="twitter-react-mount" 
+                data-tweet-url="${source}" 
+                data-tweet-id="${tweetId}"
                 data-caption="${block.data.caption || ''}">
-                <div class="twitter-card">
-                  <div class="twitter-header">
-                    <div class="twitter-logo">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="#1d9bf0">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                      </svg>
-                    </div>
-                    <div class="twitter-user">
-                      <span class="twitter-username">@${username}</span>
-                      <span class="twitter-platform">على X</span>
-                    </div>
-                  </div>
-                  <div class="twitter-content">
-                    <div class="twitter-loading">
-                      <div class="loading-spinner"></div>
-                      <span>جاري تحميل التغريدة...</span>
-                    </div>
-                  </div>
-                  <div class="twitter-actions">
-                    <a href="${source}" target="_blank" rel="noopener noreferrer" class="twitter-view-button">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
-                        <polyline points="9,11 12,14 22,4"/>
-                      </svg>
-                      عرض على X
-                    </a>
-                  </div>
-                  ${block.data.caption ? `<div class="twitter-caption">${DOMPurify.sanitize(block.data.caption)}</div>` : ''}
-                </div>
               </div>`;
             }
           }
@@ -303,7 +358,6 @@ const parseEditorJsToHtml = (content: string): string => {
           // Generic embed fallback
           return `<div class="generic-embed">
             <a href="${source}" target="_blank" rel="noopener noreferrer" class="embed-link">
-              <ExternalLink size={16} />
               عرض المحتوى المضمن
             </a>
             ${embedCaption}
@@ -319,38 +373,12 @@ const parseEditorJsToHtml = (content: string): string => {
           
           if (isTwitterLink) {
             const tweetId = extractTweetId(linkUrl);
-            const username = extractTwitterUsername(linkUrl);
-            
-            if (tweetId && username) {
-              // Affichage simple et compact pour les liens Twitter
-              return `<div class="twitter-simple-card">
-                <div class="twitter-simple-header">
-                  <div class="twitter-simple-logo">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#1d9bf0">
-                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                    </svg>
-                  </div>
-                  <div class="twitter-simple-info">
-                    <span class="twitter-simple-platform">تغريدة على X</span>
-                    <span class="twitter-simple-username">@${username}</span>
-                  </div>
-                  <button class="twitter-simple-close">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#536471">
-                      <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                  </button>
-                </div>
-                <div class="twitter-simple-content">
-                  <p class="twitter-simple-text">انقر لعرض التغريدة</p>
-                </div>
-                <div class="twitter-simple-footer">
-                  <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="twitter-simple-button">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-                    </svg>
-                    عرض على X
-                  </a>
-                </div>
+            if (tweetId) {
+              // Créer un placeholder pour les liens Twitter aussi
+              return `<div class="twitter-react-mount" 
+                data-tweet-url="${linkUrl}" 
+                data-tweet-id="${tweetId}"
+                data-caption="">
               </div>`;
             }
           }
@@ -566,257 +594,6 @@ const newsContentStyles = `
     text-decoration: underline;
   }
   
-  /* Twitter embeds */
-  .twitter-embed-container {
-    margin: 20px 0;
-    max-width: 550px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  
-  .twitter-card {
-    border: 1px solid #e1e8ed;
-    border-radius: 16px;
-    background: #ffffff;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: box-shadow 0.2s ease;
-  }
-  
-  .twitter-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .twitter-header {
-    display: flex;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #f7f9fa;
-    background: #ffffff;
-  }
-  
-  .twitter-logo {
-    margin-left: 12px;
-    display: flex;
-    align-items: center;
-  }
-  
-  .twitter-user {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .twitter-username {
-    font-weight: bold;
-    color: #0f1419;
-    font-size: 15px;
-    direction: ltr;
-    text-align: left;
-  }
-  
-  .twitter-platform {
-    font-size: 13px;
-    color: #536471;
-    margin-top: 2px;
-  }
-  
-  .twitter-content {
-    padding: 16px;
-    min-height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #f7f9fa;
-  }
-  
-  .twitter-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    color: #536471;
-    font-size: 14px;
-  }
-  
-  .loading-spinner {
-    width: 24px;
-    height: 24px;
-    border: 2px solid #e1e8ed;
-    border-top: 2px solid #1d9bf0;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-  
-  .twitter-actions {
-    padding: 12px 16px;
-    border-top: 1px solid #f7f9fa;
-    background: #ffffff;
-    display: flex;
-    justify-content: center;
-  }
-  
-  .twitter-view-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #1d9bf0;
-    color: white;
-    text-decoration: none;
-    border-radius: 20px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-  }
-  
-  .twitter-view-button:hover {
-    background: #1a8cd8;
-    color: white;
-  }
-  
-  .twitter-caption {
-    padding: 12px 16px;
-    border-top: 1px solid #f7f9fa;
-    background: #f7f9fa;
-    font-size: 14px;
-    color: #536471;
-    font-style: italic;
-    text-align: center;
-  }
-  
-  .twitter-embed-placeholder {
-    margin: 20px 0;
-    text-align: center;
-    max-width: 100%;
-  }
-  
-  .loading-placeholder {
-    padding: 20px;
-    text-align: center;
-    color: #666;
-    font-style: italic;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #f9f9f9;
-  }
-  
-  /* Twitter Simple Cards */
-  .twitter-simple-card {
-    border: 1px solid #e1e8ed;
-    border-radius: 12px;
-    background: #ffffff;
-    overflow: hidden;
-    margin: 16px 0;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-    transition: box-shadow 0.2s ease;
-  }
-  
-  .twitter-simple-card:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  }
-  
-  .twitter-simple-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: #1d9bf0;
-    color: white;
-  }
-  
-  .twitter-simple-logo {
-    display: flex;
-    align-items: center;
-  }
-  
-  .twitter-simple-info {
-    flex: 1;
-    margin-right: 12px;
-    margin-left: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .twitter-simple-platform {
-    font-size: 13px;
-    font-weight: 500;
-    color: white;
-  }
-  
-  .twitter-simple-username {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.8);
-    direction: ltr;
-    text-align: left;
-  }
-  
-  .twitter-simple-close {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-  }
-  
-  .twitter-simple-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
-  
-  .twitter-simple-content {
-    padding: 16px;
-    text-align: center;
-    background: #ffffff;
-    direction: rtl;
-  }
-  
-  .twitter-simple-text {
-    font-size: 14px;
-    color: #536471;
-    margin: 0;
-    line-height: 1.4;
-  }
-  
-  .twitter-simple-footer {
-    padding: 12px 16px;
-    background: #ffffff;
-    border-top: 1px solid #f7f9fa;
-    text-align: center;
-  }
-  
-  .twitter-simple-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: #1d9bf0;
-    color: white;
-    text-decoration: none;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-    transition: background-color 0.2s ease;
-  }
-  
-  .twitter-simple-button:hover {
-    background: #1a8cd8;
-    color: white;
-  }
-  
-  .twitter-simple-button svg {
-    fill: currentColor;
-  }
-  
   /* Link previews */
   .link-preview {
     border: 1px solid #e1e8ed;
@@ -857,32 +634,6 @@ const newsContentStyles = `
     font-size: 12px;
     direction: ltr;
     text-align: left;
-  }
-  
-  /* Liens Twitter inline */
-  .twitter-inline-link {
-    color: #1d9bf0;
-    text-decoration: none;
-    font-weight: 500;
-    padding: 4px 8px;
-    border-radius: 8px;
-    background: rgba(29, 155, 240, 0.1);
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    border: 1px solid rgba(29, 155, 240, 0.2);
-  }
-  
-  .twitter-inline-link:hover {
-    background: rgba(29, 155, 240, 0.15);
-    border-color: rgba(29, 155, 240, 0.3);
-    color: #1a8cd8;
-    transform: translateY(-1px);
-  }
-  
-  .twitter-inline-link svg {
-    vertical-align: middle;
   }
   
   /* Liens */
