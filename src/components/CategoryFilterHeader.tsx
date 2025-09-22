@@ -218,7 +218,7 @@ const CategoryFilterHeader = ({
         </div>
 
         {/* Mobile Version - Scroll horizontal avec boutons de navigation */}
-     {/* Mobile Version - Scroll tactile simple */}
+{/* Mobile Version - Scroll tactile simple */}
 <div className="lg:hidden py-4">
   {/* Container de scroll horizontal - sans flèches */}
   <div 
@@ -245,7 +245,15 @@ const CategoryFilterHeader = ({
           }}
         >
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger 
+              asChild
+              onOpenChange={(open) => {
+                // Empêcher l'ouverture si c'était un scroll
+                if (open && category.isScrolling) {
+                  return false;
+                }
+              }}
+            >
               <button
                 className={`
                   w-full flex items-center justify-between gap-2 px-3 py-3 text-xs font-semibold rounded-xl border shadow-md transition-all duration-300 ease-out
@@ -255,14 +263,31 @@ const CategoryFilterHeader = ({
                   }
                   min-h-[48px] backdrop-blur-sm
                 `}
-                onClick={(e) => {
-                  // S'assurer que c'est bien un clic, pas un scroll
-                  e.preventDefault();
-                  e.stopPropagation();
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  category.touchStartX = touch.clientX;
+                  category.touchStartY = touch.clientY;
+                  category.isScrolling = false;
                 }}
-                onTouchEnd={(e) => {
-                  // Empêcher l'ouverture accidentelle pendant le scroll
-                  if (e.touches && e.touches.length > 0) {
+                onTouchMove={(e) => {
+                  const touch = e.touches[0];
+                  const deltaX = Math.abs(touch.clientX - (category.touchStartX || 0));
+                  const deltaY = Math.abs(touch.clientY - (category.touchStartY || 0));
+                  
+                  // Si le mouvement horizontal est plus important, c'est un scroll
+                  if (deltaX > 10 || deltaY > 10) {
+                    category.isScrolling = true;
+                  }
+                }}
+                onTouchEnd={() => {
+                  // Réinitialiser après un délai
+                  setTimeout(() => {
+                    category.isScrolling = false;
+                  }, 100);
+                }}
+                onPointerDown={(e) => {
+                  // Empêcher l'activation du dropdown si c'est un scroll en cours
+                  if (category.isScrolling) {
                     e.preventDefault();
                   }
                 }}
