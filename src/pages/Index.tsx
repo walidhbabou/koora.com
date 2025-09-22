@@ -278,7 +278,6 @@ const Index = () => {
             )}
 
             {/* Sponsors Section */}
-            <SponsorsSection />
           </div>
 
           {/* Right Sidebar (Today Matches + Ads) */}

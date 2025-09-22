@@ -676,7 +676,7 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
       {/* Éditeur principal */}
       <div
         id={holderIdRef.current}
-        className="border rounded-lg p-4 bg-white text-black border-slate-300 min-h-[400px] focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all duration-200"
+        className="border rounded-lg p-4 bg-white dark:bg-[#18181b] text-black dark:text-white border-slate-300 dark:border-slate-700 min-h-[400px] focus-within:border-blue-500 dark:focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-blue-900 transition-all duration-200"
         style={{
           background: 'var(--editor-bg, #fff)',
           color: 'var(--editor-text, #222)',
@@ -693,7 +693,7 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
       ></div>
 
       {/* Styles CSS personnalisés */}
-      <style jsx="true">{`
+  <style >{`
         .news-editor-container {
           --editor-bg: #fff;
           --editor-border: #ddd;
@@ -702,7 +702,6 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           --editor-btn-text: #fff;
           --editor-btn-hover: #6d28d9;
         }
-        
         .dark .news-editor-container {
           --editor-bg: #18181b;
           --editor-border: #444;
@@ -711,25 +710,34 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           --editor-btn-text: #18181b;
           --editor-btn-hover: #8b5cf6;
         }
-
+        /* Inputs et selects en dark mode */
+        .dark .news-editor-container input,
+        .dark .news-editor-container textarea,
+        .dark .news-editor-container select {
+          background: #18181b !important;
+          color: #fff !important;
+          border-color: #444 !important;
+        }
+        .dark .news-editor-container input::placeholder,
+        .dark .news-editor-container textarea::placeholder {
+          color: #aaa !important;
+        }
+        }
         .news-editor-container #${holderIdRef.current} {
           background: var(--editor-bg) !important;
           color: var(--editor-text) !important;
           border-color: var(--editor-border) !important;
         }
-
         .dark .news-editor-container #${holderIdRef.current} .ce-paragraph,
         .dark .news-editor-container #${holderIdRef.current} .ce-header,
         .dark .news-editor-container #${holderIdRef.current} .ce-quote,
         .dark .news-editor-container #${holderIdRef.current} .ce-list {
           color: #fff !important;
         }
-
         .dark .news-editor-container #${holderIdRef.current} .ce-paragraph[data-placeholder]:empty:before,
         .dark .news-editor-container #${holderIdRef.current} .ce-header[data-placeholder]:empty:before {
           color: #aaa !important;
         }
-
         .news-editor-container .ce-toolbar__content,
         .news-editor-container .ce-inline-toolbar,
         .news-editor-container .ce-conversion-toolbar,
@@ -738,43 +746,60 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           border-color: var(--editor-border) !important;
           color: var(--editor-text) !important;
         }
-
+        .dark .news-editor-container .ce-toolbar__content,
+        .dark .news-editor-container .ce-inline-toolbar,
+        .dark .news-editor-container .ce-conversion-toolbar,
+        .dark .news-editor-container .ce-settings {
+          background: #18181b !important;
+          color: #eee !important;
+          border-color: #444 !important;
+        }
         .news-editor-container .ce-popover,
         .news-editor-container .ce-popover-item {
           background: var(--editor-bg) !important;
           border-color: var(--editor-border) !important;
           color: var(--editor-text) !important;
         }
-
+        .dark .news-editor-container .ce-popover,
+        .dark .news-editor-container .ce-popover-item {
+          background: #18181b !important;
+          color: #eee !important;
+          border-color: #444 !important;
+        }
         .news-editor-container .ce-inline-tool,
         .news-editor-container .ce-conversion-tool,
         .news-editor-container .ce-settings__button {
           color: var(--editor-text) !important;
         }
-
+        .dark .news-editor-container .ce-inline-tool,
+        .dark .news-editor-container .ce-conversion-tool,
+        .dark .news-editor-container .ce-settings__button {
+          color: #eee !important;
+        }
         .news-editor-container .ce-inline-tool:hover,
         .news-editor-container .ce-conversion-tool:hover,
         .news-editor-container .ce-settings__button:hover {
           background: var(--editor-border) !important;
         }
-
+        .dark .news-editor-container .ce-inline-tool:hover,
+        .dark .news-editor-container .ce-conversion-tool:hover,
+        .dark .news-editor-container .ce-settings__button:hover {
+          background: #222 !important;
+        }
         /* Amélioration du style des boutons */
         .editor-button {
           background: var(--editor-btn-bg);
           color: var(--editor-btn-text);
           transition: all 0.2s ease;
         }
-
         .editor-button:hover {
           background: var(--editor-btn-hover);
           transform: translateY(-1px);
           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-
         .editor-button:active {
           transform: translateY(0);
         }
-
         /* Style pour les raccourcis clavier */
         .keyboard-shortcut {
           font-family: 'SFMono-Regular', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
@@ -783,7 +808,6 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           border-radius: 0.25rem;
           border: 1px solid;
         }
-
         /* Améliorer la sélection de texte */
         .news-editor-container #${holderIdRef.current} .ce-block {
           user-select: text !important;
@@ -791,25 +815,21 @@ Note: Le navigateur ne permet pas l'accès automatique au presse-papiers pour de
           -moz-user-select: text !important;
           -ms-user-select: text !important;
         }
-
         .news-editor-container #${holderIdRef.current} .ce-paragraph,
         .news-editor-container #${holderIdRef.current} .ce-header {
           cursor: text !important;
           user-select: text !important;
           -webkit-user-select: text !important;
         }
-
         /* Améliorer la visibilité de la sélection */
         .news-editor-container #${holderIdRef.current} ::selection {
           background-color: rgba(59, 130, 246, 0.3) !important;
           color: inherit !important;
         }
-
         .news-editor-container #${holderIdRef.current} ::-moz-selection {
           background-color: rgba(59, 130, 246, 0.3) !important;
           color: inherit !important;
         }
-
         /* Empêcher la sélection des éléments de l'interface */
         .news-editor-container .ce-toolbar,
         .news-editor-container .ce-inline-toolbar {

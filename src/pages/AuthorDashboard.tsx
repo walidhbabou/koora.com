@@ -879,6 +879,46 @@ const AuthorDashboard: React.FC = () => {
 
   return (
     <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
+      <style jsx="true">{`
+        .dark input,
+        .dark textarea,
+        .dark select {
+          background: #18181b !important;
+          color: #fff !important;
+          border-color: #444 !important;
+        }
+        .dark input::placeholder,
+        .dark textarea::placeholder {
+          color: #aaa !important;
+        }
+        .dark .bg-white {
+          background-color: #18181b !important;
+        }
+        .dark .text-black {
+          color: #fff !important;
+        }
+        .dark .border-slate-200 {
+          border-color: #444 !important;
+        }
+        .dark .border-slate-300 {
+          border-color: #444 !important;
+        }
+        .dark .border-slate-700 {
+          border-color: #444 !important;
+        }
+        .dark .bg-slate-50 {
+          background-color: #18181b !important;
+        }
+        .dark .bg-slate-100 {
+          background-color: #222 !important;
+        }
+        .dark .bg-slate-900 {
+          background-color: #18181b !important;
+        }
+        .dark .bg-slate-800 {
+          background-color: #222 !important;
+        }
+      `}</style>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-lg dark:bg-slate-900/80 border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50 shadow-lg">
         <div className="container mx-auto px-6 py-4">

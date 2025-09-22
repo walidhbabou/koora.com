@@ -1,5 +1,40 @@
+// Instagram Embed using react-instagram-embed
+// Custom Instagram Embed for React 18
+const InstagramEmbed: React.FC<{ url: string }> = ({ url }) => {
+  // Extract post shortcode from URL
+  const match = url.match(/instagram\.com\/(?:p|tv|reel)\/([\w-]+)/);
+  const shortcode = match ? match[1] : null;
+  if (!shortcode) {
+    return (
+      <div className="generic-embed error">
+        <p>لا يمكن عرض منشور إنستغرام</p>
+        <a href={url} target="_blank" rel="noopener noreferrer" className="embed-link">مشاهدة على إنستغرام</a>
+      </div>
+    );
+  }
+  // Official Instagram embed HTML
+  return (
+    <div className="embed-container" style={{ margin: '20px 0', textAlign: 'center' }}>
+      <iframe
+        src={`https://www.instagram.com/p/${shortcode}/embed`}
+        width="400"
+        height="480"
+        frameBorder="0"
+        scrolling="no"
+        allowTransparency={true}
+        allow="encrypted-media"
+        style={{ borderRadius: 8, maxWidth: '100%' }}
+        title="Instagram Post"
+      ></iframe>
+      <div className="embed-caption">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="embed-link">مشاهدة على إنستغرام</a>
+      </div>
+    </div>
+  );
+};
 import React, { useEffect, useState, useCallback } from "react";
 import ReactDOM from "react-dom";
+import { createRoot, Root } from "react-dom/client";
 import SEO from "@/components/SEO";
 import { useParams, Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -141,6 +176,30 @@ const cleanJsonString = (jsonString: string): string => {
 export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, caption }) => {
   const tweetId = extractTweetId(url);
   const username = extractTwitterUsername(url);
+  const [isDark, setIsDark] = React.useState<boolean>(() => {
+    if (typeof document !== 'undefined') {
+      const hasDarkClass = document.documentElement.classList.contains('dark');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return hasDarkClass || prefersDark;
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      const hasDarkClass = document.documentElement.classList.contains('dark');
+      setIsDark(hasDarkClass || mql.matches);
+    };
+    mql.addEventListener?.('change', handleChange);
+    const observer = new MutationObserver(handleChange);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => {
+      mql.removeEventListener?.('change', handleChange);
+      observer.disconnect();
+    };
+  }, []);
   
   if (!tweetId) {
     return (
@@ -156,7 +215,6 @@ export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, capti
       }}>
         <p>لا يمكن تحميل التغريدة</p>
         <a href={url} target="_blank" rel="noopener noreferrer" style={{
-          color: '#1d9bf0',
           textDecoration: 'none',
           display: 'inline-block',
           padding: '8px 16px',
@@ -173,242 +231,80 @@ export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, capti
   }
 
   return (
-    <div className="twitter-embed-container" style={{
+    <div className="twitter-embed-content" style={{
       margin: '20px 0',
       maxWidth: '550px',
       marginLeft: 'auto',
       marginRight: 'auto',
-      border: '1px solid #e1e8ed',
-      borderRadius: '12px',
       overflow: 'hidden',
-      backgroundColor: 'white',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+      backgroundColor: 'transparent'
     }}>
-      <div className="twitter-embed-header" style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '12px 16px',
-        background: '#f7f9fa',
-        borderBottom: '1px solid #e1e8ed',
-        fontSize: '14px',
-        color: '#536471',
-        direction: 'rtl'
-      }}>
-        <span>تغريدة من @{username}</span>
-        <div className="twitter-logo">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#1d9bf0">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-          </svg>
-        </div>
-      </div>
-      
-      <div className="twitter-embed-content" style={{
-        minHeight: '200px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'white'
-      }}>
-        <TwitterTweetEmbed 
-          tweetId={tweetId} 
-          options={{
-            theme: 'light',
-            conversation: 'none',
-            cards: 'visible',
-            align: 'center',
-            dnt: true,
-            width: 500
-          }}
-        />
-      </div>
-      
-      {caption && (
-        <div className="twitter-embed-caption" style={{
-          padding: '12px 16px',
-          borderTop: '1px solid #e1e8ed',
-          background: '#f7f9fa',
-          fontSize: '14px',
-          color: '#536471',
-          fontStyle: 'italic',
-          textAlign: 'center',
-          direction: 'rtl'
-        }}>
-          {caption}
-        </div>
-      )}
-      
-      <div className="twitter-embed-footer" style={{
-        padding: '8px 16px',
-        borderTop: '1px solid #e1e8ed',
-        textAlign: 'center'
-      }}>
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 12px',
-          background: '#1d9bf0',
-          color: 'white',
-          textDecoration: 'none',
-          borderRadius: '16px',
-          fontSize: '12px',
-          fontWeight: '500'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
-          </svg>
-          عرض على X
-        </a>
-      </div>
+      <TwitterTweetEmbed 
+        tweetId={tweetId} 
+        options={{
+          theme: isDark ? 'dark' : 'light',
+          conversation: 'none',
+          cards: 'visible',
+          align: 'center',
+          dnt: true,
+          width: 500
+        }}
+      />
     </div>
   );
 };
 
-// Parser Editor.js amélioré avec nettoyage JSON
-const parseEditorJsToHtml = (content: string): string => {
+
+// Nouveau parser React-friendly
+const parseEditorJsBlocks = (content: string): EditorJsBlock[] => {
   try {
-    // Nettoyer le JSON avant parsing
     const cleanedContent = cleanJsonString(content);
     const data: EditorJsData = JSON.parse(cleanedContent);
-    
-    return data.blocks.map((block) => {
-      switch (block.type) {
-        case 'paragraph':
-          return `<div class="news-paragraph">${DOMPurify.sanitize(block.data.text || '')}</div>`;
-          
-        case 'header': {
-          const level = block.data.level || 1;
-          return `<h${level} class="news-header news-header-${level}">${DOMPurify.sanitize(block.data.text || '')}</h${level}>`;
-        }
-          
-        case 'list': {
-          const listItems = block.data.items?.map(item => 
-            `<li class="news-list-item">${DOMPurify.sanitize(item)}</li>`
-          ).join('') || '';
-          return `<ul class="news-list">${listItems}</ul>`;
-        }
-          
-        case 'quote':
-          return `<blockquote class="news-quote">${DOMPurify.sanitize(block.data.text || '')}</blockquote>`;
-          
-        case 'table': {
-          const tableRows = block.data.content?.map((row, rowIndex) => {
-            const cells = row.map((cell, cellIndex) => {
-              const isHeader = rowIndex === 0 && block.data.withHeadings;
-              const tag = isHeader ? 'th' : 'td';
-              const className = isHeader ? 'news-table-header' : 'news-table-cell';
-              return `<${tag} class="${className}">${DOMPurify.sanitize(cell)}</${tag}>`;
-            }).join('');
-            return `<tr class="news-table-row">${cells}</tr>`;
-          }).join('') || '';
-          return `<table class="news-table"><tbody>${tableRows}</tbody></table>`;
-        }
-          
-        case 'image': {
-          const imageUrl = block.data.file?.url || block.data.url || '';
-          const caption = block.data.caption ? 
-            `<div class="news-image-caption">${DOMPurify.sanitize(block.data.caption)}</div>` : '';
-          return `<div class="news-image">
-            <img src="${imageUrl}" alt="${block.data.caption || ''}" class="news-image-img" loading="lazy" />
-            ${caption}
-          </div>`;
-        }
-          
-        case 'delimiter':
-          return `<hr class="news-delimiter" />`;
-          
-        case 'code':
-          return `<pre class="news-code"><code>${DOMPurify.sanitize(block.data.code || '')}</code></pre>`;
-          
-        case 'embed': {
-          const service = block.data.service?.toLowerCase();
-          const source = block.data.source || '';
-          const embed = block.data.embed || '';
-          const embedCaption = block.data.caption ? 
-            `<div class="embed-caption">${DOMPurify.sanitize(block.data.caption)}</div>` : '';
-            
-          if (service === 'youtube' && source) {
-            const videoId = extractYouTubeId(source);
-            if (videoId) {
-              return `<div class="embed-container">
-                <div class="youtube-embed">
-                  <iframe src="https://www.youtube.com/embed/${videoId}" 
-                    class="youtube-iframe" 
-                    frameborder="0" 
-                    allowfullscreen
-                    title="YouTube video">
-                  </iframe>
-                </div>
-                ${embedCaption}
-              </div>`;
-            }
-          } else if ((service === 'twitter' || service === 'x') && source) {
-            const tweetId = extractTweetId(source);
-            if (tweetId) {
-              // Créer un placeholder pour monter le composant React
-              return `<div class="twitter-react-mount" 
-                data-tweet-url="${source}" 
-                data-tweet-id="${tweetId}"
-                data-caption="${block.data.caption || ''}">
-              </div>`;
-            }
-          }
-          
-          // Generic embed fallback
-          return `<div class="generic-embed">
-            <a href="${source}" target="_blank" rel="noopener noreferrer" class="embed-link">
-              عرض المحتوى المضمن
-            </a>
-            ${embedCaption}
-          </div>`;
-        }
-          
-        case 'linkTool': {
-          const meta = block.data.meta;
-          const linkUrl = block.data.url || '';
-          
-          // Vérifier si c'est un lien Twitter/X
-          const isTwitterLink = /(?:twitter\.com|x\.com)/.test(linkUrl);
-          
-          if (isTwitterLink) {
-            const tweetId = extractTweetId(linkUrl);
-            if (tweetId) {
-              // Créer un placeholder pour les liens Twitter aussi
-              return `<div class="twitter-react-mount" 
-                data-tweet-url="${linkUrl}" 
-                data-tweet-id="${tweetId}"
-                data-caption="">
-              </div>`;
-            }
-          }
-          
-          // Affichage normal pour les autres liens
-          const linkImage = meta?.image?.url ? 
-            `<img src="${meta.image.url}" alt="" class="link-image" />` : '';
-          return `<div class="link-preview">
-            ${linkImage}
-            <div class="link-content">
-              <div class="link-title">
-                <a href="${linkUrl}" target="_blank" rel="noopener noreferrer">
-                  ${DOMPurify.sanitize(meta?.title || linkUrl)}
-                </a>
-              </div>
-              ${meta?.description ? `<div class="link-description">${DOMPurify.sanitize(meta.description)}</div>` : ''}
-              <div class="link-url">${linkUrl}</div>
-            </div>
-          </div>`;
-        }
-          
-        default:
-          console.warn(`Type de bloc non supporté: ${block.type}`);
-          return `<div class="error">نوع المحتوى غير مدعوم: ${block.type}</div>`;
-      }
-    }).join('');
-    
+    return data.blocks;
   } catch (error) {
     console.error('Erreur lors du parsing du contenu Editor.js:', error);
-    return `<div class="error">خطأ في تحليل المحتوى</div>`;
+    return [];
+  }
+};
+
+// Utilitaire pour fallback HTML pour les blocs non gérés
+const parseOtherBlocksToHtml = (block: EditorJsBlock): string => {
+  switch (block.type) {
+    case 'quote':
+      return `<blockquote class="news-quote">${DOMPurify.sanitize(block.data.text || '')}</blockquote>`;
+    case 'code':
+      return `<pre class="news-code"><code>${DOMPurify.sanitize(block.data.code || '')}</code></pre>`;
+    case 'delimiter':
+      return `<hr class="news-delimiter" />`;
+    case 'table': {
+      const tableRows = block.data.content?.map((row, rowIndex) => {
+        const cells = row.map((cell, cellIndex) => {
+          const isHeader = rowIndex === 0 && block.data.withHeadings;
+          const tag = isHeader ? 'th' : 'td';
+          const className = isHeader ? 'news-table-header' : 'news-table-cell';
+          return `<${tag} class="${className}">${DOMPurify.sanitize(cell)}</${tag}>`;
+        }).join('');
+        return `<tr class="news-table-row">${cells}</tr>`;
+      }).join('') || '';
+      return `<table class="news-table"><tbody>${tableRows}</tbody></table>`;
+    }
+    case 'image': {
+      const imageUrl = block.data.file?.url || block.data.url || '';
+      const caption = block.data.caption ? 
+        `<div class="news-image-caption">${DOMPurify.sanitize(block.data.caption)}</div>` : '';
+      return `<div class="news-image">
+        <img src="${imageUrl}" alt="${block.data.caption || ''}" class="news-image-img" loading="lazy" />
+        ${caption}
+      </div>`;
+    }
+    case 'list': {
+      const listItems = block.data.items?.map(item => 
+        `<li class="news-list-item">${DOMPurify.sanitize(item)}</li>`
+      ).join('') || '';
+      return `<ul class="news-list">${listItems}</ul>`;
+    }
+    default:
+      return '';
   }
 };
 
@@ -423,6 +319,26 @@ const newsContentStyles = `
     direction: rtl;
     text-align: right;
   }
+
+  /* Dark mode (class or OS preference) */
+  .dark .news-content, [data-theme="dark"] .news-content { color: #e5e7eb; }
+  @media (prefers-color-scheme: dark) {
+    .news-content { color: #e5e7eb; }
+  }
+  .dark .news-header, [data-theme="dark"] .news-header { color: #f3f4f6; }
+  @media (prefers-color-scheme: dark) { .news-header { color: #f3f4f6; } }
+  .dark .news-quote, [data-theme="dark"] .news-quote { background: #111827; border-right-color: #3b82f6; }
+  @media (prefers-color-scheme: dark) { .news-quote { background: #111827; border-right-color: #3b82f6; } }
+  .dark .news-table, [data-theme="dark"] .news-table { border-color: #374151; }
+  .dark .news-table-header, [data-theme="dark"] .news-table-header { background: #1f2937; color: #e5e7eb; border-bottom-color: #374151; }
+  .dark .news-table-cell, [data-theme="dark"] .news-table-cell { border-bottom-color: #374151; }
+  .dark .news-image-caption, [data-theme="dark"] .news-image-caption { color: #9ca3af; }
+  .dark .generic-embed, [data-theme="dark"] .generic-embed { background: #111827; border-color: #374151; }
+  .dark .link-title a, [data-theme="dark"] .link-title a { color: #e5e7eb; }
+  .dark .link-title a:hover, [data-theme="dark"] .link-title a:hover { color: #93c5fd; }
+  .dark .link-description, [data-theme="dark"] .link-description { color: #9ca3af; }
+  .dark .news-content a, [data-theme="dark"] .news-content a { color: #93c5fd; }
+  .dark .news-content a:hover, [data-theme="dark"] .news-content a:hover { color: #60a5fa; }
   
   /* Paragraphes */
   .news-paragraph {
@@ -448,14 +364,16 @@ const newsContentStyles = `
   
   /* Listes */
   .news-list {
-    margin: 16px 0;
+    margin-top: 18px;
+    margin-bottom: 18px;
     padding-right: 24px;
     direction: rtl;
   }
-  
+
   .news-list-item {
-    margin: 8px 0;
-    line-height: 1.6;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    line-height: 1.7;
   }
   
   /* Citations */
@@ -704,6 +622,15 @@ const newsContentStyles = `
     .news-table-cell {
       padding: 6px 3px;
     }
+      .twitter-embed-content .twitter-tweet-rendered img,
+.twitter-embed-content .twitter-tweet-rendered video {
+  width: 100% !important;
+  height: 220px !important; /* Adjust as needed */
+  object-fit: cover !important;
+  object-position: center top !important; /* Adjust to focus on the desired part */
+  border-radius: 8px;
+  display: block;
+}
   }
 `;
 
@@ -718,7 +645,7 @@ const NewsDetails: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const [reportOpen, setReportOpen] = useState(false);
   const [reportDesc, setReportDesc] = useState('');
-  const [parsedContent, setParsedContent] = useState<string>('');
+  const [parsedBlocks, setParsedBlocks] = useState<EditorJsBlock[]>([]);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -737,8 +664,8 @@ const NewsDetails: React.FC = () => {
 
       // Parse content
       if (data?.content) {
-        const parsed = parseEditorJsToHtml(data.content);
-        setParsedContent(parsed);
+        const blocks = parseEditorJsBlocks(data.content);
+        setParsedBlocks(blocks);
       }
 
       // Fetch related news
@@ -786,46 +713,7 @@ const NewsDetails: React.FC = () => {
     }
   }, [id]);
 
-  // Effect to handle Twitter embeds after content is rendered
-  useEffect(() => {
-    if (parsedContent) {
-      setTimeout(() => {
-        const twitterContainers = document.querySelectorAll('.twitter-embed-container');
-        
-        twitterContainers.forEach((container) => {
-          const tweetId = container.getAttribute('data-tweet-id');
-          const username = container.getAttribute('data-username');
-          const source = container.getAttribute('data-source');
-          
-          if (tweetId && source && username) {
-            const twitterContent = container.querySelector('.twitter-content');
-            const loadingDiv = container.querySelector('.twitter-loading');
-            
-            // Afficher immédiatement le contenu stylisé
-            if (twitterContent && loadingDiv) {
-              setTimeout(() => {
-                twitterContent.innerHTML = `
-                  <div style="padding: 20px; text-align: center; direction: rtl;">
-                    <div style="margin-bottom: 15px;">
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="#1d9bf0" style="margin-bottom: 10px;">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                      </svg>
-                    </div>
-                    <p style="color: #0f1419; font-size: 16px; margin: 0 0 10px 0; font-weight: 500;">
-                      تغريدة من @${username}
-                    </p>
-                    <p style="color: #536471; font-size: 14px; margin: 0;">
-                      انقر على "عرض على X" لمشاهدة التغريدة كاملة
-                    </p>
-                  </div>
-                `;
-              }, 500);
-            }
-          }
-        });
-      }, 100);
-    }
-  }, [parsedContent]);
+  // Plus besoin de l'effet pour monter les XEmbed, tout est rendu en React
 
   const handleReport = async () => {
     if (!user || !reportDesc.trim()) return;
@@ -913,106 +801,228 @@ const NewsDetails: React.FC = () => {
         image={news.image_url || undefined}
       />
       
-      <style dangerouslySetInnerHTML={{ __html: newsContentStyles }} />
+        <style dangerouslySetInnerHTML={{ __html: newsContentStyles + `
+          .news-full-image {
+            width: 100%;
+            max-width: 100%;
+            height: 420px;
+            max-height: 60vh;
+            object-fit: cover;
+            object-position: center top;
+            border-radius: 0;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+            display: block;
+            margin: 0 auto 18px auto;
+          }
+          @media (max-width: 768px) {
+            .news-full-image {
+              height: 220px;
+              max-height: 40vh;
+            }
+          }
+          @media (max-width: 480px) {
+            .news-full-image {
+              height: 140px;
+              max-height: 28vh;
+            }
+          }
+          .news-big-title {
+            font-size: 2.8em !important;
+            font-weight: 900 !important;
+            text-align: center !important;
+            margin-bottom: 18px !important;
+            margin-top: 0 !important;
+            color: #222 !important;
+            letter-spacing: -1px;
+          }
+          .dark .news-big-title { color: #f3f4f6 !important; }
+        ` }} />
       
       <Header />
       
-      <main className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <article className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
-            {news.image_url && (
-              <div style={{width: '100%', height: '320px', maxHeight: '40vw', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                <img 
-                  src={news.image_url} 
-                  alt={news.title}
-                  style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px'}}
-                />
-              </div>
-            )}
-            
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Clock className="h-4 w-4" />
-                  <time dateTime={news.created_at}>
-                    {new Date(news.created_at).toLocaleDateString('fr-SA', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </time>
-                </div>
-                
-                {isAuthenticated && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setReportOpen(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Flag className="h-4 w-4" />
-                    إبلاغ
-                  </Button>
+      <main className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left side - Article content */}
+            <div className="lg:col-span-2">
+              <article className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-8">
+                <h1 className="news-big-title" dir="rtl">{news.title}</h1>
+                {news.image_url && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                    <img 
+                      src={news.image_url} 
+                      alt={news.title}
+                      className="news-full-image"
+                      style={{ maxWidth: '100%', width: '100%', height: '420px', objectFit: 'cover', objectPosition: 'center top', borderRadius: 0, boxShadow: '0 2px 16px rgba(0,0,0,0.10)' }}
+                    />
+                  </div>
                 )}
-              </div>
               
-              <h1 className="text-3xl font-bold mb-6 text-right" dir="rtl">
-                {news.title}
-              </h1>
-              
-              <div 
-                className="news-content"
-                dangerouslySetInnerHTML={{ 
-                  __html: DOMPurify.sanitize(parsedContent) 
-                }}
-              />
-            </div>
-          </article>
-
-          {/* Related News */}
-          {relatedNews.length > 0 && (
-            <section className="mb-8">
-              <h2 className="text-2xl font-bold mb-6 text-right" dir="rtl">
-                أخبار ذات صلة
-              </h2>
-              
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {relatedNews.map((item) => (
-                  <Card key={item.id} className="hover:shadow-md transition-shadow">
-                    <Link to={`/news/${item.id}`} className="block">
-                      {item.image_url && (
-                        <img
-                          src={item.image_url}
-                          alt={item.title}
-                          className="w-full h-32 object-cover rounded-t-lg"
-                        />
-                      )}
-                      <div className="p-4">
-                        <h3 className="font-semibold text-sm mb-2 line-clamp-2 text-right" dir="rtl">
-                          {item.title}
-                        </h3>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          <Clock className="h-3 w-3" />
-                          <time dateTime={item.created_at}>
-                            {new Date(item.created_at).toLocaleDateString('fr-SA', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            })}
-                          </time>
+                <div className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                      <Clock className="h-4 w-4" />
+                      <time dateTime={news.created_at}>
+                        {(() => {
+                          const date = new Date(news.created_at);
+                          const months = [
+                            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+                          ];
+                          const day = date.getDate();
+                          const month = months[date.getMonth()];
+                          const year = date.getFullYear();
+                          return `${day} ${month}, ${year}`;
+                        })()}
+                      </time>
+                    </div>
+                    
+                    {isAuthenticated && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setReportOpen(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Flag className="h-4 w-4" />
+                        إبلاغ
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="news-content">
+                {parsedBlocks.map((block, index) => {
+                  switch (block.type) {
+                    case 'paragraph':
+                      return <div key={index} className="news-paragraph" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
+                    case 'header': {
+                      const level = block.data.level || 1;
+                      const HeaderTag = `h${level}` as keyof JSX.IntrinsicElements;
+                      return <HeaderTag key={index} className={`news-header news-header-${level}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
+                    }
+                    case 'list': {
+                      const isOrdered = block.data.style === 'ordered';
+                      const ListTag = isOrdered ? 'ol' : 'ul';
+                      // For Editor.js v2+ with items as objects with 'content' property
+                      const items = Array.isArray(block.data.items) ? block.data.items : [];
+                      // Add default browser list style for bullets/numbers
+                      const listStyle = isOrdered ? { listStyleType: 'decimal', paddingRight: 0 } : { listStyleType: 'disc', paddingRight: 0 };
+                      return (
+                        <ListTag key={index} className="news-list" style={listStyle}>
+                          {items.map((item, i) => {
+                            // If item is a string, display it
+                            if (typeof item === 'string') {
+                               
+                              return <li key={i} className="news-list-item">   <br />{item}</li>;
+                            }
+                            // If item is object with 'content', display content
+                            if (item && typeof item === 'object' && 'content' in item && typeof item.content === 'string') {
+                              return <li key={i} className="news-list-item"> {item.content}</li>;
+                            }
+                            return null;
+                          })}
+                        </ListTag>
+                      );
+                    }
+                    case 'image': {
+                      const imageUrl = block.data.file?.url || block.data.url || '';
+                      return (
+                        <div key={index} className="news-image">
+                          <img src={imageUrl} alt={block.data.caption || ''} className="news-image-img" loading="lazy" />
+                          {block.data.caption && <div className="news-image-caption">{block.data.caption}</div>}
                         </div>
-                      </div>
-                    </Link>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          )}
+                      );
+                    }
+                    case 'embed': {
+                      const linkUrl = block.data.source || block.data.embed || '';
+                      if (/(?:twitter\.com|x\.com)/.test(linkUrl)) {
+                        const tweetId = extractTweetId(linkUrl);
+                        const caption = block.data.caption;
+                        if (tweetId) {
+                          return <XEmbed key={index} url={linkUrl} caption={caption} />;
+                        }
+                      }
+                      if (/instagram\.com/.test(linkUrl)) {
+                        return <InstagramEmbed key={index} url={linkUrl} />;
+                      }
+                      // Fallback pour les autres embeds
+                      return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
+                    }
+                    case 'linkTool': {
+                      const linkUrl = block.data.link || block.data.url || block.data.source || '';
+                      if (/(?:twitter\.com|x\.com)/.test(linkUrl)) {
+                        const tweetId = extractTweetId(linkUrl);
+                        const caption = block.data.caption;
+                        if (tweetId) {
+                          return <XEmbed key={index} url={linkUrl} caption={caption} />;
+                        }
+                      }
+                      if (/instagram\.com/.test(linkUrl)) {
+                        return <InstagramEmbed key={index} url={linkUrl} />;
+                      }
+                      // Fallback pour les autres links
+                      return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
+                    }
+                    default:
+                      return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
+                  }
+                })}
+                  </div>
+                </div>
+              </article>
 
-          {/* Comments Section */}
-          <CommentsSection newsId={Number(id)} />
+              {/* Comments Section */}
+              <CommentsSection newsId={Number(id)} />
+            </div>
+
+            {/* Right side - Related News */}
+            <div className="lg:col-span-1">
+              {relatedNews.length > 0 && (
+                <section className="mb-8">
+                  <h2 className="text-2xl font-bold mb-6 text-right text-gray-900 dark:text-gray-100" dir="rtl">
+                    أخبار ذات صلة
+                  </h2>
+                  
+                  <div className="space-y-4">
+                    {relatedNews.map((item) => (
+                      <Card key={item.id} className="hover:shadow-md transition-shadow dark:bg-gray-800">
+                        <Link to={`/news/${item.id}`} className="block">
+                          {item.image_url && (
+                            <img
+                              src={item.image_url}
+                              alt={item.title}
+                              className="w-full h-32 object-cover rounded-t-lg"
+                            />
+                          )}
+                          <div className="p-4">
+                            <h3 className="font-semibold text-sm mb-2 line-clamp-2 text-right text-gray-900 dark:text-gray-100" dir="rtl">
+                              {item.title}
+                            </h3>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <Clock className="h-3 w-3" />
+                              <time dateTime={item.created_at}>
+                                {(() => {
+                                  const date = new Date(item.created_at);
+                                  const months = [
+                                    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+                                    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+                                  ];
+                                  const day = date.getDate();
+                                  const month = months[date.getMonth()];
+                                  const year = date.getFullYear();
+                                  return `${day} ${month}, ${year}`;
+                                })()}
+                              </time>
+                            </div>
+                          </div>
+                        </Link>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </div>
         </div>
       </main>
 

@@ -1,5 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import NewsCard from "../components/NewsCard";
+import FeaturedNewsCard from "../components/FeaturedNewsCard";
+import NewsSlider from "../components/NewsSlider";
 import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
@@ -380,40 +383,39 @@ const News = () => {
         <MobileAd testMode={process.env.NODE_ENV === 'development'} />
         
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
+          {/* Slider des dernières news */}
+          {!loadingNews && allNews.length > 0 && (
+            <div className="flex justify-center mb-6">
+              <div className="w-full max-w-3xl">
+                <NewsSlider
+                  news={allNews.slice(0, 5).map(n => ({
+                    id: n.id,
+                    title: n.title,
+                    imageUrl: n.imageUrl,
+                    publishedAt: n.publishedAt,
+                  }))}
+                />
+              </div>
+            </div>
+          )}
+          {/* Featured News en grand sous le slider */}
+          {!loadingNews && allNews.length > 0 && (
+            <div className="mb-6">
+              <Link to={`/news/${allNews[0].id}`}> 
+                <FeaturedNewsCard
+                  title={allNews[0].title}
+                  imageUrl={allNews[0].imageUrl}
+                  publishedAt={allNews[0].publishedAt}
+                  category={allNews[0].category}
+                />
+              </Link>
+            </div>
+          )}
           <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
             {/* Mobile Leagues Filter - Grid Layout */}
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
-              {/* Featured News - Responsive */}
-              {!loadingNews && allNews.length > 0 && (
-                <div className="mb-2 sm:mb-3 lg:mb-4">
-                  <Link to={`/news/${allNews[0].id}`} className="block">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow">
-                      <div className="relative">
-                        <img
-                          src={allNews[0].imageUrl}
-                          alt={allNews[0].title}
-                          className="w-full h-32 sm:h-40 md:h-56 lg:h-80 object-cover"
-                          loading="lazy"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 lg:p-4 text-white">
-                          <h1 className="text-xs sm:text-sm md:text-lg lg:text-xl font-bold mb-1 sm:mb-2 leading-tight">
-                            {allNews[0].title}
-                          </h1>
-                          <p className="text-gray-200 text-xs sm:text-sm line-clamp-1 sm:line-clamp-2 mb-1 sm:mb-2">
-                            {allNews[0].summary}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span className="text-xs">{allNews[0].publishedAt}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              )}
+              {/* La première news est déjà affichée en grand, on l'enlève de la grille */}
 
               {/* Loading state - Responsive Grid */}
               {loadingNews && allNews.length === 0 && (
@@ -432,55 +434,30 @@ const News = () => {
               )}
 
               {/* News Grid - Responsive - Starting from index 1 to avoid duplicating featured news */}
-              {!loadingNews && allNews.length > 1 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
-                  {allNews.slice(1).map((news, index) => (
-                    <Link to={`/news/${news.id}`} key={news.id} className="block">
-                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow h-full">
-                        <div className="relative">
-                          <img
-                            src={news.imageUrl}
-                            alt={news.title}
-                            className="w-full h-28 sm:h-32 lg:h-40 object-cover"
-                            loading="lazy"
-                          />
-                          <button
-                            className="absolute top-1 right-1 sm:top-2 sm:right-2 bg-black/50 text-white p-1 sm:p-1.5 rounded-full hover:bg-black/70 transition-colors touch-manipulation"
-                            onClick={(e) => { 
-                              e.preventDefault(); 
-                              e.stopPropagation(); 
-                              setReportOpenId(news.id); 
-                            }}
-                            disabled={reportingId === news.id}
-                            title="تبليغ عن الخبر"
-                          >
-                            <Flag className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <div className="p-2 sm:p-3 lg:p-4">
-                          <h3 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-900 dark:text-white mb-1 sm:mb-2 line-clamp-2 leading-tight">
-                            {news.title}
-                          </h3>
-                          <p className="text-gray-600 dark:text-gray-300 text-xs line-clamp-1 sm:line-clamp-2 mb-1 sm:mb-2">
-                            {news.summary}
-                          </p>
-                          <div className="flex items-center gap-1 text-gray-500 text-xs">
-                            <Clock className="w-3 h-3" />
-                            <span>{news.publishedAt}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
+                {!loadingNews && allNews.length > 1 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
+                    {allNews.slice(1).map((news) => (
+                      <Link to={`/news/${news.id}`} key={news.id}>
+                        <NewsCard news={news} size="medium" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
 
-              {/* No news state */}
+              {/* No news state - show empty NewsCard */}
               {!loadingNews && allNews.length === 0 && (
-                <div className="text-center py-8 sm:py-12">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-lg">
-                    {currentLanguage === 'ar' ? 'لا توجد أخبار متاحة حالياً' : 'Aucune actualité disponible'}
-                  </p>
+                <div className="flex justify-center py-8 sm:py-12">
+                  <NewsCard
+                    news={{
+                      id: 'empty',
+                      title: currentLanguage === 'ar' ? 'لا توجد أخبار متاحة حالياً' : 'Aucune actualité disponible',
+                      summary: currentLanguage === 'ar' ? 'انتظر تحديثات جديدة قريباً.' : 'De nouvelles actualités arriveront bientôt.',
+                      imageUrl: '/placeholder.svg',
+                      publishedAt: '',
+                      category: currentLanguage === 'ar' ? 'أخبار' : 'News',
+                    }}
+                    size="medium"
+                  />
                 </div>
               )}
 
