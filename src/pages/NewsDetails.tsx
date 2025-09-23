@@ -314,7 +314,7 @@ const newsContentStyles = `
   .news-content {
     line-height: 1.8;
     font-size: 16px;
-    color: #333;
+    color: #111;
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     direction: rtl;
     text-align: right;
@@ -337,6 +337,7 @@ const newsContentStyles = `
   .dark .news-image-caption, [data-theme="dark"] .news-image-caption {
     color: #e5e7eb !important;
   }
+
   @media (prefers-color-scheme: dark) {
     .news-content { color: #f3f4f6 !important; }
     .news-paragraph { color: #f3f4f6 !important; }
@@ -364,6 +365,7 @@ const newsContentStyles = `
     margin: 16px 0;
     text-align: justify;
     direction: rtl;
+    color: #111;
   }
   
   /* Titres */
@@ -846,10 +848,10 @@ const NewsDetails: React.FC = () => {
             }
           }
           .news-big-title {
-            font-size: 2.8em !important;
+            font-size: 2em !important;
             font-weight: 900 !important;
             text-align: center !important;
-            margin-bottom: 18px !important;
+            margin-bottom: 12px !important;
             margin-top: 0 !important;
             color: #222 !important;
             letter-spacing: -1px;
