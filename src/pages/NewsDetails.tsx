@@ -318,12 +318,31 @@ const newsContentStyles = `
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     direction: rtl;
     text-align: right;
+    transition: color 0.2s;
   }
 
-  /* Dark mode (class or OS preference) */
-  .dark .news-content, [data-theme="dark"] .news-content { color: #e5e7eb; }
+  /* Dark mode (class or OS preference) - improved for contrast */
+  .dark .news-content, [data-theme="dark"] .news-content {
+    color: #f3f4f6 !important;
+  }
+  .dark .news-paragraph, [data-theme="dark"] .news-paragraph {
+    color: #f3f4f6 !important;
+  }
+  .dark .news-list-item, [data-theme="dark"] .news-list-item {
+    color: #f3f4f6 !important;
+  }
+  .dark .news-header, [data-theme="dark"] .news-header {
+    color: #f3f4f6 !important;
+  }
+  .dark .news-image-caption, [data-theme="dark"] .news-image-caption {
+    color: #e5e7eb !important;
+  }
   @media (prefers-color-scheme: dark) {
-    .news-content { color: #e5e7eb; }
+    .news-content { color: #f3f4f6 !important; }
+    .news-paragraph { color: #f3f4f6 !important; }
+    .news-list-item { color: #f3f4f6 !important; }
+    .news-header { color: #f3f4f6 !important; }
+    .news-image-caption { color: #e5e7eb !important; }
   }
   .dark .news-header, [data-theme="dark"] .news-header { color: #f3f4f6; }
   @media (prefers-color-scheme: dark) { .news-header { color: #f3f4f6; } }
