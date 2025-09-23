@@ -310,11 +310,20 @@ const parseOtherBlocksToHtml = (block: EditorJsBlock): string => {
 
 // Styles CSS complets pour le contenu
 const newsContentStyles = `
-  /* Styles généraux */
+  /* Styles généraux 
+  .news-content,
+.news-content * {
+  color: #111 !important;
+}
+html.dark .news-content,
+html.dark .news-content *,
+.dark .news-content,
+.dark .news-content * {
+  color: #f8fafc !important;
+}
   .news-content {
     line-height: 1.8;
     font-size: 16px;
-    color: #111 !important;
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     direction: rtl;
     text-align: right;
