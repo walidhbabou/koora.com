@@ -50,7 +50,7 @@ import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
-import { TwitterTweetEmbed } from "react-twitter-embed";
+//import { TwitterTweetEmbed } from "react-twitter-embed";
 
 // Interface pour les blocs Editor.js
 interface EditorJsBlock {
@@ -171,94 +171,32 @@ const cleanJsonString = (jsonString: string): string => {
     }
   }
 };
-
+function normalizeTwitterUrl(url: string): string {
+  return url.replace("https://x.com", "https://twitter.com");
+}
 // Composant Twitter amélioré
 export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, caption }) => {
-  const tweetId = extractTweetId(url);
-  const [isDark, setIsDark] = React.useState<boolean>(() => {
-    if (typeof document !== "undefined") {
-      const hasDarkClass = document.documentElement.classList.contains("dark");
-      const prefersDark = window.matchMedia &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches;
-      return hasDarkClass || prefersDark;
-    }
-    return false;
-  });
+  const normalizedUrl = normalizeTwitterUrl(url);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Charger le script Twitter si pas encore présent
     if (!document.getElementById("twitter-wjs")) {
       const script = document.createElement("script");
       script.id = "twitter-wjs";
       script.src = "https://platform.twitter.com/widgets.js";
       script.async = true;
+      script.onload = () => (window as any)?.twttr?.widgets?.load();
       document.body.appendChild(script);
     } else {
-      // Si déjà présent, demander un re-render des widgets
       (window as any)?.twttr?.widgets?.load();
     }
-
-    // Observer le changement de thème
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      const hasDarkClass = document.documentElement.classList.contains("dark");
-      setIsDark(hasDarkClass || mql.matches);
-      (window as any)?.twttr?.widgets?.load();
-    };
-
-    mql.addEventListener?.("change", handleChange);
-    const observer = new MutationObserver(handleChange);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-
-    return () => {
-      mql.removeEventListener?.("change", handleChange);
-      observer.disconnect();
-    };
-  }, [url]);
-
-  if (!tweetId) {
-    return (
-      <div className="twitter-error-card" style={{
-        padding: "20px",
-        textAlign: "center",
-        border: "1px solid #fecaca",
-        borderRadius: "8px",
-        background: "#fef2f2",
-        color: "#dc2626",
-        margin: "20px 0",
-        direction: "rtl"
-      }}>
-        <p>لا يمكن تحميل التغريدة</p>
-        <a href={url} target="_blank" rel="noopener noreferrer" style={{
-          textDecoration: "none",
-          display: "inline-block",
-          padding: "8px 16px",
-          background: "#1d9bf0",
-          color: "white",
-          borderRadius: "20px",
-          fontSize: "14px",
-          marginTop: "10px"
-        }}>
-          عرض على X
-        </a>
-      </div>
-    );
-  }
+  }, [normalizedUrl]);
 
   return (
-    <div style={{
-      margin: "20px 0",
-      maxWidth: "550px",
-      marginLeft: "auto",
-      marginRight: "auto"
-    }}>
-      <blockquote
-        className="twitter-tweet"
-        data-theme={isDark ? "dark" : "light"}
-      >
-        <a href={url}></a>
+    <div style={{ margin: "20px 0", maxWidth: "550px", marginLeft: "auto", marginRight: "auto" }}>
+      <blockquote key={normalizedUrl} className="twitter-tweet" data-theme="light">
+        <a href={normalizedUrl}></a>
       </blockquote>
       {caption && (
         <p style={{ textAlign: "center", fontSize: "14px", marginTop: "8px", color: "#666" }}>
