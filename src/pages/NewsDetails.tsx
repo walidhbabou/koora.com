@@ -343,7 +343,7 @@ const newsContentStyles = `
     .news-paragraph,
     .news-header,
     .news-list-item {
-      color: #000000ff !important;
+      color: #f8fafc !important;
     }
   }
 
