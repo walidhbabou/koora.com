@@ -239,29 +239,17 @@ export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, capti
       overflow: 'hidden',
       backgroundColor: 'transparent'
     }}>
-      {process.env.NODE_ENV === 'development' ? (
-        <TwitterTweetEmbed
-          tweetId={tweetId}
-          options={{
-            theme: isDark ? 'dark' : 'light',
-            conversation: 'none',
-            cards: 'visible',
-            align: 'center',
-            dnt: true,
-            width: 500
-          }}
-        />
-      ) : (
-        <iframe
-          src={`https://twitframe.com/show?url=${encodeURIComponent(url)}`}
-          width="500"
-          height="600"
-          frameBorder="0"
-          allowFullScreen
-          style={{ border: 'none', maxWidth: '100%' }}
-          title="Twitter/X Post"
-        />
-      )}
+      <TwitterTweetEmbed 
+        tweetId={tweetId} 
+        options={{
+          theme: isDark ? 'dark' : 'light',
+          conversation: 'none',
+          cards: 'visible',
+          align: 'center',
+          dnt: true,
+          width: 500
+        }}
+      />
     </div>
   );
 };
