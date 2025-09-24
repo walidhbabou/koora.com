@@ -366,7 +366,7 @@ html.dark .news-content *,
   [data-theme="dark"] .news-paragraph,
   [data-theme="dark"] .news-header,
   [data-theme="dark"] .news-list-item {
-    color: #f8fafc !important;
+    color: #000000ff !important;
   }
 
   /* Détection automatique du mode sombre du système */
