@@ -311,31 +311,13 @@ const parseOtherBlocksToHtml = (block: EditorJsBlock): string => {
 // Styles CSS complets pour le contenu
 const newsContentStyles = `
   /* Styles généraux 
-  .news-content,
-.news-content * {
-  color: #111 !important;
-}
-html.dark .news-content,
-html.dark .news-content *,
-.dark .news-content,
-.dark .news-content * {
-  color: #f8fafc !important;
-}
-  .news-content {
-    line-height: 1.8;
-    font-size: 16px;
-    font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    direction: rtl;
-    text-align: right;
-    transition: color 0.2s;
-  }
-
+  
   /* Paragraphes */
   .news-paragraph {
     margin: 16px 0;
     text-align: justify;
     direction: rtl;
-    color: #111 !important;
+    color: #444 !important;
   }
   
   /* Titres */
@@ -350,24 +332,10 @@ html.dark .news-content *,
     margin-top: 10px;
     margin-bottom: 10px;
     line-height: 1.7;
-    color: #111 !important;
+    color: #444 !important;
   }
 
-  /* Mode sombre - priorité absolue */
-  html.dark .news-content,
-  html.dark .news-paragraph,
-  html.dark .news-header,
-  html.dark .news-list-item,
-  .dark .news-content,
-  .dark .news-paragraph,
-  .dark .news-header,
-  .dark .news-list-item,
-  [data-theme="dark"] .news-content,
-  [data-theme="dark"] .news-paragraph,
-  [data-theme="dark"] .news-header,
-  [data-theme="dark"] .news-list-item {
-    color: #000000ff !important;
-  }
+  
 
   /* Détection automatique du mode sombre du système */
   @media (prefers-color-scheme: dark) {
@@ -375,7 +343,7 @@ html.dark .news-content *,
     .news-paragraph,
     .news-header,
     .news-list-item {
-      color: #f8fafc !important;
+      color: #000000ff !important;
     }
   }
 
@@ -389,7 +357,7 @@ html.dark .news-content *,
     .dark .news-paragraph,
     .dark .news-header,
     .dark .news-list-item {
-      color: #f8fafc !important;
+      color: #050505ff !important;
     }
   }
 
@@ -441,7 +409,7 @@ html.dark .news-content *,
     font-style: italic;
     border-radius: 4px;
     direction: rtl;
-    color: #111 !important;
+    color: #444 !important;
   }
 
   .dark .news-quote,
