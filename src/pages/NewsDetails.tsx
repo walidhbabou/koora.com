@@ -314,16 +314,20 @@ const newsContentStyles = `
   .news-content {
     line-height: 1.8;
     font-size: 16px;
-    color: #333;
+    color: #222;
     font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     direction: rtl;
     text-align: right;
   }
 
   /* Dark mode (class or OS preference) */
-  .dark .news-content, [data-theme="dark"] .news-content { color: #e5e7eb; }
+  .dark .news-content, [data-theme="dark"] .news-content { color: #f8fafc !important; }
+  .dark .news-paragraph, [data-theme="dark"] .news-paragraph { color: #f8fafc !important; }
+  .dark .news-list-item, [data-theme="dark"] .news-list-item { color: #f8fafc !important; }
   @media (prefers-color-scheme: dark) {
-    .news-content { color: #e5e7eb; }
+    .news-content { color: #f8fafc !important; }
+    .news-paragraph { color: #f8fafc !important; }
+    .news-list-item { color: #f8fafc !important; }
   }
   .dark .news-header, [data-theme="dark"] .news-header { color: #f3f4f6; }
   @media (prefers-color-scheme: dark) { .news-header { color: #f3f4f6; } }
@@ -345,6 +349,7 @@ const newsContentStyles = `
     margin: 16px 0;
     text-align: justify;
     direction: rtl;
+    color: #222;
   }
   
   /* Titres */
@@ -374,6 +379,7 @@ const newsContentStyles = `
     margin-top: 10px;
     margin-bottom: 10px;
     line-height: 1.7;
+    color: #222;
   }
   
   /* Citations */
