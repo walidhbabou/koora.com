@@ -18,35 +18,41 @@ import "../styles/rtl.css";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useNavigate } from "react-router-dom";
-
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 // Utility to check if a string contains Arabic characters
 const isArabic = (str: string) => /[\u0600-\u06FF]/.test(str);
 const getDisplayTeamName = (name: string) => {
   const translated = getTeamTranslation(name);
   return isArabic(translated) ? translated : name;
 };
-
+dayjs.extend(utc);
+dayjs.extend(timezone);
 // Shared formatters to match TeamDetails.tsx, extended with timezone
+
 const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
   if (!dateString) return '';
-  const date = new Date(dateString);
+  const localDate = dayjs.utc(dateString).tz(tz);
   if (currentLanguage === 'ar') {
-    return date.toLocaleDateString('ar', { day: 'numeric', month: 'long', year: 'numeric', timeZone: tz });
+    // Format arabe: jour mois année
+    return localDate.locale('ar').format('D MMMM YYYY');
   }
-  return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: tz });
+  // Format français: jour mois année
+  return localDate.locale('fr').format('D MMM YYYY');
 };
+
 
 const formatTimeLocalized = (dateString: string, currentLanguage: string, tz: string, hourFormat: '12'|'24') => {
   if (!dateString) return '';
-  const date = new Date(dateString);
+  const localDate = dayjs.utc(dateString).tz(tz);
+  let formatString = hourFormat === '12' ? 'hh:mm A' : 'HH:mm';
   if (currentLanguage === 'ar') {
-    const parts = new Intl.DateTimeFormat('ar', { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: tz }).formatToParts(date);
-    const dayPeriod = parts.find(p => p.type === 'dayPeriod')?.value || '';
-    const hour = parts.find(p => p.type === 'hour')?.value || '';
-    const minute = parts.find(p => p.type === 'minute')?.value || '';
-    return hourFormat === '12' ? `${dayPeriod} ${hour}:${minute}`.trim() : `${hour}:${minute}`;
+    // Format arabe: 12h ou 24h avec indicateur matin/soir
+    return localDate.locale('ar').format(formatString);
   }
-  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: hourFormat === '12', timeZone: tz }).format(date);
+  // Format français: 12h ou 24h
+  return localDate.locale('fr').format(formatString);
 };
 
 // Composant carte de match stylée avec bouton détails

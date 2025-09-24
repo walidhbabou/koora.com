@@ -897,13 +897,14 @@ const NewsDetails: React.FC = () => {
             }
           }
           .news-big-title {
-            font-size: 2.8em !important;
-            font-weight: 900 !important;
-            text-align: center !important;
+            font-size: 2em !important;
+            font-weight: bold !important;
+            text-align: right !important;
             margin-bottom: 18px !important;
             margin-top: 0 !important;
             color: #222 !important;
-            letter-spacing: -1px;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            letter-spacing: 0;
           }
           .dark .news-big-title { color: #f3f4f6 !important; }
         ` }} />
@@ -916,18 +917,17 @@ const NewsDetails: React.FC = () => {
             {/* Left side - Article content */}
             <div className="lg:col-span-2">
               <article className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-8">
-                <h1 className="news-big-title" dir="rtl">{news.title}</h1>
-                {news.image_url && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                    <img 
-                      src={news.image_url} 
-                      alt={news.title}
-                      className="news-full-image"
-                      style={{ maxWidth: '100%', width: '100%', height: '420px', objectFit: 'cover', objectPosition: 'center top', borderRadius: 0, boxShadow: '0 2px 16px rgba(0,0,0,0.10)' }}
-                    />
-                  </div>
-                )}
-              
+    {news.image_url && (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+        <img 
+          src={news.image_url} 
+          alt={news.title}
+          className="news-full-image"
+          style={{ maxWidth: '100%', width: '100%', height: '420px', objectFit: 'cover', objectPosition: 'center top', borderRadius: 0, boxShadow: '0 2px 16px rgba(0,0,0,0.10)' }}
+        />
+      </div>
+    )}
+<h1 className="news-big-title">{news.title}</h1> 
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
