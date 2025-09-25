@@ -249,15 +249,21 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
     {/* Centre: status label + score/time, stacked */}
     <div className="flex flex-col items-center justify-center w-[90px] min-w-[90px] sm:w-[140px] sm:min-w-[140px]">
       <span className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 mb-0.5 whitespace-nowrap">{statusLabel}</span>
-      {(isLiveState || isFinishedState)
-        ? (
-          <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
-            {isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}
-          </span>
-        ) : (
-          <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-sm sm:text-base">{time}</span>
-        )
-      }
+        {(isLiveState || isFinishedState)
+          ? (
+            <span className="font-bold text-[#1a2a3a] dark:text-[#f1f5f9] text-sm sm:text-base">
+              {isRTL ? `${awayScore} - ${homeScore}` : `${homeScore} - ${awayScore}`}
+            </span>
+          ) : (
+            currentLanguage === 'ar' && isUpcomingState && upcomingArabicParts ? (
+              <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-sm sm:text-base">
+                {upcomingArabicParts.hhmm} {upcomingArabicParts.mer}
+              </span>
+            ) : (
+              <span className="font-extrabold text-[#0f172a] dark:text-[#f1f5f9] text-sm sm:text-base">{time}</span>
+            )
+          )
+        }
     </div>
     
     {/* Home team (left) - right side of row, take equal space */}
@@ -401,13 +407,33 @@ const Matches = () => {
       logo: "https://media.api-sports.io/football/leagues/2.png"
     },
     {
+      name: currentLanguage === 'ar' ? "الدوري الأوروبي" : "Europa League",
+      id: MAIN_LEAGUES.EUROPA_LEAGUE,
+      logo: "https://media.api-sports.io/football/leagues/3.png"
+    },
+    {
+      name: currentLanguage === 'ar' ? "دوري أبطال أفريقيا" : "CAF Champions League",
+      id: 12,
+      logo: "https://media.api-sports.io/football/leagues/12.png"
+    },
+    {
+      name: currentLanguage === 'ar' ? "كأس الكونفدرالية الأفريقية" : "CAF Confederation Cup",
+      id: 20,
+      logo: "https://media.api-sports.io/football/leagues/20.png"
+    },
+    {
+      name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
+      id: 895,
+      logo: "https://media.api-sports.io/football/leagues/895.png"
+    },
+    {
       name: currentLanguage === 'ar' ? "الليغا الإسبانية" : "La Liga",
       id: MAIN_LEAGUES.LA_LIGA,
       logo: "https://media.api-sports.io/football/leagues/140.png"
     },
     {
       name: currentLanguage === 'ar' ? "البطولة المغربية" : "Botola Maroc",
-      id: 200, // Ajout Botola Maroc
+      id: MAIN_LEAGUES.BOTOLA_MAROC,
       logo: "https://media.api-sports.io/football/leagues/200.png"
     },
     {

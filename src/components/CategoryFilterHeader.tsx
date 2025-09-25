@@ -106,15 +106,16 @@ const CategoryFilterHeader = ({
                     variant="ghost"
                     className={`
                       relative group flex items-center gap-2 px-6 py-4 mx-1
+                      text-white
                       ${isActive 
-                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-lg`
-                        : "text-gray-700 dark:text-sport-green hover:text-black dark:hover:text-white"}
+                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} shadow-lg`
+                        : "hover:text-white"}
                       font-bold text-base
                       hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor}
                       transition-all duration-300 border-none outline-none
                       rounded-lg backdrop-blur-sm
                       ${isActive ? "transform scale-105" : "hover:transform hover:scale-105"}
-                      bg-white/70 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-600/50
+                      bg-white/10 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-600/50
                     `}
                   >
                     {openDropdown === category.id ? (

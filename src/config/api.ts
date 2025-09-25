@@ -90,16 +90,23 @@ export const MAIN_LEAGUES = {
   BUNDESLIGA: 78,         // Bundesliga
   SERIE_A: 135,           // Serie A
   LIGUE_1: 61,            // Ligue 1
-  
+
   // Compétitions internationales
-  CHAMPIONS_LEAGUE: 2,    // UEFA Champions League.
+  CHAMPIONS_LEAGUE: 2,    // UEFA Champions League
   EUROPA_LEAGUE: 3,       // UEFA Europa League
-  WORLD_CUP: 1,          // FIFA World Cup
-  
+  WORLD_CUP: 1,           // FIFA World Cup
+
+  // Compétitions africaines (IDs corrigés)
+  AFRICA_CHAMPIONS_LEAGUE: 12,      // CAF Champions League (ID corrigé)
+  AFRICA_CONFED_CUP: 20,            // CAF Confederation Cup (ID corrigé)
+
+  // Egyptian Premier League
+  EGYPTIAN_PREMIER_LEAGUE: 895,       // Egyptian Premier League (ID ajouté)
+
   // Ligues secondaires souvent disponibles
   EREDIVISIE: 88,         // Eredivisie (Pays-Bas)
   PRIMERA_DIVISION: 87,   // Primeira Liga (Portugal)
-  
+
   // Botola Pro (Maroc)
   BOTOLA_MAROC: 200,      // Morocco Botola Pro
 };
@@ -107,11 +114,16 @@ export const MAIN_LEAGUES = {
 // Ligues à afficher (filtrage spécifique) - Utiliser seulement les ligues gratuites
 export const SELECTED_LEAGUES = [
   MAIN_LEAGUES.PREMIER_LEAGUE, // Premier League
-  MAIN_LEAGUES.LIGUE_1,       // Ligue 1 France
-  MAIN_LEAGUES.BUNDESLIGA,    // Bundesliga
-  MAIN_LEAGUES.LA_LIGA,       // La Liga
-  MAIN_LEAGUES.SERIE_A,       // Serie A
-  MAIN_LEAGUES.BOTOLA_MAROC,  // Botola Pro (Morocco)
+  MAIN_LEAGUES.LIGUE_1,        // Ligue 1 France
+  MAIN_LEAGUES.BUNDESLIGA,     // Bundesliga
+  MAIN_LEAGUES.LA_LIGA,        // La Liga
+  MAIN_LEAGUES.SERIE_A,        // Serie A
+  MAIN_LEAGUES.BOTOLA_MAROC,   // Botola Pro (Morocco)
+  MAIN_LEAGUES.CHAMPIONS_LEAGUE, // UEFA Champions League
+  MAIN_LEAGUES.EUROPA_LEAGUE,    // UEFA Europa League
+  MAIN_LEAGUES.AFRICA_CHAMPIONS_LEAGUE, // CAF Champions League (ID corrigé)
+  MAIN_LEAGUES.AFRICA_CONFED_CUP,       // CAF Confederation Cup (ID corrigé)
+  MAIN_LEAGUES.EGYPTIAN_PREMIER_LEAGUE, // Egyptian Premier League (ID ajouté)
 ];
 
 // Configuration des appels API avec gestion d'erreurs et fallback mock

@@ -164,8 +164,8 @@ const Header = () => {
         
         {/* Texte logo (seulement sur sm+) */}
         <div className="hidden sm:flex items-center ml-2">
-          <span className={`text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-            {currentLanguage === 'ar' ? 'كورة' : 'KOORA'}
+          <span className={`text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 arabic-text`}>
+            كورة
           </span>
         </div>
       </div>

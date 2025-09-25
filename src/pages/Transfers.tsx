@@ -16,13 +16,44 @@ import TransferCard from "@/components/TransferCard";
 import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import "../styles/rtl.css";
 
+
 const Transfers = () => {
   const { t, currentLanguage } = useTranslation();
   const [selectedSeason, setSelectedSeason] = useState(2025);
-  // Use hook to get transfers data
-  const { data, loading, error } = useMainLeaguesTransfers(selectedSeason);
   const isRTL = currentLanguage === "ar";
   const isMobile = useIsMobile();
+
+  // NEW: Fast preview state for global transfers
+  const [fastPreview, setFastPreview] = useState<any[] | null>(null);
+  const [fastPreviewLoading, setFastPreviewLoading] = useState(true);
+  const [fastPreviewError, setFastPreviewError] = useState<string | null>(null);
+
+  // Hook for main leagues transfers (détail)
+  const { data, loading, error } = useMainLeaguesTransfers(selectedSeason);
+
+  // Fast preview: fetch global recent transfers on mount/season change
+  useEffect(() => {
+    let cancelled = false;
+    setFastPreviewLoading(true);
+    setFastPreviewError(null);
+    setFastPreview(null);
+    import("../config/api").then(({ footballAPI }) => {
+      footballAPI.getAllRecentTransfers(selectedSeason)
+        .then(res => {
+          if (!cancelled) {
+            setFastPreview(Array.isArray(res?.response) ? res.response : []);
+            setFastPreviewLoading(false);
+          }
+        })
+        .catch(e => {
+          if (!cancelled) {
+            setFastPreviewError("Erreur chargement rapide");
+            setFastPreviewLoading(false);
+          }
+        });
+    });
+    return () => { cancelled = true; };
+  }, [selectedSeason]);
 
   // directRaw and fallback fetching removed
 
@@ -221,7 +252,9 @@ const Transfers = () => {
 
   
 
-  if (loading) {
+
+  // Show fast preview if main data is loading
+  if (loading && (fastPreviewLoading || !fastPreview)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
         <Header />
@@ -232,6 +265,76 @@ const Transfers = () => {
             <span className={`${isRTL ? 'mr-2' : 'ml-2'}`}>
               {isRTL ? "جاري التحميل..." : "Loading..."}
             </span>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show fast preview results if available and main data is still loading
+  if (loading && fastPreview && fastPreview.length > 0) {
+    return (
+      <div className={`min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background ${isRTL ? 'rtl' : 'ltr'}`}>
+        <SEO 
+          title="الانتقالات | كورة - آخر انتقالات اللاعبين والصفقات"
+          description="تابع آخر انتقالات اللاعبين وصفقات الأندية في الدوريات العربية والعالمية. أحدث الأخبار والشائعات حول انتقالات النجوم."
+          keywords={["انتقالات اللاعبين", "صفقات الأندية", "انتقالات كرة القدم", "سوق الانتقالات", "أخبار الانتقالات"]}
+          type="website"
+        />
+        <Header />
+        <TeamsLogos />
+        <div className="w-full max-w-7xl mx-auto px-4 py-3">
+          <div className="space-y-6">
+            <div className={`flex items-center justify-between gap-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'} flex-wrap`}>
+              <div className={`${isRTL ? 'text-right' : 'text-left'} min-w-[200px] flex-1`} />
+              <div className="flex gap-2 overflow-x-auto md:overflow-visible py-1">
+                <Button variant="outline" size="sm">
+                  <Calendar className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                  {isRTL ? "نافذة الانتقالات" : "Transfer Window"}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="bg-blue-100 border-blue-300"
+                >
+                  {isRTL ? "2025" : "2025"}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                <TrendingUp className="w-5 h-5 text-green-600" />
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                  {isRTL ? `انتقالات ${selectedSeason}/${selectedSeason + 1}` : `Transfers ${selectedSeason}/${selectedSeason + 1}`}
+                  <span className="ml-2 text-xs text-gray-400">{isRTL ? "عرض سريع" : "Fast preview"}</span>
+                </h2>
+              </div>
+              <div className="mb-1 flex justify-center">
+                <input
+                  type="text"
+                  disabled
+                  value={search}
+                  placeholder={isRTL ? "تحميل..." : "Loading..."}
+                  className={`w-full max-w-xl h-11 px-5 ${isRTL ? 'text-right' : 'text-left'} rounded-full bg-[hsl(var(--input))] border border-transparent text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]`}
+                  style={{ direction: isRTL ? "rtl" : "ltr" }}
+                />
+              </div>
+              <div className="space-y-4 sm:space-y-3">
+                {fastPreview.map((transfer, index) => {
+                  const t = transfer as Record<string, unknown>;
+                  const player = t['player'] as Record<string, unknown> | undefined;
+                  const pid = player?.['id'] ?? 'unknown';
+                  const dateKey = t['date'] ?? t['normalizedDate'] ?? 'nodate';
+                  return (
+                    <TransferCard key={`fast-${pid}-${dateKey}-${index}`} transfer={transfer as any} />
+                  );
+                })}
+              </div>
+              <div className="text-center text-xs text-gray-400 pt-4">
+                {isRTL ? "يتم تحميل التفاصيل الكاملة..." : "Loading full details..."}
+              </div>
+            </div>
           </div>
         </div>
         <Footer />

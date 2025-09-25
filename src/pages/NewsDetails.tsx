@@ -225,8 +225,16 @@ const parseOtherBlocksToHtml = (block: EditorJsBlock): string => {
   switch (block.type) {
     case 'quote':
       return `<blockquote class="news-quote">${DOMPurify.sanitize(block.data.text || '')}</blockquote>`;
-    case 'code':
-      return `<pre class="news-code"><code>${DOMPurify.sanitize(block.data.code || '')}</code></pre>`;
+    case 'code': {
+      const code = block.data.code || '';
+      // Detect Twitter embed HTML
+  const twitterMatch = code.match(/<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/);
+      if (twitterMatch && twitterMatch[1]) {
+        // Mark for React rendering
+        return `__REACT_TWITTER_EMBED__${twitterMatch[1]}__`;
+      }
+      return `<pre class="news-code"><code>${DOMPurify.sanitize(code)}</code></pre>`;
+    }
     case 'delimiter':
       return `<hr class="news-delimiter" />`;
     case 'table': {
@@ -915,6 +923,22 @@ const NewsDetails: React.FC = () => {
                   
                   <div className="news-content">
                 {parsedBlocks.map((block, index) => {
+                  // Special handling for code blocks with Twitter embed marker or HTML
+                  if (block.type === 'code') {
+                    const code = block.data.code || '';
+                    // 1. Detect marker
+                    const reactTwitterMarker = code.match(/^__REACT_TWITTER_EMBED__(https:\/\/twitter.com\/[^_]+)__$/);
+                    if (reactTwitterMarker) {
+                      return <XEmbed key={index} url={reactTwitterMarker[1]} />;
+                    }
+                    // 2. Detect Twitter embed HTML directly
+                    const twitterHtmlMatch = code.match(/<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/);
+                    if (twitterHtmlMatch && twitterHtmlMatch[1]) {
+                      return <XEmbed key={index} url={twitterHtmlMatch[1]} />;
+                    }
+                    // 3. Otherwise, render as code
+                    return <pre key={index} className="news-code"><code>{code}</code></pre>;
+                  }
                   switch (block.type) {
                     case 'paragraph':
                       return <div key={index} className="news-paragraph" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
@@ -935,7 +959,6 @@ const NewsDetails: React.FC = () => {
                           {items.map((item, i) => {
                             // If item is a string, display it
                             if (typeof item === 'string') {
-                               
                               return <li key={i} className="news-list-item">   <br />{item}</li>;
                             }
                             // If item is object with 'content', display content
