@@ -87,9 +87,9 @@ const Transfers = () => {
   }, [selectedSeason]);
   // Pagination (responsive)
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(50);
+  const [pageSize, setPageSize] = useState<number>(500);
   useEffect(() => {
-    setPageSize(isMobile ? 20 : 50);
+    setPageSize(500);
   }, [isMobile]);
 
   // Tri par date décroissante (sans filtrage strict par saison pour garantir l'affichage)
@@ -156,36 +156,50 @@ const Transfers = () => {
   };
 
 
-  // Filtrer par saison (selectedSeason) en utilisant getTransferYear –
-  // l'utilisateur veut uniquement les transferts de cette année
-  const transfersForSeason = useMemo(() => (
-    sortedTransfers.filter(tr => getTransferYear(tr) === selectedSeason)
-  ), [sortedTransfers, selectedSeason]);
 
-  // Filtrer par ligue sélectionnée en vérifiant si l'équipe source ou destination appartient à la ligue
+  // Fallback automatique : si aucun transfert pour la saison sélectionnée, prendre la saison la plus récente disponible
+  const transfersForSeason = useMemo(() => {
+    const filtered = sortedTransfers.filter(tr => getTransferYear(tr) === selectedSeason);
+    if (filtered.length > 0) return filtered;
+    // Fallback : trouver la saison la plus récente avec des transferts
+    const years = sortedTransfers.map(getTransferYear).filter(y => !!y) as number[];
+    const mostRecentYear = years.length > 0 ? Math.max(...years) : null;
+    if (mostRecentYear && mostRecentYear !== selectedSeason) {
+      return sortedTransfers.filter(tr => getTransferYear(tr) === mostRecentYear);
+    }
+    return filtered;
+  }, [sortedTransfers, selectedSeason]);
+
+  // Filtrer uniquement par ligue sélectionnée (pas de VIP)
   const leagueFiltered = useMemo(() => (
     transfersForSeason.filter((t) => {
       if (!selectedLeagueId) return true;
       const set = leagueTeamsMap[selectedLeagueId];
-      if (!set) return true; // si pas d'info, ne pas filtrer pour éviter vide
-      const outId = (t as any)?.teams?.out?.id;
-      const inId = (t as any)?.teams?.in?.id;
+      if (!set) return true;
+      const outId = (t as TransferLike)?.teams?.out?.id;
+      const inId = (t as TransferLike)?.teams?.in?.id;
       return (typeof outId === 'number' && set.has(outId)) || (typeof inId === 'number' && set.has(inId));
     })
   ), [transfersForSeason, selectedLeagueId, leagueTeamsMap]);
 
-  // Appliquer le filtre de recherche (nom joueur ou club entrant)
+  // Appliquer le filtre de recherche (nom joueur ou club entrant) et trier par montant
   const deferredSearch = useDeferredValue(search);
-  const filteredTransfers = useMemo(() => (
-    leagueFiltered.filter((t) => {
+  const filteredTransfers = useMemo(() => {
+    const filtered = leagueFiltered.filter((t) => {
       const text = deferredSearch.trim().toLowerCase();
       if (!text) return true;
-      const playerName = String((t as any)?.player?.name || '').toLowerCase();
-      const fromName = String((t as any)?.teams?.out?.name || '').toLowerCase();
-      const toName = String((t as any)?.teams?.in?.name || '').toLowerCase();
+      const playerName = String((t as TransferLike)?.player?.name || '').toLowerCase();
+      const fromName = String((t as TransferLike)?.teams?.out?.name || '').toLowerCase();
+      const toName = String((t as TransferLike)?.teams?.in?.name || '').toLowerCase();
       return playerName.includes(text) || fromName.includes(text) || toName.includes(text);
-    })
-  ), [leagueFiltered, deferredSearch]);
+    });
+    // Tri par montant décroissant si disponible
+    return filtered.slice().sort((a, b) => {
+      const feeA = typeof a.fee === 'number' ? a.fee : 0;
+      const feeB = typeof b.fee === 'number' ? b.fee : 0;
+      return feeB - feeA;
+    });
+  }, [leagueFiltered, deferredSearch]);
 
   // Aucun fallback multi-années: si vide, on affiche vide (conforme au besoin)
 

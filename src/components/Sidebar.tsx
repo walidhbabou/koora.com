@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { footballAPI, MAIN_LEAGUES } from "@/config/api";
-import { getTeamTranslation } from "@/utils/teamNameMap";
+import { transliterateTeamName } from "@/utils/transliterate";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Fixture as APIFixture } from "@/config/api";
 
@@ -63,25 +63,38 @@ const Sidebar = () => {
           selectedDate.toISOString().slice(0, 10)
         );
 
-        const filteredMatches = (res.response || [])
+        const filteredRawMatches = (res.response || [])
           .filter(
             (fixture: APIFixture) =>
               Object.values(MAIN_LEAGUES).includes(fixture.league.id) &&
-              fixture.league.name !== "Regionalliga - West" && // 🚫 exclure cette ligue
-              fixture.league.name !== "Eredivisie" // 🚫 exclure Eredivisie
+              fixture.league.name !== "Regionalliga - West" &&
+              fixture.league.name !== "Eredivisie"
           )
           .map((fixture: APIFixture) => ({
             league: translateName(fixture.league.name),
             leagueLogo: fixture.league.logo,
-            homeTeam: getTeamTranslation(fixture.teams.home.name),
-            awayTeam: getTeamTranslation(fixture.teams.away.name),
+            homeTeam: fixture.teams.home.name,
+            awayTeam: fixture.teams.away.name,
             homeLogo: fixture.teams.home.logo,
             awayLogo: fixture.teams.away.logo,
             homeScore: fixture.goals.home,
             awayScore: fixture.goals.away,
-            time: fixture.fixture.date,
-            status: fixture.fixture.status.short,
+            // Compat: support both API nested shape and our local Fixture type
+            time: (fixture as any).fixture?.date ?? (fixture as any).date,
+            status: (fixture as any).fixture?.status?.short ?? (fixture as any).status,
           }));
+
+        // Translittération phonétique: écrire les noms en lettres arabes sans traduire le sens
+        const uniqueTeamNames = Array.from(new Set(filteredRawMatches.flatMap((m) => [m.homeTeam, m.awayTeam]).filter(Boolean)));
+        const nameToArabic = new Map<string, string>(
+          uniqueTeamNames.map((n) => [n, transliterateTeamName(n)])
+        );
+
+        const filteredMatches = filteredRawMatches.map((m) => ({
+          ...m,
+          homeTeam: nameToArabic.get(m.homeTeam) || m.homeTeam,
+          awayTeam: nameToArabic.get(m.awayTeam) || m.awayTeam,
+        }));
 
         // Regroupement par ligue
         const grouped: GroupedMatches = {};

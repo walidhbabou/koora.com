@@ -19,13 +19,6 @@ const TeamsLogos = () => {
       league: "La Liga",
       leagueId: 140
     },
-    { 
-      id: 529, 
-      name: currentLanguage === 'ar' ? "برشلونة" : "Barcelona", 
-      logo: "https://media.api-sports.io/football/teams/529.png",
-      league: "La Liga",
-      leagueId: 140
-    },
     // Premier League
     { 
       id: 33, 
@@ -121,7 +114,71 @@ const TeamsLogos = () => {
       logo: "https://media.api-sports.io/football/teams/976.png",
       league: "Botola Pro",
       leagueId: 564
-    }
+    },
+      // New teams added
+      { 
+        id: 1577, 
+        name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly (Libya)", 
+        logo: "https://media.api-sports.io/football/teams/1029.png",
+        league: "Libyan Premier League",
+        leagueId: 312
+      },
+      { 
+        id: 1040, 
+        name: currentLanguage === 'ar' ? "الزمالك" : "Zamalek", 
+        logo: "https://media.api-sports.io/football/teams/1040.png",
+        league: "Egyptian Premier League",
+        leagueId: 307
+      },
+      { 
+        id: 969, 
+        name: currentLanguage === 'ar' ? "الجيش الملكي" : "FAR Rabat", 
+        logo: "https://media.api-sports.io/football/teams/969.png",
+        league: "Botola Pro",
+        leagueId: 564
+      },
+      { 
+        id: 10755, 
+        name: currentLanguage === 'ar' ? "مولودية واد" : "Mouloudia Oued", 
+        logo: "https://media.api-sports.io/football/teams/10755.png",
+        league: "Algerian Ligue 1",
+        leagueId: 302
+      },
+      { 
+        id: 3453, 
+        name: currentLanguage === 'ar' ? "المغرب الفاسي" : "Maghreb Fès", 
+        logo: "https://media.api-sports.io/football/teams/3453.png",
+        league: "Botola Pro",
+        leagueId: 564
+      },
+      { 
+        id: 2932, 
+        name: currentLanguage === 'ar' ? "الهلال السعودي" : "Al-Hilal Saudi FC", 
+        logo: "https://media.api-sports.io/football/teams/2932.png",
+        league: "Saudi Pro League",
+        leagueId: 307
+      },
+      { 
+        id: 2938, 
+        name: currentLanguage === 'ar' ? "الاتحاد السعودي" : "Al-Ittihad FC", 
+        logo: "https://media.api-sports.io/football/teams/2938.png",
+        league: "Saudi Pro League",
+        leagueId: 307
+      },
+      { 
+        id: 2939, 
+        name: currentLanguage === 'ar' ? "النصر السعودي" : "Al-Nassr", 
+        logo: "https://media.api-sports.io/football/teams/2939.png",
+        league: "Saudi Pro League",
+        leagueId: 307
+      },
+      { 
+        id: 9568, 
+        name: currentLanguage === 'ar' ? "انتر ميامي" : "Inter Miami", 
+        logo: "https://media.api-sports.io/football/teams/9568.png",
+        league: "Major League Soccer",
+        leagueId: 253
+      },
   ];
 
   // Responsive number of visible teams
@@ -271,20 +328,7 @@ const TeamsLogos = () => {
             ))}
           </div>
 
-          {/* Desktop dots indicator */}
-          <div className="hidden sm:flex justify-center mt-4 space-x-2">
-            {Array.from({ length: Math.ceil(teams.length / visibleTeams) }).map((_, index) => (
-              <button
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  Math.floor(currentIndex / visibleTeams) === index
-                    ? 'bg-sport-green'
-                    : 'bg-gray-300 hover:bg-gray-400'
-                }`}
-                onClick={() => setCurrentIndex(index * visibleTeams)}
-              />
-            ))}
-          </div>
+          
         </div>
       </div>
     </div>

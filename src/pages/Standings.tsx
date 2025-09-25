@@ -134,6 +134,50 @@ const Standings = () => {
       country: currentLanguage === 'ar' ? 'المغرب' : 'Morocco',
       flag: '🇲🇦'
     },
+    // Saudi Pro League
+    {
+      id: 307,
+      name: currentLanguage === 'ar' ? 'الدوري السعودي للمحترفين' : 'Saudi Pro League',
+      logo: 'https://media.api-sports.io/football/leagues/307.png',
+      country: currentLanguage === 'ar' ? 'السعودية' : 'Saudi Arabia',
+      flag: '🇸🇦'
+    },
+    // Qatar QSL Cup
+    {
+      id: 677,
+      name: currentLanguage === 'ar' ? 'كأس قطر QSL' : 'QSL Cup',
+      logo: 'https://media.api-sports.io/football/leagues/677.png',
+      country: currentLanguage === 'ar' ? 'قطر' : 'Qatar',
+      flag: '🇶🇦'
+    },
+    // Algeria Ligue 1
+    {
+      id: 186,
+      name: currentLanguage === 'ar' ? 'الدوري الجزائري - الرابطة المحترفة الأولى' : 'Algeria Ligue 1',
+      logo: 'https://media.api-sports.io/football/leagues/186.png',
+      country: currentLanguage === 'ar' ? 'الجزائر' : 'Algeria',
+      flag: '🇩🇿'
+    },
+     {
+          name: currentLanguage === 'ar' ? "الدوري الأوروبي" : "Europa League",
+          id: MAIN_LEAGUES.EUROPA_LEAGUE,
+          logo: "https://media.api-sports.io/football/leagues/3.png"
+        },
+        {
+          name: currentLanguage === 'ar' ? "دوري أبطال أفريقيا" : "CAF Champions League",
+          id: 12,
+          logo: "https://media.api-sports.io/football/leagues/12.png"
+        },
+        {
+          name: currentLanguage === 'ar' ? "كأس الكونفدرالية الأفريقية" : "CAF Confederation Cup",
+          id: 20,
+          logo: "https://media.api-sports.io/football/leagues/20.png"
+        },
+        {
+          name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
+          id: 233,
+          logo: "https://media.api-sports.io/football/leagues/233.png"
+        },
   ];
 
   // Filtrer les ligues selon la recherche
@@ -282,7 +326,6 @@ const Standings = () => {
               <div className="relative w-full sm:w-auto" dir="rtl">
                 <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
                 <Input
-                  placeholder={t('searchTournament')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={`${isRTL ? 'pr-10' : 'pl-10'} bg-white dark:bg-[#181a20] border-gray-200 dark:border-[#23262f] focus:border-blue-500 w-full sm:w-64`}

@@ -101,7 +101,7 @@ export const MAIN_LEAGUES = {
   AFRICA_CONFED_CUP: 20,            // CAF Confederation Cup (ID corrigé)
 
   // Egyptian Premier League
-  EGYPTIAN_PREMIER_LEAGUE: 895,       // Egyptian Premier League (ID ajouté)
+  EGYPTIAN_PREMIER_LEAGUE: 233,       // Egyptian Premier League (ID ajouté)
 
   // Ligues secondaires souvent disponibles
   EREDIVISIE: 88,         // Eredivisie (Pays-Bas)

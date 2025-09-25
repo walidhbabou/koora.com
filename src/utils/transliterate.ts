@@ -93,3 +93,33 @@ export function maybeTransliterateName(fullName: string, currentLanguage: string
   if (currentLanguage === 'ar') return transliterateToArabic(fullName);
   return fullName;
 }
+
+// Smart overrides for well-known teams to preferred Arabic forms
+const TEAM_OVERRIDES: Record<string, string> = {
+  // Barcelona variants
+  'barcelona': 'برشلونة',
+  'fc barcelona': 'برشلونة',
+  'barca': 'برشلونة',
+  'barça': 'برشلونة',
+  // Common clubs (extend as needed)
+  'real madrid': 'ريال مدريد',
+  'manchester city': 'مانشستر سيتي',
+  'manchester united': 'مانشستر يونايتد',
+  'bayern munich': 'بايرن ميونخ',
+  'paris saint-germain': 'باريس سان جيرمان',
+};
+
+function normalizeTeamKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[._'’`"()\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function transliterateTeamName(name: string): string {
+  if (!name) return '';
+  const key = normalizeTeamKey(name);
+  if (TEAM_OVERRIDES[key]) return TEAM_OVERRIDES[key];
+  return transliterateToArabic(name);
+}

@@ -423,8 +423,8 @@ const Matches = () => {
     },
     {
       name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
-      id: 895,
-      logo: "https://media.api-sports.io/football/leagues/895.png"
+      id: 233,
+      logo: "https://media.api-sports.io/football/leagues/233.png"
     },
     {
       name: currentLanguage === 'ar' ? "الليغا الإسبانية" : "La Liga",
@@ -445,6 +445,24 @@ const Matches = () => {
       name: currentLanguage === 'ar' ? "الدوري الإيطالي" : "Serie A",
       id: MAIN_LEAGUES.SERIE_A,
       logo: "https://media.api-sports.io/football/leagues/135.png"
+    },
+    // Saudi Pro League
+    {
+      name: currentLanguage === 'ar' ? 'الدوري السعودي للمحترفين' : 'Saudi Pro League',
+      id: 307,
+      logo: 'https://media.api-sports.io/football/leagues/307.png'
+    },
+    // Qatar QSL Cup
+    {
+      name: currentLanguage === 'ar' ? 'كأس قطر QSL' : 'QSL Cup',
+      id: 677,
+      logo: 'https://media.api-sports.io/football/leagues/677.png'
+    },
+    // Algeria Ligue 1
+    {
+      name: currentLanguage === 'ar' ? 'الدوري الجزائري - الرابطة المحترفة الأولى' : 'Algeria Ligue 1',
+      id: 186,
+      logo: 'https://media.api-sports.io/football/leagues/186.png'
     }
   ];
 
