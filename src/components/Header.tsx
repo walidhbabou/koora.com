@@ -2,7 +2,7 @@ import { Search, Home, Trophy, Newspaper, BarChart3, ArrowLeftRight } from "luci
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { UserSettings } from "./UserSettings";
 // Language switcher and dark mode moved into UserSettings
 import { useTranslation } from "../hooks/useTranslation";
@@ -14,9 +14,17 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t, isRTL, direction, currentLanguage } = useTranslation();
   const { isAdmin } = useAuth();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  // Fonction de recherche : navigation vers la page de résultats
+  const handleSearch = () => {
+    if (searchValue.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchValue)}`);
+    }
+  };
   
   const navItemsWithIcons = [
     { ...NAV_ITEMS.find(item => item.key === 'home'), icon: Home },
@@ -107,11 +115,27 @@ const Header = () => {
               {/* Search */}
               <div className="relative hidden xl:block">
                 <Search className={`absolute ${isRTL ? 'right-4' : 'left-4'} top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4`} />
-                <Input
-                  placeholder={t('search')}
-                  className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-48 xl:w-64 h-10 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-600 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-700 focus:border-emerald-300 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder={t('search')}
+                    className={`search-input ${isRTL ? 'pr-12 text-right' : 'pl-12 text-left'} w-48 xl:w-64 h-10 rounded-full bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-600 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-700 focus:border-emerald-300 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 transition-all duration-300 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    value={searchValue}
+                    onChange={e => setSearchValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleSearch();
+                    }}
+                  />
+                  <Button
+                    variant="default"
+                    size="sm"
+                    aria-label="Rechercher"
+                    onClick={handleSearch}
+                    className="hidden xl:inline-flex"
+                  >
+                    {t('search')}
+                  </Button>
+                </div>
               </div>
               
               {/* Search Button for smaller screens */}
@@ -120,6 +144,7 @@ const Header = () => {
                 size="icon"
                 aria-label="Search"
                 className="xl:hidden w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300"
+                onClick={handleSearch}
               >
                 <Search className="w-4 h-4" />
               </Button>
@@ -206,7 +231,23 @@ const Header = () => {
                   placeholder={t('search')}
                   className={`${isRTL ? 'pr-10 pl-3 text-right' : 'pl-10 pr-3 text-left'} w-full h-10 sm:h-11 rounded-lg bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-sm placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:bg-white dark:focus:bg-slate-600 focus:border-emerald-300 dark:focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 dark:focus:ring-emerald-800 transition-all duration-200 ${isRTL && currentLanguage === 'ar' ? 'arabic-text' : ''}`}
                   dir={isRTL ? 'rtl' : 'ltr'}
+                  value={searchValue}
+                  onChange={e => setSearchValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handleSearch();
+                      setMobileSearchOpen(false);
+                    }
+                  }}
                 />
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="absolute top-1/2 -translate-y-1/2 right-2"
+                  onClick={() => { handleSearch(); setMobileSearchOpen(false); }}
+                >
+                  {t('search')}
+                </Button>
               </div>
               {/* Suggestions ou résultats de recherche pourraient être ajoutés ici */}
             </div>

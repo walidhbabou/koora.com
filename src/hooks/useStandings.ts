@@ -49,85 +49,127 @@ export const useLeagueStandings = (leagueId: number, season: number = new Date()
 };
 
 // Hook pour récupérer les classements de toutes les ligues principales
-export const useAllLeagueStandings = (season: number = new Date().getFullYear()) => {
-  const premierLeague = useLeagueStandings(MAIN_LEAGUES.PREMIER_LEAGUE, season);
-  const laLiga = useLeagueStandings(MAIN_LEAGUES.LA_LIGA, season);
-  const serieA = useLeagueStandings(MAIN_LEAGUES.SERIE_A, season);
-  const bundesliga = useLeagueStandings(MAIN_LEAGUES.BUNDESLIGA, season);
-  const ligue1 = useLeagueStandings(MAIN_LEAGUES.LIGUE_1, season);
-  const championsLeague = useLeagueStandings(MAIN_LEAGUES.CHAMPIONS_LEAGUE, season);
 
-  const queries = [premierLeague, laLiga, serieA, bundesliga, ligue1, championsLeague];
-  const leagues = [
-    MAIN_LEAGUES.PREMIER_LEAGUE,
-    MAIN_LEAGUES.LA_LIGA,
-    MAIN_LEAGUES.SERIE_A,
-    MAIN_LEAGUES.BUNDESLIGA,
-    MAIN_LEAGUES.LIGUE_1,
-    MAIN_LEAGUES.CHAMPIONS_LEAGUE
+export const useAllLeagueStandings = (season: number = new Date().getFullYear()) => {
+  // Ajouter ici toutes les ligues à afficher avec leur logo correct
+  const leagueConfigs = [
+    {
+      id: MAIN_LEAGUES.PREMIER_LEAGUE,
+      name: 'Premier League',
+      logo: 'https://media.api-sports.io/football/leagues/39.png',
+      country: 'England',
+      flag: '🏴',
+    },
+    {
+      id: MAIN_LEAGUES.LA_LIGA,
+      name: 'La Liga',
+      logo: 'https://media.api-sports.io/football/leagues/140.png',
+      country: 'Spain',
+      flag: '🇪🇸',
+    },
+    {
+      id: MAIN_LEAGUES.SERIE_A,
+      name: 'Serie A',
+      logo: 'https://media.api-sports.io/football/leagues/135.png',
+      country: 'Italy',
+      flag: '🇮🇹',
+    },
+    {
+      id: MAIN_LEAGUES.BUNDESLIGA,
+      name: 'Bundesliga',
+      logo: 'https://media.api-sports.io/football/leagues/78.png',
+      country: 'Germany',
+      flag: '🇩🇪',
+    },
+    {
+      id: MAIN_LEAGUES.LIGUE_1,
+      name: 'Ligue 1',
+      logo: 'https://media.api-sports.io/football/leagues/61.png',
+      country: 'France',
+      flag: '🇫🇷',
+    },
+    {
+      id: MAIN_LEAGUES.BOTOLA_MAROC,
+      name: 'Botola Pro',
+      logo: 'https://media.api-sports.io/football/leagues/200.png',
+      country: 'Morocco',
+      flag: '🇲🇦',
+    },
+    {
+      id: 307,
+      name: 'Saudi Pro League',
+      logo: 'https://media.api-sports.io/football/leagues/307.png',
+      country: 'Saudi Arabia',
+      flag: '🇸🇦',
+    },
+    {
+      id: 677,
+      name: 'QSL Cup',
+      logo: 'https://media.api-sports.io/football/leagues/677.png',
+      country: 'Qatar',
+      flag: '🇶🇦',
+    },
+    {
+      id: 186,
+      name: 'Algeria Ligue 1',
+      logo: 'https://media.api-sports.io/football/leagues/186.png',
+      country: 'Algeria',
+      flag: '🇩�',
+    },
+    {
+      id: MAIN_LEAGUES.EUROPA_LEAGUE,
+      name: 'Europa League',
+      logo: 'https://media.api-sports.io/football/leagues/3.png',
+      country: 'Europe',
+      flag: '🇪�',
+    },
+    {
+      id: 12,
+      name: 'CAF Champions League',
+      logo: 'https://media.api-sports.io/football/leagues/12.png',
+      country: 'Africa',
+      flag: '�',
+    },
+    {
+      id: 20,
+      name: 'CAF Confederation Cup',
+      logo: 'https://media.api-sports.io/football/leagues/20.png',
+      country: 'Africa',
+      flag: '�',
+    },
+    {
+      id: 233,
+      name: 'Egyptian Premier League',
+      logo: 'https://media.api-sports.io/football/leagues/233.png',
+      country: 'Egypt',
+      flag: '��',
+    },
+    {
+      id: MAIN_LEAGUES.CHAMPIONS_LEAGUE,
+      name: 'Champions League',
+      logo: 'https://media.api-sports.io/football/leagues/2.png',
+      country: 'Europe',
+      flag: '🇪🇺',
+    },
   ];
 
-  // Combiner tous les résultats
+  const queries = leagueConfigs.map(l => useLeagueStandings(l.id, season));
+
+
+  // Combiner tous les résultats avec les configs
   const standingsData: LeagueStanding[] = queries.map((query, index) => {
-    const leagueId = leagues[index];
-    let leagueName = '';
-    let leagueLogo = '';
-    let country = '';
-    let flag = '';
-
-    // Mapping des noms et logos des ligues
-    switch (leagueId) {
-      case MAIN_LEAGUES.PREMIER_LEAGUE:
-        leagueName = 'Premier League';
-        leagueLogo = 'https://media.api-sports.io/football/leagues/39.png';
-        country = 'England';
-        flag = '🏴󠁧󠁢󠁥󠁮󠁧󠁿';
-        break;
-      case MAIN_LEAGUES.LA_LIGA:
-        leagueName = 'La Liga';
-        leagueLogo = 'https://media.api-sports.io/football/leagues/140.png';
-        country = 'Spain';
-        flag = '🇪🇸';
-        break;
-      case MAIN_LEAGUES.SERIE_A:
-        leagueName = 'Serie A';
-        leagueLogo = 'https://media.api-sports.io/football/leagues/135.png';
-        country = 'Italy';
-        flag = '🇮🇹';
-        break;
-      case MAIN_LEAGUES.BUNDESLIGA:
-        leagueName = 'Bundesliga';
-        leagueLogo = 'https://media.api-sports.io/football/leagues/78.png';
-        country = 'Germany';
-        flag = '🇩🇪';
-        break;
-      case MAIN_LEAGUES.LIGUE_1:
-        leagueName = 'Ligue 1';
-        leagueLogo = 'https://media.api-sports.io/football/leagues/61.png';
-        country = 'France';
-        flag = '🇫🇷';
-        break;
-      case MAIN_LEAGUES.CHAMPIONS_LEAGUE:
-        leagueName = 'Champions League';
-        leagueLogo = 'https://media.api-sports.io/football/leagues/2.png';
-        country = 'Europe';
-        flag = '🇪🇺';
-        break;
-    }
-
-    // Extraire les données de classement si disponibles
+    const config = leagueConfigs[index];
     let standings: Standing[] = [];
     const responseData = query.data as StandingsResponse | undefined;
     if (responseData?.response?.[0]?.league?.standings?.[0]) {
       standings = responseData.response[0].league.standings[0];
     }
-
     return {
-      leagueId,
-      leagueName,
-      leagueLogo,
-      country,
-      flag,
+      leagueId: config.id,
+      leagueName: config.name,
+      leagueLogo: config.logo,
+      country: config.country,
+      flag: config.flag,
       season,
       standings,
       loading: query.isLoading,

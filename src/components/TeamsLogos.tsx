@@ -99,7 +99,7 @@ const TeamsLogos = () => {
       name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly", 
       logo: "https://media.api-sports.io/football/teams/1023.png",
       league: "Egyptian Premier League",
-      leagueId: 307
+      leagueId: 233
     },
     { 
       id: 968, 
@@ -121,21 +121,21 @@ const TeamsLogos = () => {
         name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly (Libya)", 
         logo: "https://media.api-sports.io/football/teams/1029.png",
         league: "Libyan Premier League",
-        leagueId: 312
+        leagueId: 1040
       },
       { 
         id: 1040, 
         name: currentLanguage === 'ar' ? "الزمالك" : "Zamalek", 
         logo: "https://media.api-sports.io/football/teams/1040.png",
         league: "Egyptian Premier League",
-        leagueId: 307
+        leagueId: 233
       },
       { 
         id: 969, 
         name: currentLanguage === 'ar' ? "الجيش الملكي" : "FAR Rabat", 
         logo: "https://media.api-sports.io/football/teams/969.png",
         league: "Botola Pro",
-        leagueId: 564
+        leagueId: 200
       },
       { 
         id: 10755, 
@@ -149,7 +149,7 @@ const TeamsLogos = () => {
         name: currentLanguage === 'ar' ? "المغرب الفاسي" : "Maghreb Fès", 
         logo: "https://media.api-sports.io/football/teams/3453.png",
         league: "Botola Pro",
-        leagueId: 564
+        leagueId: 200
       },
       { 
         id: 2932, 

@@ -159,25 +159,33 @@ const Standings = () => {
       flag: '🇩🇿'
     },
      {
-          name: currentLanguage === 'ar' ? "الدوري الأوروبي" : "Europa League",
-          id: MAIN_LEAGUES.EUROPA_LEAGUE,
-          logo: "https://media.api-sports.io/football/leagues/3.png"
-        },
-        {
-          name: currentLanguage === 'ar' ? "دوري أبطال أفريقيا" : "CAF Champions League",
-          id: 12,
-          logo: "https://media.api-sports.io/football/leagues/12.png"
-        },
-        {
-          name: currentLanguage === 'ar' ? "كأس الكونفدرالية الأفريقية" : "CAF Confederation Cup",
-          id: 20,
-          logo: "https://media.api-sports.io/football/leagues/20.png"
-        },
-        {
-          name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
-          id: 233,
-          logo: "https://media.api-sports.io/football/leagues/233.png"
-        },
+      name: currentLanguage === 'ar' ? "الدوري الأوروبي" : "Europa League",
+      id: MAIN_LEAGUES.EUROPA_LEAGUE,
+      logo: "https://media.api-sports.io/football/leagues/3.png",
+      country: currentLanguage === 'ar' ? 'أوروبا' : 'Europe',
+      flag: '🇪🇺'
+    },
+    {
+      name: currentLanguage === 'ar' ? "دوري أبطال أفريقيا" : "CAF Champions League",
+      id: 12,
+      logo: "https://media.api-sports.io/football/leagues/12.png",
+      country: currentLanguage === 'ar' ? 'أفريقيا' : 'Africa',
+      flag: '🌍'
+    },
+    {
+      name: currentLanguage === 'ar' ? "كأس الكونفدرالية الأفريقية" : "CAF Confederation Cup",
+      id: 20,
+      logo: "https://media.api-sports.io/football/leagues/20.png",
+      country: currentLanguage === 'ar' ? 'أفريقيا' : 'Africa',
+      flag: '🌍'
+    },
+    {
+      name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
+      id: 233,
+      logo: "https://media.api-sports.io/football/leagues/233.png",
+      country: currentLanguage === 'ar' ? 'مصر' : 'Egypt',
+      flag: '🇪🇬'
+    },
   ];
 
   // Filtrer les ligues selon la recherche

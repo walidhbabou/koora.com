@@ -87,9 +87,9 @@ const Transfers = () => {
   }, [selectedSeason]);
   // Pagination (responsive)
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number>(500);
+  const [pageSize, setPageSize] = useState<number>(20);
   useEffect(() => {
-    setPageSize(500);
+    setPageSize(20);
   }, [isMobile]);
 
   // Tri par date décroissante (sans filtrage strict par saison pour garantir l'affichage)
@@ -458,6 +458,8 @@ const Transfers = () => {
                 </div>
               </div>
 
+              {/* Debug: nombre de transferts trouvés */}
+              
               {paginatedTransfers.length > 0 ? (
                 <div className="space-y-4 sm:space-y-3">
                   {paginatedTransfers.map((transfer, index) => {
@@ -471,12 +473,27 @@ const Transfers = () => {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  <div className="text-6xl mb-4">⚽</div>
-                  <div className="text-lg font-medium">
-                    {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}
+                // Fallback : si aucun transfert pour la saison sélectionnée, afficher tous les transferts disponibles (20 max)
+                filteredTransfers.length > 0 ? (
+                  <div className="space-y-4 sm:space-y-3">
+                    {filteredTransfers.slice(0, 20).map((transfer, index) => {
+                      const t = transfer as Record<string, unknown>;
+                      const player = t['player'] as Record<string, unknown> | undefined;
+                      const pid = player?.['id'] ?? 'unknown';
+                      const dateKey = t['date'] ?? t['normalizedDate'] ?? 'nodate';
+                      return (
+                        <TransferCard key={`fallback-${pid}-${dateKey}-${index}`} transfer={transfer as unknown as TransferEnriched} />
+                      );
+                    })}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <div className="text-6xl mb-4">⚽</div>
+                    <div className="text-lg font-medium">
+                      {isRTL ? "لا توجد انتقالات متاحة حالياً" : "No transfers available right now"}
+                    </div>
+                  </div>
+                )
               )}
 
               {/* Pagination (always visible) */}

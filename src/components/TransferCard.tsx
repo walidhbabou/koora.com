@@ -26,8 +26,8 @@ const TransferCard: React.FC<Props> = ({ transfer }) => {
   const toName = isRTL ? getTeamTranslation(toTeam?.name || '-') : (toTeam?.name || '-');
   const typeLabel = transfer?.type || (isRTL ? 'انتقال' : 'Transfer');
 
-  // Directional arrow
-  const arrow = isRTL ? '←' : '→';
+  // Directional arrow: pour RTL (arabe) →, sinon ←
+  const arrow = isRTL ? '→' : '←';
 
   // Fonction pour formater la date en arabe
   const formatDateArabic = (dateString: string) => {

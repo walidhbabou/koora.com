@@ -19,6 +19,7 @@ import LanguageTest from "./pages/LanguageTest";
 import TranslationDemo from "./pages/TranslationDemo";
 import TeamDetails from "./pages/TeamDetails";
 import TestPage from "./pages/TestPage";
+import Search from "./pages/Search";
 import AdminDashboard from "./pages/AdminDashboard";
 import EditorDashboard from "./pages/EditorDashboard";
 import AuthorDashboard from "./pages/AuthorDashboard";
@@ -79,6 +80,7 @@ const App = () => {
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/team/:teamId" element={<TeamDetails />} />
                 <Route path="/test" element={<TestPage />} />
+                <Route path="/search" element={<Search />} />
                 <Route path="/language-test" element={<LanguageTest />} />
                 <Route path="/translation-demo" element={<TranslationDemo />} />
                 <Route path="/login" element={<LoginPage />} />
