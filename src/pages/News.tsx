@@ -64,6 +64,19 @@ const parseEditorJsContent = (content: string): string => {
   }
 };
 
+type WordPressNewsItem = {
+  id: number;
+  title: { rendered: string };
+  excerpt: { rendered: string };
+  date: string;
+  featured_media?: number;
+  _embedded?: {
+    'wp:featuredmedia'?: Array<{
+      source_url: string;
+    }>;
+  };
+};
+
 const News = () => {
   type NewsCardItem = {
     id: string;
@@ -72,6 +85,7 @@ const News = () => {
     imageUrl: string;
     publishedAt: string;
     category: string;
+    source?: 'wordpress' | 'supabase';
   };
 
   interface Category {
@@ -112,120 +126,203 @@ const News = () => {
   const [reportOpenId, setReportOpenId] = useState<string | null>(null);
   const [reportDesc, setReportDesc] = useState('');
   const [selectedChampion, setSelectedChampion] = useState<number | null>(null);
-  
+  const [news, setNews] = useState<WordPressNewsItem[]>([]);
+
   // States pour CategoryFilterHeader
   const [selectedHeaderCategory, setSelectedHeaderCategory] = useState<number | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
 
-  const fetchNews = useCallback(async (nextPage: number, append: boolean = false) => {
+  // Fonction utilitaire pour nettoyer le HTML
+  const stripHtml = (html: string) =>
+    html
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+      .replace(/&hellip;/gi, '...')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#8217;/gi, "'")
+      .replace(/&#8220;/gi, '"')
+      .replace(/&#8221;/gi, '"')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  // Fonction pour transformer les données WordPress en format NewsCardItem
+  const transformWordPressNews = (wpNews: WordPressNewsItem[]): NewsCardItem[] => {
+    return wpNews.map((item) => {
+      const plainExcerpt = stripHtml(item.excerpt?.rendered || '');
+      const plainTitle = stripHtml(item.title?.rendered || '');
+      const imageUrl = item._embedded?.['wp:featuredmedia']?.[0]?.source_url || '/placeholder.svg';
+      
+      return {
+        id: `wp_${item.id}`,
+        title: plainTitle,
+        summary: plainExcerpt.slice(0, 160) + (plainExcerpt.length > 160 ? '…' : ''),
+        imageUrl: imageUrl,
+        publishedAt: item.date ? new Date(item.date).toISOString().slice(0, 10) : '',
+        category: currentLanguage === 'ar' ? 'كورة نيوز' : 'Koora News',
+        source: 'wordpress'
+      };
+    });
+  };
+
+  // Fonction pour récupérer les news Supabase
+  const fetchSupabaseNews = useCallback(async (nextPage: number): Promise<NewsCardItem[]> => {
+    let query = supabase
+      .from('news')
+      .select('*', { count: 'exact' })
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .range((nextPage - 1) * pageSize, nextPage * pageSize - 1);
+    
+    // Filter by category header selection
+    if (selectedHeaderCategory && selectedSubCategory) {
+      switch(selectedHeaderCategory) {
+        case 1:
+          query = query.eq('competition_internationale_id', selectedSubCategory);
+          break;
+        case 2:
+          query = query.eq('competition_mondiale_id', selectedSubCategory);
+          break;
+        case 3:
+          query = query.eq('competition_continentale_id', selectedSubCategory);
+          break;
+        case 4:
+          query = query.eq('competition_locale_id', selectedSubCategory);
+          break;
+        case 5:
+          query = query.eq('transfert_news_id', selectedSubCategory);
+          break;
+      }
+    } else if (selectedHeaderCategory) {
+      switch(selectedHeaderCategory) {
+        case 1:
+          query = query.not('competition_internationale_id', 'is', null);
+          break;
+        case 2:
+          query = query.not('competition_mondiale_id', 'is', null);
+          break;
+        case 3:
+          query = query.not('competition_continentale_id', 'is', null);
+          break;
+        case 4:
+          query = query.not('competition_locale_id', 'is', null);
+          break;
+        case 5:
+          query = query.not('transfert_news_id', 'is', null);
+          break;
+      }
+    }
+    
+    if (selectedChampion) {
+      switch(selectedChampion) {
+        case 1:
+          query = query.eq('competition_internationale_id', 1);
+          break;
+        case 2:
+          query = query.eq('competition_internationale_id', 2);
+          break;
+        case 3:
+          query = query.eq('competition_internationale_id', 3);
+          break;
+        case 4:
+          query = query.eq('competition_internationale_id', 4);
+          break;
+        case 5:
+          query = query.eq('competition_internationale_id', 5);
+          break;
+        case 6:
+          query = query.eq('competition_internationale_id', 6);
+          break;
+      }
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    
+    if (data) {
+      return data.map((n: NewsDBRow) => {
+        const parsedContent = parseEditorJsContent(String(n.content || ''));
+        const plain = stripHtml(parsedContent);
+        return {
+          id: String(n.id || ''),
+          title: String(n.title || '-'),
+          summary: plain.slice(0, 160) + (plain.length > 160 ? '…' : ''),
+          imageUrl: String(n.image_url || '/placeholder.svg'),
+          publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
+          category: 'أخبار',
+          source: 'supabase'
+        };
+      });
+    }
+    
+    return [];
+  }, [selectedChampion, selectedHeaderCategory, selectedSubCategory, pageSize]);
+
+  // Fonction pour récupérer les news WordPress
+  const fetchWordPressNews = async (): Promise<NewsCardItem[]> => {
+    try {
+      const response = await fetch("https://koora.com/wp-json/wp/v2/posts?_embed");
+      if (!response.ok) throw new Error('WordPress fetch failed');
+      
+      const wpNews: WordPressNewsItem[] = await response.json();
+      console.log('WordPress news loaded:', wpNews.length, 'articles');
+      
+      return transformWordPressNews(wpNews);
+    } catch (error) {
+      console.error('WordPress news fetch failed:', error);
+      return [];
+    }
+  };
+
+  // Fonction principale pour récupérer et combiner toutes les news
+  const fetchAllNews = useCallback(async (nextPage: number, append: boolean = false) => {
     setLoadingNews(true);
     try {
-      let query = supabase
-        .from('news')
-        .select('*', { count: 'exact' })
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .range((nextPage - 1) * pageSize, nextPage * pageSize - 1);
+      const promises = [];
       
-      // Filter by category header selection
-      if (selectedHeaderCategory && selectedSubCategory) {
-        // Filter by specific subcategory
-        switch(selectedHeaderCategory) {
-          case 1: // Internationales
-            query = query.eq('competition_internationale_id', selectedSubCategory);
-            break;
-          case 2: // Mondiales
-            query = query.eq('competition_mondiale_id', selectedSubCategory);
-            break;
-          case 3: // Continentales
-            query = query.eq('competition_continentale_id', selectedSubCategory);
-            break;
-          case 4: // Locales
-            query = query.eq('competition_locale_id', selectedSubCategory);
-            break;
-          case 5: // Transferts
-            query = query.eq('transfert_news_id', selectedSubCategory);
-            break;
-        }
-      } else if (selectedHeaderCategory) {
-        // Filter by category (all subcategories)
-        switch(selectedHeaderCategory) {
-          case 1: // Internationales
-            query = query.not('competition_internationale_id', 'is', null);
-            break;
-          case 2: // Mondiales
-            query = query.not('competition_mondiale_id', 'is', null);
-            break;
-          case 3: // Continentales
-            query = query.not('competition_continentale_id', 'is', null);
-            break;
-          case 4: // Locales
-            query = query.not('competition_locale_id', 'is', null);
-            break;
-          case 5: // Transferts
-            query = query.not('transfert_news_id', 'is', null);
-            break;
-        }
+      // Récupérer les news Supabase
+      promises.push(fetchSupabaseNews(nextPage));
+      
+      // Récupérer les news WordPress seulement pour la première page
+      if (nextPage === 1) {
+        promises.push(fetchWordPressNews());
       }
       
-      // Filter by competition type if selected (legacy filter)
-      if (selectedChampion) {
-        // Map champion selection to competition filters
-        switch(selectedChampion) {
-          case 1: // Champions League
-            query = query.eq('competition_internationale_id', 1);
-            break;
-          case 2: // Premier League
-            query = query.eq('competition_internationale_id', 2);
-            break;
-          case 3: // La Liga
-            query = query.eq('competition_internationale_id', 3);
-            break;
-          case 4: // Serie A
-            query = query.eq('competition_internationale_id', 4);
-            break;
-          case 5: // Bundesliga
-            query = query.eq('competition_internationale_id', 5);
-            break;
-          case 6: // Ligue 1
-            query = query.eq('competition_internationale_id', 6);
-            break;
-        }
+      const results = await Promise.all(promises);
+      const supabaseNews = results[0] || [];
+      const wordpressNews = results[1] || [];
+      
+      let combinedNews: NewsCardItem[];
+      
+      if (nextPage === 1) {
+        // Pour la première page, mélanger WordPress et Supabase
+        combinedNews = [...wordpressNews, ...supabaseNews];
+        
+        // Trier par date (plus récent en premier)
+        combinedNews.sort((a, b) => 
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        );
+        
+        console.log('Combined news:', combinedNews.length);
+        console.log('WordPress articles:', wordpressNews.length);
+        console.log('Supabase articles:', supabaseNews.length);
+      } else {
+        // Pour les autres pages, seulement Supabase
+        combinedNews = supabaseNews;
       }
       
-      const { data, count, error } = await query;
-      
-      if (error) throw error;
-      
-      if (data) {
-        const stripHtml = (html: string) =>
-          html
-            .replace(/<[^>]*>/g, ' ')
-            .replace(/&nbsp;/gi, ' ')
-            .replace(/&amp;/gi, '&')
-            .replace(/&lt;/gi, '<')
-            .replace(/&gt;/gi, '>')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        const mapped: NewsCardItem[] = data.map((n: NewsDBRow) => {
-          // Parse Editor.js content first, then strip HTML
-          const parsedContent = parseEditorJsContent(String(n.content || ''));
-          const plain = stripHtml(parsedContent);
-          return {
-            id: String(n.id || ''),
-            title: String(n.title || '-'),
-            summary: plain.slice(0, 160) + (plain.length > 160 ? '…' : ''),
-            imageUrl: String(n.image_url || '/placeholder.svg'),
-            publishedAt: n.created_at ? new Date(n.created_at).toISOString().slice(0, 10) : '',
-            category: 'أخبار',
-          };
-        });
-
-        setAllNews(prev => append ? [...prev, ...mapped] : mapped);
-        setHasMore(mapped.length === pageSize);
-        if (!append) setPage(nextPage);
+      if (append) {
+        setAllNews(prev => [...prev, ...combinedNews]);
+      } else {
+        setAllNews(combinedNews);
       }
+      
+      setHasMore(supabaseNews.length === pageSize);
+      if (!append) setPage(nextPage);
+      
     } catch (e) {
       console.error('Failed to load news', e);
       if (!append) setAllNews([]);
@@ -233,11 +330,23 @@ const News = () => {
     } finally {
       setLoadingNews(false);
     }
-  }, [selectedChampion, selectedHeaderCategory, selectedSubCategory, pageSize]);
+  }, [fetchSupabaseNews]);
 
-  useEffect(() => { 
-    fetchNews(1, false); 
-  }, [fetchNews]);
+  // useEffect pour charger les news WordPress (pour debug et état séparé)
+  useEffect(() => {
+    fetch("https://koora.com/wp-json/wp/v2/posts")
+      .then(res => res.json())
+      .then((data) => {
+        console.log('WordPress news loaded in separate effect:', data.length, 'articles');
+        setNews(data);
+      })
+      .catch(error => console.error('Error fetching WordPress news:', error));
+  }, []);
+
+  // useEffect principal pour charger toutes les news
+  useEffect(() => {
+    fetchAllNews(1, false);
+  }, [fetchAllNews]);
 
   const reportNews = async (newsId: string, description: string) => {
     if (reportingId) return;
@@ -249,6 +358,17 @@ const News = () => {
       });
       return;
     }
+    
+    // Ne pas permettre le signalement des news WordPress
+    if (newsId.startsWith('wp_')) {
+      toast({ 
+        title: 'غير متاح', 
+        description: 'لا يمكن الإبلاغ عن هذا المحتوى الخارجي', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+    
     setReportingId(newsId);
     try {
       try {
@@ -292,7 +412,7 @@ const News = () => {
   const handleLoadMore = async () => {
     if (loadingNews || !hasMore) return;
     const next = page + 1;
-    await fetchNews(next, true);
+    await fetchAllNews(next, true);
     setPage(next);
   };
 
@@ -300,7 +420,7 @@ const News = () => {
     setSelectedChampion(championId);
     setPage(1);
     setAllNews([]);
-    fetchNews(1);
+    fetchAllNews(1);
   };
 
   // Trending topics derived from latest news titles
@@ -308,12 +428,12 @@ const News = () => {
 
   // Mapping between league IDs and competition IDs (adjust these based on your actual data)
   const leagueToCompetitionMap: { [key: number]: number } = {
-    [MAIN_LEAGUES.CHAMPIONS_LEAGUE]: 1,   // competition_internationale_id
-    [MAIN_LEAGUES.PREMIER_LEAGUE]: 2,     // competition_internationale_id  
-    [MAIN_LEAGUES.LA_LIGA]: 3,           // competition_internationale_id
-    [MAIN_LEAGUES.SERIE_A]: 4,           // competition_internationale_id
-    [MAIN_LEAGUES.BUNDESLIGA]: 5,        // competition_internationale_id
-    [MAIN_LEAGUES.LIGUE_1]: 6,           // competition_internationale_id
+    [MAIN_LEAGUES.CHAMPIONS_LEAGUE]: 1,
+    [MAIN_LEAGUES.PREMIER_LEAGUE]: 2,
+    [MAIN_LEAGUES.LA_LIGA]: 3,
+    [MAIN_LEAGUES.SERIE_A]: 4,
+    [MAIN_LEAGUES.BUNDESLIGA]: 5,
+    [MAIN_LEAGUES.LIGUE_1]: 6,
   };
 
   // Leagues list (left sidebar) localized
@@ -356,6 +476,13 @@ const News = () => {
     },
   ];
 
+  // Debug logs - only in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Total news to display:', allNews.length);
+    console.log('WordPress news count:', allNews.filter(n => n.source === 'wordpress').length);
+    console.log('Supabase news count:', allNews.filter(n => n.source === 'supabase').length);
+  }
+
   return (
     <React.Fragment>
       <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
@@ -383,6 +510,8 @@ const News = () => {
         <MobileAd testMode={process.env.NODE_ENV === 'development'} />
         
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
+          
+          
           {/* Slider des dernières news */}
           {!loadingNews && allNews.length > 0 && (
             <div className="flex justify-center mb-6">
@@ -398,25 +527,31 @@ const News = () => {
               </div>
             </div>
           )}
+          
           {/* Featured News en grand sous le slider */}
           {!loadingNews && allNews.length > 0 && (
             <div className="mb-6">
-              <Link to={`/news/${allNews[0].id}`}> 
-                <FeaturedNewsCard
-                  title={allNews[0].title}
-                  imageUrl={allNews[0].imageUrl}
-                  publishedAt={allNews[0].publishedAt}
-                  category={allNews[0].category}
-                />
+              <Link to={`/news/${allNews[0].id}`}>
+                <div className="relative">
+                  <FeaturedNewsCard
+                    title={allNews[0].title}
+                    imageUrl={allNews[0].imageUrl}
+                    publishedAt={allNews[0].publishedAt}
+                    category={allNews[0].category}
+                  />
+                  {allNews[0].source === 'wordpress' && (
+                    <div className="absolute top-4 right-4 bg-blue-600 text-white text-sm px-3 py-1 rounded-full font-medium">
+                      {currentLanguage === 'ar' ? 'كورة نيوز' : 'Koora News'}
+                    </div>
+                  )}
+                </div>
               </Link>
             </div>
           )}
+          
           <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
-            {/* Mobile Leagues Filter - Grid Layout */}
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
-              {/* La première news est déjà affichée en grand, on l'enlève de la grille */}
-
               {/* Loading state - Responsive Grid */}
               {loadingNews && allNews.length === 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
@@ -434,17 +569,24 @@ const News = () => {
               )}
 
               {/* News Grid - Responsive - Starting from index 1 to avoid duplicating featured news */}
-                {!loadingNews && allNews.length > 1 && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
-                    {allNews.slice(1).map((news) => (
-                      <Link to={`/news/${news.id}`} key={news.id}>
-                        <NewsCard news={news} size="medium" />
+              {!loadingNews && allNews.length > 1 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
+                  {allNews.slice(1).map((newsItem) => (
+                    <div key={newsItem.id} className="relative">
+                      <Link to={`/news/${newsItem.id}`}>
+                        <NewsCard news={newsItem} size="medium" />
+                        {newsItem.source === 'wordpress' && (
+                          <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                            {currentLanguage === 'ar' ? 'كورة' : 'Koora'}
+                          </div>
+                        )}
                       </Link>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
-              {/* No news state - show empty NewsCard */}
+              {/* No news state */}
               {!loadingNews && allNews.length === 0 && (
                 <div className="flex justify-center py-8 sm:py-12">
                   <NewsCard
@@ -461,7 +603,7 @@ const News = () => {
                 </div>
               )}
 
-              {/* Load More Button - Mobile Responsive */}
+              {/* Load More Button */}
               {!loadingNews && allNews.length > 0 && (
                 <div className="flex justify-center pt-2 sm:pt-3 lg:pt-4">
                   <Button
@@ -477,7 +619,7 @@ const News = () => {
               )}
             </div>
 
-            {/* Right Sidebar - More Secondary Content */}
+            {/* Right Sidebar */}
             <div className="hidden xl:block w-64 space-y-4">
               {/* Trending Topics */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
