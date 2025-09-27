@@ -106,12 +106,11 @@ const CategoryFilterHeader = ({
                     variant="ghost"
                     className={`
                       relative group flex items-center gap-2 px-6 py-4 mx-1
-                      text-white
                       ${isActive 
-                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} shadow-lg`
-                        : "hover:text-white"}
+                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} shadow-lg text-white`
+                        : "text-gray-800 dark:text-white hover:text-white"}
                       font-bold text-base
-                      hover:bg-gradient-to-r hover:${category.lightColor} dark:hover:${category.darkColor}
+                      hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 dark:hover:from-sport-green dark:hover:to-green-800 hover:text-white
                       transition-all duration-300 border-none outline-none
                       rounded-lg backdrop-blur-sm
                       ${isActive ? "transform scale-105" : "hover:transform hover:scale-105"}
@@ -130,7 +129,7 @@ const CategoryFilterHeader = ({
                 </DropdownMenuTrigger>
 
                 <DropdownMenuContent 
-                  className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-800 border border-gray-200 dark:border-slate-600/50 min-w-[320px] shadow-2xl backdrop-blur-md"
+                  className="bg-white dark:bg-gradient-to-b dark:from-slate-900 dark:to-slate-800 border border-gray-200 dark:border-slate-600/50 min-w-[320px] shadow-2xl backdrop-blur-md text-gray-900 dark:text-white"
                   align="center"
                   sideOffset={12}
                 >
@@ -141,7 +140,7 @@ const CategoryFilterHeader = ({
                   </div>
 
                   <DropdownMenuItem
-                    className="text-gray-700 dark:text-sport-green hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 hover:text-white cursor-pointer font-medium px-4 py-3"
+                    className="text-gray-800 dark:text-sport-green hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 hover:text-white cursor-pointer font-medium px-4 py-3"
                     onClick={() => {
                       setSelectedHeaderCategory(category.id);
                       setSelectedSubCategory(null);
@@ -154,7 +153,7 @@ const CategoryFilterHeader = ({
                     {subCategories[category.id]?.map((subCat) => (
                       <DropdownMenuItem
                         key={subCat.id}
-                        className="text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-sport-green cursor-pointer px-4 py-2"
+                        className="text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-sport-green cursor-pointer px-4 py-2"
                         onClick={() => {
                           setSelectedHeaderCategory(category.id);
                           setSelectedSubCategory(subCat.id);

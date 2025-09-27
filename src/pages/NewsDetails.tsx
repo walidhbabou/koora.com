@@ -807,13 +807,39 @@ const NewsDetails: React.FC = () => {
       
       const wpNews: WordPressNewsItem = await response.json();
       
-      // Transformer en format NewsRow
+      // Chercher l'image principale :
+      let imageUrl = wpNews._embedded?.['wp:featuredmedia']?.[0]?.source_url || null;
+      // Si pas d'image, chercher la première image dans le contenu HTML
+      if (!imageUrl && wpNews.content?.rendered) {
+        const imgMatch = wpNews.content.rendered.match(/<img[^>]+src=["']([^"'>]+)["']/i);
+        if (imgMatch && imgMatch[1]) {
+          imageUrl = imgMatch[1];
+        }
+      }
+      // Si toujours pas d'image, chercher un lien Twitter/X et utiliser l'image d'aperçu
+      if (!imageUrl && wpNews.content?.rendered) {
+        const twitterMatch = wpNews.content.rendered.match(/https?:\/\/(?:twitter|x)\.com\/[^"]+/i);
+        if (twitterMatch && twitterMatch[0]) {
+          // Utiliser l'API oEmbed Twitter pour récupérer l'image d'aperçu
+          try {
+            const oembedRes = await fetch(`https://publish.twitter.com/oembed?url=${encodeURIComponent(twitterMatch[0])}`);
+            if (oembedRes.ok) {
+              const oembedData = await oembedRes.json();
+              // Chercher une image dans le HTML retourné
+              const thumbMatch = oembedData.html.match(/<img[^>]+src=["']([^"'>]+)["']/i);
+              if (thumbMatch && thumbMatch[1]) {
+                imageUrl = thumbMatch[1];
+              }
+            }
+          } catch (e) { /* ignorer */ }
+        }
+      }
       const transformedNews: NewsRow = {
         id: wpNews.id,
         title: stripHtml(wpNews.title.rendered),
         content: wpNews.content.rendered, // Garder le HTML pour WordPress
         created_at: wpNews.date,
-        image_url: wpNews._embedded?.['wp:featuredmedia']?.[0]?.source_url || null,
+        image_url: imageUrl,
         source: 'wordpress'
       };
 
@@ -1083,8 +1109,42 @@ const NewsDetails: React.FC = () => {
                   
                   <div className={isWordPressNews ? "wordpress-content" : "news-content"}>
                     {isWordPressNews ? (
-                      // Contenu WordPress - rendu HTML direct
-                      <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(news.content) }} />
+                      // Contenu WordPress - rendu avec détection des liens Twitter/X
+                      <>
+                        {(() => {
+                          // Split le contenu sur les liens Twitter/X de type /status/ uniquement
+                          const parts: React.ReactNode[] = [];
+                          const regex = /(https?:\/\/(?:twitter|x)\.com\/[\w\-@.]+\/status\/[0-9]+)/gi;
+                          let lastIndex = 0;
+                          let match;
+                          const raw = news.content || '';
+                          while ((match = regex.exec(raw)) !== null) {
+                            // Ajouter le HTML avant le lien
+                            if (match.index > lastIndex) {
+                              let before = raw.slice(lastIndex, match.index);
+                              // Nettoyer les liens ref_src et attributs techniques
+                              before = before.replace(/<a [^>]*ref_src[^>]*>.*?<\/a>/gi, '');
+                              before = before.replace(/<a [^>]*rel="nofollow noopener"[^>]*target="_blank"[^>]*>.*?<\/a>/gi, '');
+                              parts.push(<span key={lastIndex} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(before) }} />);
+                            }
+                            // Ajouter l'embed
+                            parts.push(
+                              <div key={match[0]} style={{margin: '18px 0'}}>
+                                <XEmbed url={match[0]} />
+                              </div>
+                            );
+                            lastIndex = match.index + match[0].length;
+                          }
+                          // Ajouter le reste du HTML
+                          if (lastIndex < raw.length) {
+                            let after = raw.slice(lastIndex);
+                            after = after.replace(/<a [^>]*ref_src[^>]*>.*?<\/a>/gi, '');
+                            after = after.replace(/<a [^>]*rel="nofollow noopener"[^>]*target="_blank"[^>]*>.*?<\/a>/gi, '');
+                            parts.push(<span key={lastIndex} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(after) }} />);
+                          }
+                          return parts;
+                        })()}
+                      </>
                     ) : (
                       // Contenu Supabase - rendu Editor.js
                       parsedBlocks.map((block, index) => {
