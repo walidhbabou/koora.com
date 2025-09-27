@@ -208,7 +208,7 @@ const Index = () => {
       
       {/* Mobile Ad */}
       <MobileAd testMode={process.env.NODE_ENV === 'development'} />
-      
+
       <div className="container mx-auto px-4 py-4 sm:py-8">
         <div className="flex flex-col lg:flex-row xl:flex-row gap-5 lg:gap-8 xl:gap-10 items-start">
           {/* Main Content */}
@@ -310,6 +310,43 @@ const Index = () => {
                 {/* Sidebar Ad */}
                 <SidebarAd testMode={process.env.NODE_ENV === 'development'} />
               </div>
+            </div>
+             {/* Mobile layout: sidebar + news cards */}
+            <div className="flex flex-col lg:hidden gap-5 items-stretch">
+              {/* News Grid - Responsive layout mobile */}
+              <div className="grid grid-cols-1 gap-4 animate-in fade-in-50">
+                {loading && (
+                  <>
+                    <Card className="h-80 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                    <Card className="h-64 animate-pulse bg-slate-100/60 dark:bg-slate-800/40" />
+                  </>
+                )}
+                {!loading && newsItems.map((news, idx) => (
+                  <Link key={news.id} to={`/news/${news.id}`} className="block">
+                    <NewsCard news={news} size={idx === 0 ? 'large' : 'medium'} />
+                  </Link>
+                ))}
+                {/* Pagination Controls Mobile */}
+                {totalCount > NEWS_PER_PAGE && (
+                  <div className="flex justify-center items-center mt-8">
+                    <button
+                      className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50"
+                      onClick={() => setPage(page - 1)}
+                      disabled={page === 1}
+                    >السابق</button>
+                    <span className="mx-2">صفحة {page} من {Math.ceil(totalCount / NEWS_PER_PAGE)}</span>
+                    <button
+                      className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50"
+                      onClick={() => setPage(page + 1)}
+                      disabled={page >= Math.ceil(totalCount / NEWS_PER_PAGE)}
+                    >التالي</button>
+                  </div>
+                )}
+                {!loading && newsItems.length === 0 && (
+                  <Card className="mt-4 p-8 text-center text-muted-foreground">لا توجد أخبار متاحة حالياً</Card>
+                )}
+              </div>
+              <Sidebar />
             </div>
           </div>
         </div>
