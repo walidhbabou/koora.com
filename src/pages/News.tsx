@@ -334,13 +334,13 @@ const News = () => {
 
   // useEffect pour charger les news WordPress (pour debug et état séparé)
   useEffect(() => {
-    fetch("https://koora.com/wp-json/wp/v2/posts")
+    fetch("/api/news")
       .then(res => res.json())
       .then((data) => {
-        console.log('WordPress news loaded in separate effect:', data.length, 'articles');
+        console.log('MySQL news loaded in separate effect:', data.length, 'articles');
         setNews(data);
       })
-      .catch(error => console.error('Error fetching WordPress news:', error));
+      .catch(error => console.error('Error fetching MySQL news:', error));
   }, []);
 
   // useEffect principal pour charger toutes les news
