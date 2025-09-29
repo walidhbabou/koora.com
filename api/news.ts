@@ -1,11 +1,10 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import mysql from 'mysql2/promise';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const connection = await mysql.createConnection({
-      host: 'srv1540.hstgr.io',
+      host: 'srv1540.hstgr.io', 
       user: 'u772497629_eZrQF',
       password: '8SsJwwgSkH',
       database: 'u772497629_CwWyn'
