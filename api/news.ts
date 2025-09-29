@@ -5,7 +5,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const connection = await mysql.createConnection({
       host: 'srv1540.hstgr.io', 
-      user: 'u772497629_eZrQF',
+      user: 'u772497629_eZrQf',
       password: '8SsJwwgSkH',
       database: 'u772497629_CwWyn'
     });
