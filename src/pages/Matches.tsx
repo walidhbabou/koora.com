@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { isArabic, getDisplayTeamName, formatDisplayDate, formatTimeLocalized, flattenMatch } from "@/utils/matchUtils";
+import { Fixture, League, Team } from "@/types/match";
 import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
@@ -22,38 +24,10 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 // Utility to check if a string contains Arabic characters
-const isArabic = (str: string) => /[\u0600-\u06FF]/.test(str);
-const getDisplayTeamName = (name: string) => {
-  const translated = getTeamTranslation(name);
-  return isArabic(translated) ? translated : name;
-};
+// ...existing code...
 dayjs.extend(utc);
 dayjs.extend(timezone);
-// Shared formatters to match TeamDetails.tsx, extended with timezone
-
-const formatDisplayDate = (dateString: string, currentLanguage: string, tz: string) => {
-  if (!dateString) return '';
-  const localDate = dayjs.utc(dateString).tz(tz);
-  if (currentLanguage === 'ar') {
-    // Format arabe: jour mois année
-    return localDate.locale('ar').format('D MMMM YYYY');
-  }
-  // Format français: jour mois année
-  return localDate.locale('fr').format('D MMM YYYY');
-};
-
-
-const formatTimeLocalized = (dateString: string, currentLanguage: string, tz: string, hourFormat: '12'|'24') => {
-  if (!dateString) return '';
-  const localDate = dayjs.utc(dateString).tz(tz);
-  let formatString = hourFormat === '12' ? 'hh:mm A' : 'HH:mm';
-  if (currentLanguage === 'ar') {
-    // Format arabe: 12h ou 24h avec indicateur matin/soir
-    return localDate.locale('ar').format(formatString);
-  }
-  // Format français: 12h ou 24h
-  return localDate.locale('fr').format(formatString);
-};
+// ...existing code...
 
 // Composant carte de match stylée avec bouton détails
 const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/config/api").Fixture, currentLanguage: string, onDetails: (match: any) => void }) => {
@@ -62,8 +36,8 @@ const MatchCard = ({ match, currentLanguage, onDetails }: { match: import("@/con
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  const displayHomeName = getDisplayTeamName(homeName);
-  const displayAwayName = getDisplayTeamName(awayName);
+  const displayHomeName = getDisplayTeamName(homeName, getTeamTranslation);
+  const displayAwayName = getDisplayTeamName(awayName, getTeamTranslation);
   const homeScore = (match.goals?.home ?? match.score?.fulltime?.home ?? 0);
   const awayScore = (match.goals?.away ?? match.score?.fulltime?.away ?? 0);
 
@@ -145,8 +119,8 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
   const awayLogo = match.teams?.away?.logo;
   const homeName = match.teams?.home?.name || "";
   const awayName = match.teams?.away?.name || "";
-  const displayHomeName = getDisplayTeamName(homeName);
-  const displayAwayName = getDisplayTeamName(awayName);
+  const displayHomeName = getDisplayTeamName(homeName, getTeamTranslation);
+  const displayAwayName = getDisplayTeamName(awayName, getTeamTranslation);
 
   // Formatage du temps de début du match
   const getMatchTime = () => {
@@ -316,46 +290,7 @@ const TranslatedMatchRow = ({ match, currentLanguage }: { match: import("@/confi
 };
 
 // Utilitaire pour aplatir un match (issu de l'API ou déjà à plat)
-const flattenMatch = (item: {
-  fixture?: {
-    id: number;
-    date: string;
-    status?: { short: string };
-  };
-  league?: {
-    id: number;
-    name: string;
-    logo: string;
-  };
-  teams?: {
-    home: { id: number; name: string; logo: string };
-    away: { id: number; name: string; logo: string };
-  };
-  goals?: { home: number; away: number };
-  score?: {
-    halftime?: { home: number; away: number };
-    fulltime?: { home: number; away: number };
-    extratime?: { home: number; away: number };
-    penalty?: { home: number; away: number };
-  };
-  status?: string;
-}) => {
-  const fixture = item.fixture || item;
-  const league = item.league || {};
-  return {
-    id: fixture.id,
-    date: fixture.date,
-    status: fixture.status?.short || item.status || '',
-    league: {
-      id: league.id,
-      name: league.name || '',
-      logo: league.logo || '',
-    },
-    teams: item.teams,
-    goals: item.goals,
-    score: item.score,
-  };
-};
+// ...existing code...
 
 const Matches = () => {
   const { currentLanguage, isRTL, direction } = useTranslation();
@@ -550,7 +485,8 @@ const Matches = () => {
     let list = allLiveMatches
       .filter((match: {
         league?: { id: number };
-      }) => match.league?.id === league.id)
+        date?: string;
+      }) => match.league?.id === league.id && match.date?.slice(0, 10) === selectedDate)
       .map(flattenMatch);
 
     if (statusFilter !== 'all') {

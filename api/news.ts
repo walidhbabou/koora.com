@@ -2,13 +2,28 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import mysql from 'mysql2/promise';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Enable CORS for local dev and Vercel
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  let connection;
   try {
-    const connection = await mysql.createConnection({
+    connection = await mysql.createConnection({
       host: 'srv1540.hstgr.io', 
       user: 'u772497629_eZrQf',
       password: '8SsJwwgSkH',
       database: 'u772497629_CwWyn'
     });
+  } catch (connErr) {
+    console.error('MySQL connection error:', connErr);
+    res.status(500).json({ error: 'MySQL connection error', details: connErr instanceof Error ? connErr.message : connErr });
+    return;
+  }
+  try {
     // On récupère les 20 derniers articles publiés
     const [rows] = await connection.execute(`
       SELECT ID, post_date, post_title, post_excerpt, post_content, post_status, post_type
@@ -18,9 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       LIMIT 20
     `);
     await connection.end();
-    res.status(200).json(rows);
+    // Always return valid JSON array
+    res.status(200).json(Array.isArray(rows) ? rows : []);
   } catch (error) {
-    console.error('MySQL connection/query error:', error);
-    res.status(500).json({ error: 'MySQL connection/query error', details: error instanceof Error ? error.message : error });
+    console.error('MySQL query error:', error);
+    res.status(500).json({ error: 'MySQL query error', details: error instanceof Error ? error.message : error });
+    if (connection) await connection.end();
   }
 }

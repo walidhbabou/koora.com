@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { stripHtml, parseEditorJsContent, transformWordPressNews } from "@/utils/newsUtils";
+import { EditorJsBlock, EditorJsContent, WordPressNewsItem, NewsCardItem, Category, DisplayCategory, NewsDBRow } from "@/types/news";
 import { Link } from "react-router-dom";
 import NewsCard from "../components/NewsCard";
 import FeaturedNewsCard from "../components/FeaturedNewsCard";
@@ -18,101 +19,11 @@ import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-
+import React, { useEffect, useState, useCallback } from "react";
 // Types for Editor.js content
-interface EditorJsBlock {
-  type: string;
-  data: {
-    text?: string;
-    items?: string[];
-    [key: string]: unknown;
-  };
-}
-
-interface EditorJsContent {
-  blocks: EditorJsBlock[];
-  version?: string;
-  time?: number;
-}
-
-// Function to parse Editor.js content and extract text
-const parseEditorJsContent = (content: string): string => {
-  try {
-    const parsed: EditorJsContent = JSON.parse(content);
-    if (parsed.blocks && Array.isArray(parsed.blocks)) {
-      return parsed.blocks
-        .map((block: EditorJsBlock) => {
-          if ((block.type === 'paragraph' || block.type === 'header') && block.data && block.data.text) {
-            return block.data.text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-          }
-          if (block.type === 'list' && block.data && block.data.items) {
-            return block.data.items.join(' ');
-          }
-          return '';
-        })
-        .filter(Boolean)
-        .join(' ');
-    }
-    return '';
-  } catch (e) {
-    // Fallback: try to extract text from raw JSON or string
-    const textMatches = content.match(/"text":\s*"([^"]+)"/g);
-    if (textMatches && textMatches.length > 0) {
-      return textMatches.map(match => match.replace(/"text":\s*"([^"]+)"/, '$1')).join(' ');
-    }
-    return '';
-  }
-};
-
-type WordPressNewsItem = {
-  id: number;
-  title: { rendered: string };
-  excerpt: { rendered: string };
-  date: string;
-  featured_media?: number;
-  _embedded?: {
-    'wp:featuredmedia'?: Array<{
-      source_url: string;
-    }>;
-  };
-};
 
 const News = () => {
-  type NewsCardItem = {
-    id: string;
-    title: string;
-    summary: string;
-    imageUrl: string;
-    publishedAt: string;
-    category: string;
-    source?: 'wordpress' | 'supabase';
-  };
-
-  interface Category {
-    id: string;
-    name: string;
-    name_ar: string;
-  }
-
-  interface DisplayCategory {
-    id: string | null;
-    name: string;
-    count: number;
-    active: boolean;
-  }
-
-  interface NewsDBRow {
-    id: number;
-    title: string;
-    content: string;
-    created_at: string;
-    image_url?: string;
-    status: string;
-    competition_internationale_id?: number;
-    competition_mondiale_id?: number;
-    competition_continentale_id?: number;
-    competition_locale_id?: number;
-  }
+  // ...existing code...
 
   const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
@@ -133,39 +44,10 @@ const News = () => {
   const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
 
   // Fonction utilitaire pour nettoyer le HTML
-  const stripHtml = (html: string) =>
-    html
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/&nbsp;/gi, ' ')
-      .replace(/&amp;/gi, '&')
-      .replace(/&lt;/gi, '<')
-      .replace(/&gt;/gi, '>')
-      .replace(/&hellip;/gi, '...')
-      .replace(/&quot;/gi, '"')
-      .replace(/&#8217;/gi, "'")
-      .replace(/&#8220;/gi, '"')
-      .replace(/&#8221;/gi, '"')
-      .replace(/\s+/g, ' ')
-      .trim();
+  // ...existing code...
 
   // Fonction pour transformer les données WordPress en format NewsCardItem
-  const transformWordPressNews = (wpNews: WordPressNewsItem[]): NewsCardItem[] => {
-    return wpNews.map((item) => {
-      const plainExcerpt = stripHtml(item.excerpt?.rendered || '');
-      const plainTitle = stripHtml(item.title?.rendered || '');
-      const imageUrl = item._embedded?.['wp:featuredmedia']?.[0]?.source_url || '/placeholder.svg';
-      
-      return {
-        id: `wp_${item.id}`,
-        title: plainTitle,
-        summary: plainExcerpt.slice(0, 160) + (plainExcerpt.length > 160 ? '…' : ''),
-        imageUrl: imageUrl,
-        publishedAt: item.date ? new Date(item.date).toISOString().slice(0, 10) : '',
-        category: currentLanguage === 'ar' ? 'كورة نيوز' : 'Koora News',
-        source: 'wordpress'
-      };
-    });
-  };
+  // ...existing code...
 
   // Fonction pour récupérer les news Supabase
   const fetchSupabaseNews = useCallback(async (nextPage: number): Promise<NewsCardItem[]> => {
