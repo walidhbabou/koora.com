@@ -34,13 +34,13 @@ import ResetPassword from "./pages/ResetPassword";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Privacy from "./pages/Privacy";
-
+import BackToTopButton from "./components/BackToTopButton";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   // Example: get language from localStorage or default to 'ar'
-  const lang = localStorage.getItem('lang') || 'ar';
+  const lang = localStorage.getItem("lang") || "ar";
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
@@ -51,22 +51,69 @@ const App = () => {
           <TooltipProvider>
             <Helmet>
               <html lang={lang} />
-              <title>{lang === 'ar' ? 'كورة - مباريات كرة القدم، أخبار، انتقالات، نتائج مباشرة' : 'Koora - Football Matches, News, Transfers, Live Scores'}</title>
-              <meta name="description" content={lang === 'ar' ? 'تابع آخر أخبار كرة القدم، مواعيد ونتائج المباريات، انتقالات اللاعبين، ترتيب الدوريات، كل شيء عن كرة القدم العربية والعالمية.' : 'Follow the latest football news, match schedules, transfers, league standings, everything about Arab and world football.'} />
-              <meta name="keywords" content={lang === 'ar' ? 'كرة القدم, مباريات, نتائج مباشرة, انتقالات, ترتيب الدوريات, أخبار كرة القدم, الدوري المصري, دوري أبطال أفريقيا, الدوري الأوروبي, الدوري الإنجليزي, الدوري الإسباني' : 'football, matches, live scores, transfers, league standings, football news, Egyptian league, CAF Champions League, Europa League, Premier League, La Liga'} />
-              <meta property="og:title" content={lang === 'ar' ? 'كورة - مباريات كرة القدم، أخبار، انتقالات، نتائج مباشرة' : 'Koora - Football Matches, News, Transfers, Live Scores'} />
-              <meta property="og:description" content={lang === 'ar' ? 'تابع آخر أخبار كرة القدم، مواعيد ونتائج المباريات، انتقالات اللاعبين، ترتيب الدوريات، كل شيء عن كرة القدم العربية والعالمية.' : 'Follow the latest football news, match schedules, transfers, league standings, everything about Arab and world football.'} />
+              <title>
+                {lang === "ar"
+                  ? "كورة - مباريات كرة القدم، أخبار، انتقالات، نتائج مباشرة"
+                  : "Koora - Football Matches, News, Transfers, Live Scores"}
+              </title>
+              <meta
+                name="description"
+                content={
+                  lang === "ar"
+                    ? "تابع آخر أخبار كرة القدم، مواعيد ونتائج المباريات، انتقالات اللاعبين، ترتيب الدوريات، كل شيء عن كرة القدم العربية والعالمية."
+                    : "Follow the latest football news, match schedules, transfers, league standings, everything about Arab and world football."
+                }
+              />
+              <meta
+                name="keywords"
+                content={
+                  lang === "ar"
+                    ? "كرة القدم, مباريات, نتائج مباشرة, انتقالات, ترتيب الدوريات, أخبار كرة القدم, الدوري المصري, دوري أبطال أفريقيا, الدوري الأوروبي, الدوري الإنجليزي, الدوري الإسباني"
+                    : "football, matches, live scores, transfers, league standings, football news, Egyptian league, CAF Champions League, Europa League, Premier League, La Liga"
+                }
+              />
+              <meta
+                property="og:title"
+                content={
+                  lang === "ar"
+                    ? "كورة - مباريات كرة القدم، أخبار، انتقالات، نتائج مباشرة"
+                    : "Koora - Football Matches, News, Transfers, Live Scores"
+                }
+              />
+              <meta
+                property="og:description"
+                content={
+                  lang === "ar"
+                    ? "تابع آخر أخبار كرة القدم، مواعيد ونتائج المباريات، انتقالات اللاعبين، ترتيب الدوريات، كل شيء عن كرة القدم العربية والعالمية."
+                    : "Follow the latest football news, match schedules, transfers, league standings, everything about Arab and world football."
+                }
+              />
               <meta property="og:type" content="website" />
               <meta property="og:url" content="https://koora.com" />
               <meta property="og:image" content="/public/kooralogo.png" />
               <meta name="twitter:card" content="summary_large_image" />
-              <meta name="twitter:title" content={lang === 'ar' ? 'كورة - مباريات كرة القدم، أخبار، انتقالات، نتائج مباشرة' : 'Koora - Football Matches, News, Transfers, Live Scores'} />
-              <meta name="twitter:description" content={lang === 'ar' ? 'تابع آخر أخبار كرة القدم، مواعيد ونتائج المباريات، انتقالات اللاعبين، ترتيب الدوريات، كل شيء عن كرة القدم العربية والعالمية.' : 'Follow the latest football news, match schedules, transfers, league standings, everything about Arab and world football.'} />
+              <meta
+                name="twitter:title"
+                content={
+                  lang === "ar"
+                    ? "كورة - مباريات كرة القدم، أخبار، انتقالات، نتائج مباشرة"
+                    : "Koora - Football Matches, News, Transfers, Live Scores"
+                }
+              />
+              <meta
+                name="twitter:description"
+                content={
+                  lang === "ar"
+                    ? "تابع آخر أخبار كرة القدم، مواعيد ونتائج المباريات، انتقالات اللاعبين، ترتيب الدوريات، كل شيء عن كرة القدم العربية والعالمية."
+                    : "Follow the latest football news, match schedules, transfers, league standings, everything about Arab and world football."
+                }
+              />
               <meta name="twitter:image" content="/public/kooralogo.png" />
             </Helmet>
             <DarkModeToggle />
             <Toaster />
             <Sonner />
+            <BackToTopButton />
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -85,26 +132,38 @@ const App = () => {
                 <Route path="/translation-demo" element={<TranslationDemo />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/dashboard" element={<RoleBasedRouter />} />
-                <Route path="/admin" element={
-                  <ProtectedRoute requireAdmin={true}>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/editor" element={
-                  <ProtectedRoute requireEditor={true}>
-                    <EditorDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/author" element={
-                  <ProtectedRoute requireAuthor={true}>
-                    <AuthorDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/moderator" element={
-                  <ProtectedRoute requireModerator={true}>
-                    <ModeratorDashboard />
-                  </ProtectedRoute>
-                } />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute requireAdmin={true}>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/editor"
+                  element={
+                    <ProtectedRoute requireEditor={true}>
+                      <EditorDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/author"
+                  element={
+                    <ProtectedRoute requireAuthor={true}>
+                      <AuthorDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/moderator"
+                  element={
+                    <ProtectedRoute requireModerator={true}>
+                      <ModeratorDashboard />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/privacy" element={<Privacy />} />
