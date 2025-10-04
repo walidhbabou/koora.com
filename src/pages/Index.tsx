@@ -119,6 +119,7 @@ const Index = () => {
   const [page, setPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [search, setSearch] = useState("");
+  const [carouselIndex, setCarouselIndex] = useState<number>(0);
   // Matches (dynamic by date + filter)
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -386,6 +387,27 @@ const Index = () => {
     fetchNews(page, false);
   }, [page]);
 
+  // Carousel navigation functions
+  const nextSlide = () => {
+    if (newsItems.length > 4) {
+      setCarouselIndex((prev) => (prev + 4 >= newsItems.length ? 0 : prev + 4));
+    }
+  };
+
+  const prevSlide = () => {
+    if (newsItems.length > 4) {
+      setCarouselIndex((prev) =>
+        prev - 4 < 0 ? Math.max(0, newsItems.length - 4) : prev - 4
+      );
+    }
+  };
+
+  // Get current carousel items (4 items)
+  const currentCarouselItems = newsItems.slice(
+    carouselIndex,
+    carouselIndex + 4
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
       <SEO
@@ -462,9 +484,154 @@ const Index = () => {
               </Card>
             )}
 
+            {/* Featured News Carousel Section */}
+            {!loading && newsItems.length > 0 && (
+              <section className="mt-8 lg:mt-12">
+                <div className="relative">
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={prevSlide}
+                    disabled={newsItems.length <= 4}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={nextSlide}
+                    disabled={newsItems.length <= 4}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white/10 hover:bg-white/20 backdrop-blur-md p-3 text-white rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Carousel Container */}
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-1 h-auto lg:h-96 mb-4 overflow-hidden">
+                    {/* Left Side - 1 card on top, 2 cards below */}
+                    <div className="lg:col-span-2 grid  h-full">
+                      {/* First Row - Single Card */}
+                      {currentCarouselItems[0] && (
+                        <Link
+                          to={`/news/${currentCarouselItems[0].id}`}
+                          className="block h-full"
+                        >
+                          <Card className="relative overflow-hidden h-full group cursor-pointer">
+                            <img
+                              src={
+                                currentCarouselItems[0].imageUrl ||
+                                "/placeholder.svg"
+                              }
+                              alt={currentCarouselItems[0].title}
+                              className="w-full h-48 lg:h-56 object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                            {/* <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                              أكتوبر 4, 2025
+                            </div> */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                              <h3 className="font-bold text-sm lg:text-base leading-tight mb-2 line-clamp-2">
+                                {currentCarouselItems[0].title}
+                              </h3>
+                              <p className="text-xs text-gray-200 line-clamp-2">
+                                {currentCarouselItems[0].summary}
+                              </p>
+                            </div>
+                          </Card>
+                        </Link>
+                      )}
+
+                      {/* Second Row - Two Cards */}
+                      <div className="grid grid-cols-2 gap-1">
+                        {currentCarouselItems.slice(1, 3).map((news) => (
+                          <Link
+                            key={news.id}
+                            to={`/news/${news.id}`}
+                            className="block h-full"
+                          >
+                            <Card className="relative overflow-hidden h-full group cursor-pointer">
+                              <img
+                                src={news.imageUrl || "/placeholder.svg"}
+                                alt={news.title}
+                                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                              {/* <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                أكتوبر 4, 2025
+                              </div> */}
+                              <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                                <h3 className="font-bold text-xs lg:text-sm leading-tight mb-1 line-clamp-2">
+                                  {news.title}
+                                </h3>
+                              </div>
+                            </Card>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Right Side - Main Featured Article */}
+                    <div className="lg:col-span-2">
+                      {currentCarouselItems[3] && (
+                        <Link
+                          to={`/news/${currentCarouselItems[3].id}`}
+                          className="block h-full"
+                        >
+                          <Card className="relative overflow-hidden h-full group cursor-pointer">
+                            <img
+                              src={
+                                currentCarouselItems[3].imageUrl ||
+                                "/placeholder.svg"
+                              }
+                              alt={currentCarouselItems[3].title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                            {/* <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">
+                              فبراير 4, 2025
+                            </div> */}
+                            <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                              <h2 className="font-bold text-xl lg:text-2xl leading-tight mb-3 line-clamp-2">
+                                {currentCarouselItems[3].title}
+                              </h2>
+                              <p className="text-sm text-gray-200 line-clamp-2 lg:line-clamp-3">
+                                {currentCarouselItems[3].summary}
+                              </p>
+                            </div>
+                          </Card>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Additional News Section */}
             {newsItems.length > 5 && (
-              <div className="mt-8 lg:mt-12">
+              <div className="mt-8 pt-10 lg:mt-12">
                 <h2 className="text-lg sm:text-xl font-bold text-sport-dark mb-4 lg:mb-6">
                   المزيد من الأخبار
                 </h2>
@@ -561,6 +728,74 @@ const Index = () => {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Featured News Carousel Section - Mobile */}
+          {!loading && newsItems.length > 0 && (
+            <section className="mb-6">
+              <div className="space-y-4">
+                {/* Main Featured Article */}
+                {newsItems.length > 2 && (
+                  <Link to={`/news/${newsItems[2].id}`} className="block">
+                    <Card className="relative overflow-hidden h-64 group cursor-pointer">
+                      <img
+                        src={newsItems[2].imageUrl || "/placeholder.svg"}
+                        alt={newsItems[2].title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+                      {/* Date Badge */}
+                      <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                        فبراير 4, 2025
+                      </div>
+
+                      {/* Content */}
+                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                        <h2 className="font-bold text-lg leading-tight mb-2 line-clamp-2">
+                          {newsItems[2].title}
+                        </h2>
+                        <p className="text-sm text-gray-200 line-clamp-2">
+                          {newsItems[2].summary}
+                        </p>
+                      </div>
+                    </Card>
+                  </Link>
+                )}
+
+                {/* Two Side Articles in a Row */}
+                <div className="grid grid-cols-2 gap-3">
+                  {newsItems.slice(0, 2).map((news, index) => (
+                    <Link
+                      key={news.id}
+                      to={`/news/${news.id}`}
+                      className="block"
+                    >
+                      <Card className="relative overflow-hidden h-40 group cursor-pointer">
+                        <img
+                          src={news.imageUrl || "/placeholder.svg"}
+                          alt={news.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                        {/* Date Badge */}
+                        <div className="absolute top-2 right-2 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-medium">
+                          أكتوبر 4, 2025
+                        </div>
+
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                          <h3 className="font-bold text-xs leading-tight mb-1 line-clamp-2">
+                            {news.title}
+                          </h3>
+                        </div>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
           )}
 
           {/* Additional News Grid - Mobile */}

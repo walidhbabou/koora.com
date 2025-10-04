@@ -110,7 +110,7 @@ const App = () => {
               />
               <meta name="twitter:image" content="/public/kooralogo.png" />
             </Helmet>
-            <DarkModeToggle />
+            {/* <DarkModeToggle /> */}
             <Toaster />
             <Sonner />
             <BackToTopButton />
