@@ -529,7 +529,7 @@ const Index = () => {
                   </button>
 
                   {/* Carousel Container */}
-                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-1 h-auto lg:h-96 mb-4 overflow-hidden">
+                  <div className="grid grid-cols-1 lg:grid-cols-4  h-auto lg:h-96 mb-4 overflow-hidden">
                     {/* Left Side - 1 card on top, 2 cards below */}
                     <div className="lg:col-span-2 grid  h-full">
                       {/* First Row - Single Card */}
@@ -538,7 +538,7 @@ const Index = () => {
                           to={`/news/${currentCarouselItems[0].id}`}
                           className="block h-full"
                         >
-                          <Card className="relative overflow-hidden h-full group cursor-pointer">
+                          <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
                             <img
                               src={
                                 currentCarouselItems[0].imageUrl ||
@@ -564,14 +564,14 @@ const Index = () => {
                       )}
 
                       {/* Second Row - Two Cards */}
-                      <div className="grid grid-cols-2 gap-1">
+                      <div className="grid grid-cols-2 ">
                         {currentCarouselItems.slice(1, 3).map((news) => (
                           <Link
                             key={news.id}
                             to={`/news/${news.id}`}
                             className="block h-full"
                           >
-                            <Card className="relative overflow-hidden h-full group cursor-pointer">
+                            <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
                               <img
                                 src={news.imageUrl || "/placeholder.svg"}
                                 alt={news.title}
@@ -599,7 +599,7 @@ const Index = () => {
                           to={`/news/${currentCarouselItems[3].id}`}
                           className="block h-full"
                         >
-                          <Card className="relative overflow-hidden h-full group cursor-pointer">
+                          <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
                             <img
                               src={
                                 currentCarouselItems[3].imageUrl ||
@@ -732,13 +732,13 @@ const Index = () => {
 
           {/* Featured News Carousel Section - Mobile */}
           {!loading && newsItems.length > 0 && (
-            <section className="mb-2">
-              <div className="space-y-1">
+            <section className="mb-2 ">
+              <div className="">
                 {/* Main Featured Article */}
                 {newsItems.length > 2 && (
                   <>
-                    <Link to={`/news/${newsItems[2].id}`} className="block">
-                      <Card className="relative overflow-hidden h-64 group cursor-pointer">
+                    <Link to={`/news/${newsItems[2].id}`} className="block ">
+                      <Card className="relative overflow-hidden h-64 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[2].imageUrl || "/placeholder.svg"}
                           alt={newsItems[2].title}
@@ -763,7 +763,7 @@ const Index = () => {
                       </Card>
                     </Link>
                     <Link to={`/news/${newsItems[1].id}`} className="block">
-                      <Card className="relative overflow-hidden h-64 group cursor-pointer">
+                      <Card className="relative overflow-hidden h-64 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[1].imageUrl || "/placeholder.svg"}
                           alt={newsItems[1].title}
@@ -791,14 +791,14 @@ const Index = () => {
                 )}
 
                 {/* Two Side Articles in a Row */}
-                <div className="grid grid-cols-2 gap-1 !mt-1">
+                <div className="grid grid-cols-2 ">
                   {newsItems.slice(2, 4).map((news, index) => (
                     <Link
                       key={news.id}
                       to={`/news/${news.id}`}
                       className="block"
                     >
-                      <Card className="relative overflow-hidden h-40 group cursor-pointer">
+                      <Card className="relative overflow-hidden h-40 group cursor-pointer !rounded-none">
                         <img
                           src={news.imageUrl || "/placeholder.svg"}
                           alt={news.title}
