@@ -1,355 +1,297 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "@/hooks/useTranslation";
 
-// Animation configuration constants
-const ANIMATION_CONFIG = {
-  SMOOTH_TAU: 0.25,
-  MIN_COPIES: 2,
-  COPY_HEADROOM: 2,
-} as const;
-
 const TeamsLogos = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
   const { currentLanguage } = useTranslation();
-
-  // Animation refs and state
-  const containerRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const seqRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number | null>(null);
-  const lastTimestampRef = useRef<number | null>(null);
-  const offsetRef = useRef(0);
-  const velocityRef = useRef(0);
-
-  const [seqWidth, setSeqWidth] = useState<number>(0);
-  const [copyCount, setCopyCount] = useState<number>(
-    ANIMATION_CONFIG.MIN_COPIES
-  );
-  const [isHovered, setIsHovered] = useState<boolean>(false);
-
+  
   // Équipes principales avec vrais logos et IDs API
   const teams = [
     // La Liga
-    {
-      id: 541,
-      name: currentLanguage === "ar" ? "ريال مدريد" : "Real Madrid",
+    { 
+      id: 541, 
+      name: currentLanguage === 'ar' ? "ريال مدريد" : "Real Madrid", 
       logo: "https://media.api-sports.io/football/teams/541.png",
       league: "La Liga",
-      leagueId: 140,
+      leagueId: 140
     },
     // Premier League
-    {
-      id: 33,
-      name: currentLanguage === "ar" ? "مانشستر يونايتد" : "Manchester United",
+    { 
+      id: 33, 
+      name: currentLanguage === 'ar' ? "مانشستر يونايتد" : "Manchester United", 
       logo: "https://media.api-sports.io/football/teams/33.png",
       league: "Premier League",
-      leagueId: 39,
+      leagueId: 39
     },
-    {
-      id: 49,
-      name: currentLanguage === "ar" ? "تشيلسي" : "Chelsea",
+    { 
+      id: 49, 
+      name: currentLanguage === 'ar' ? "تشيلسي" : "Chelsea", 
       logo: "https://media.api-sports.io/football/teams/49.png",
       league: "Premier League",
-      leagueId: 39,
+      leagueId: 39
     },
-    {
-      id: 40,
-      name: currentLanguage === "ar" ? "ليفربول" : "Liverpool",
+    { 
+      id: 40, 
+      name: currentLanguage === 'ar' ? "ليفربول" : "Liverpool", 
       logo: "https://media.api-sports.io/football/teams/40.png",
       league: "Premier League",
-      leagueId: 39,
+      leagueId: 39
     },
-    {
-      id: 42,
-      name: currentLanguage === "ar" ? "أرسنال" : "Arsenal",
+    { 
+      id: 42, 
+      name: currentLanguage === 'ar' ? "أرسنال" : "Arsenal", 
       logo: "https://media.api-sports.io/football/teams/42.png",
       league: "Premier League",
-      leagueId: 39,
+      leagueId: 39
     },
-    {
-      id: 50,
-      name: currentLanguage === "ar" ? "مانشستر سيتي" : "Manchester City",
+    { 
+      id: 50, 
+      name: currentLanguage === 'ar' ? "مانشستر سيتي" : "Manchester City", 
       logo: "https://media.api-sports.io/football/teams/50.png",
       league: "Premier League",
-      leagueId: 39,
+      leagueId: 39
     },
     // Bundesliga
-    {
-      id: 157,
-      name: currentLanguage === "ar" ? "بايرن ميونخ" : "Bayern Munich",
+    { 
+      id: 157, 
+      name: currentLanguage === 'ar' ? "بايرن ميونخ" : "Bayern Munich", 
       logo: "https://media.api-sports.io/football/teams/157.png",
       league: "Bundesliga",
-      leagueId: 78,
+      leagueId: 78
     },
     // Ligue 1
-    {
-      id: 85,
-      name:
-        currentLanguage === "ar" ? "باريس سان جيرمان" : "Paris Saint-Germain",
+    { 
+      id: 85, 
+      name: currentLanguage === 'ar' ? "باريس سان جيرمان" : "Paris Saint-Germain", 
       logo: "https://media.api-sports.io/football/teams/85.png",
       league: "Ligue 1",
-      leagueId: 61,
+      leagueId: 61
     },
     // Serie A
-    {
-      id: 496,
-      name: currentLanguage === "ar" ? "يوفنتوس" : "Juventus",
+    { 
+      id: 496, 
+      name: currentLanguage === 'ar' ? "يوفنتوس" : "Juventus", 
       logo: "https://media.api-sports.io/football/teams/496.png",
       league: "Serie A",
-      leagueId: 135,
+      leagueId: 135
     },
-    {
-      id: 489,
-      name: currentLanguage === "ar" ? "إيه سي ميلان" : "AC Milan",
+    { 
+      id: 489, 
+      name: currentLanguage === 'ar' ? "إيه سي ميلان" : "AC Milan", 
       logo: "https://media.api-sports.io/football/teams/489.png",
       league: "Serie A",
-      leagueId: 135,
+      leagueId: 135
     },
-    {
-      id: 505,
-      name: currentLanguage === "ar" ? "إنتر ميلان" : "Inter Milan",
+    { 
+      id: 505, 
+      name: currentLanguage === 'ar' ? "إنتر ميلان" : "Inter Milan", 
       logo: "https://media.api-sports.io/football/teams/505.png",
       league: "Serie A",
-      leagueId: 135,
+      leagueId: 135
     },
     // Équipes africaines
-    {
-      id: 1023,
-      name: currentLanguage === "ar" ? "الأهلي" : "Al Ahly",
+    { 
+      id: 1023, 
+      name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly", 
       logo: "https://media.api-sports.io/football/teams/1023.png",
       league: "Egyptian Premier League",
-      leagueId: 233,
+      leagueId: 233
     },
-    {
-      id: 968,
-      name: currentLanguage === "ar" ? "الوداد الرياضي" : "Wydad Casablanca",
+    { 
+      id: 968, 
+      name: currentLanguage === 'ar' ? "الوداد الرياضي" : "Wydad Casablanca", 
       logo: "https://media.api-sports.io/football/teams/968.png",
       league: "Botola Pro",
-      leagueId: 564,
+      leagueId: 564
     },
-    {
-      id: 976,
-      name: currentLanguage === "ar" ? "الرجاء الرياضي" : "Raja Casablanca",
+    { 
+      id: 976, 
+      name: currentLanguage === 'ar' ? "الرجاء الرياضي" : "Raja Casablanca", 
       logo: "https://media.api-sports.io/football/teams/976.png",
       league: "Botola Pro",
-      leagueId: 564,
+      leagueId: 564
     },
-    // New teams added
-    {
-      id: 1577,
-      name: currentLanguage === "ar" ? "الأهلي" : "Al Ahly (Libya)",
-      logo: "https://media.api-sports.io/football/teams/1029.png",
-      league: "Libyan Premier League",
-      leagueId: 1040,
-    },
-    {
-      id: 1040,
-      name: currentLanguage === "ar" ? "الزمالك" : "Zamalek",
-      logo: "https://media.api-sports.io/football/teams/1040.png",
-      league: "Egyptian Premier League",
-      leagueId: 233,
-    },
-    {
-      id: 969,
-      name: currentLanguage === "ar" ? "الجيش الملكي" : "FAR Rabat",
-      logo: "https://media.api-sports.io/football/teams/969.png",
-      league: "Botola Pro",
-      leagueId: 200,
-    },
-    {
-      id: 10755,
-      name: currentLanguage === "ar" ? "مولودية واد" : "Mouloudia Oued",
-      logo: "https://media.api-sports.io/football/teams/10755.png",
-      league: "Algerian Ligue 1",
-      leagueId: 302,
-    },
-    {
-      id: 3453,
-      name: currentLanguage === "ar" ? "المغرب الفاسي" : "Maghreb Fès",
-      logo: "https://media.api-sports.io/football/teams/3453.png",
-      league: "Botola Pro",
-      leagueId: 200,
-    },
-    {
-      id: 2932,
-      name: currentLanguage === "ar" ? "الهلال السعودي" : "Al-Hilal Saudi FC",
-      logo: "https://media.api-sports.io/football/teams/2932.png",
-      league: "Saudi Pro League",
-      leagueId: 307,
-    },
-    {
-      id: 2938,
-      name: currentLanguage === "ar" ? "الاتحاد السعودي" : "Al-Ittihad FC",
-      logo: "https://media.api-sports.io/football/teams/2938.png",
-      league: "Saudi Pro League",
-      leagueId: 307,
-    },
-    {
-      id: 2939,
-      name: currentLanguage === "ar" ? "النصر السعودي" : "Al-Nassr",
-      logo: "https://media.api-sports.io/football/teams/2939.png",
-      league: "Saudi Pro League",
-      leagueId: 307,
-    },
-    {
-      id: 9568,
-      name: currentLanguage === "ar" ? "انتر ميامي" : "Inter Miami",
-      logo: "https://media.api-sports.io/football/teams/9568.png",
-      league: "Major League Soccer",
-      leagueId: 253,
-    },
+      // New teams added
+      { 
+        id: 1577, 
+        name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly (Libya)", 
+        logo: "https://media.api-sports.io/football/teams/1029.png",
+        league: "Libyan Premier League",
+        leagueId: 1040
+      },
+      { 
+        id: 1040, 
+        name: currentLanguage === 'ar' ? "الزمالك" : "Zamalek", 
+        logo: "https://media.api-sports.io/football/teams/1040.png",
+        league: "Egyptian Premier League",
+        leagueId: 233
+      },
+      { 
+        id: 969, 
+        name: currentLanguage === 'ar' ? "الجيش الملكي" : "FAR Rabat", 
+        logo: "https://media.api-sports.io/football/teams/969.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 10755, 
+        name: currentLanguage === 'ar' ? "مولودية واد" : "Mouloudia Oued", 
+        logo: "https://media.api-sports.io/football/teams/10755.png",
+        league: "Algerian Ligue 1",
+        leagueId: 302
+      },
+      { 
+        id: 3453, 
+        name: currentLanguage === 'ar' ? "المغرب الفاسي" : "Maghreb Fès", 
+        logo: "https://media.api-sports.io/football/teams/3453.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 2932, 
+        name: currentLanguage === 'ar' ? "الهلال السعودي" : "Al-Hilal Saudi FC", 
+        logo: "https://media.api-sports.io/football/teams/2932.png",
+        league: "Saudi Pro League",
+        leagueId: 307
+      },
+      { 
+        id: 2938, 
+        name: currentLanguage === 'ar' ? "الاتحاد السعودي" : "Al-Ittihad FC", 
+        logo: "https://media.api-sports.io/football/teams/2938.png",
+        league: "Saudi Pro League",
+        leagueId: 307
+      },
+      { 
+        id: 2939, 
+        name: currentLanguage === 'ar' ? "النصر السعودي" : "Al-Nassr", 
+        logo: "https://media.api-sports.io/football/teams/2939.png",
+        league: "Saudi Pro League",
+        leagueId: 307
+      },
+      { 
+        id: 9568, 
+        name: currentLanguage === 'ar' ? "انتر ميامي" : "Inter Miami", 
+        logo: "https://media.api-sports.io/football/teams/9568.png",
+        league: "Major League Soccer",
+        leagueId: 253
+      },
   ];
 
-  // Animation configuration
-  const speed = 60; // pixels per second
-  const direction = "left";
-  const pauseOnHover = true;
+  // Responsive number of visible teams
+  const getVisibleTeams = () => {
+    if (typeof window === 'undefined') return 6;
+    if (window.innerWidth < 480) return 3; // Small mobile
+    if (window.innerWidth < 640) return 4; // Mobile
+    if (window.innerWidth < 768) return 5; // Small tablet
+    if (window.innerWidth < 1024) return 6; // Tablet
+    if (window.innerWidth < 1280) return 8; // Large tablet
+    return 10; // Desktop
+  };
 
-  const targetVelocity = useMemo(() => {
-    const magnitude = Math.abs(speed);
-    const directionMultiplier = direction === "left" ? 1 : -1;
-    const speedMultiplier = speed < 0 ? -1 : 1;
-    return magnitude * directionMultiplier * speedMultiplier;
-  }, [speed, direction]);
-
-  // Update dimensions for infinite loop
-  const updateDimensions = useCallback(() => {
-    const containerWidth = containerRef.current?.clientWidth ?? 0;
-    const sequenceWidth = seqRef.current?.getBoundingClientRect?.()?.width ?? 0;
-
-    if (sequenceWidth > 0) {
-      setSeqWidth(Math.ceil(sequenceWidth));
-      const copiesNeeded =
-        Math.ceil(containerWidth / sequenceWidth) +
-        ANIMATION_CONFIG.COPY_HEADROOM;
-      setCopyCount(Math.max(ANIMATION_CONFIG.MIN_COPIES, copiesNeeded));
+  const [visibleTeams, setVisibleTeams] = useState(getVisibleTeams());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const nextSlide = () => {
+    // Desktop/tablet: scroll the row instead of index transform
+    if (visibleTeams > 4 && scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      const amount = Math.floor(el.clientWidth * 0.6);
+      el.scrollBy({ left: amount, behavior: 'smooth' });
+      return;
     }
+    // Mobile: keep index-based dots behavior
+    setCurrentIndex((prev) => (prev >= teams.length - visibleTeams ? 0 : prev + 1));
+  };
+
+  const prevSlide = () => {
+    if (visibleTeams > 4 && scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      const amount = Math.floor(el.clientWidth * 0.6);
+      el.scrollBy({ left: -amount, behavior: 'smooth' });
+      return;
+    }
+    setCurrentIndex((prev) => (prev <= 0 ? teams.length - visibleTeams : prev - 1));
+  };
+
+  // Handle window resize and keep listener in effect
+  useEffect(() => {
+    const handleResize = () => setVisibleTeams(getVisibleTeams());
+    // run once to ensure correct size
+    handleResize();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
   }, []);
-
-  // Resize observer effect
-  useEffect(() => {
-    if (!window.ResizeObserver) {
-      const handleResize = () => updateDimensions();
-      window.addEventListener("resize", handleResize);
-      updateDimensions();
-      return () => window.removeEventListener("resize", handleResize);
-    }
-
-    const observers = [containerRef, seqRef].map((ref) => {
-      if (!ref.current) return null;
-      const observer = new ResizeObserver(updateDimensions);
-      observer.observe(ref.current);
-      return observer;
-    });
-
-    updateDimensions();
-
-    return () => {
-      observers.forEach((observer) => observer?.disconnect());
-    };
-  }, [updateDimensions]);
-
-  // Animation loop
-  useEffect(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    if (seqWidth > 0) {
-      offsetRef.current =
-        ((offsetRef.current % seqWidth) + seqWidth) % seqWidth;
-      track.style.transform = `translate3d(${-offsetRef.current}px, 0, 0)`;
-    }
-
-    if (prefersReduced) {
-      track.style.transform = "translate3d(0, 0, 0)";
-      return () => {
-        lastTimestampRef.current = null;
-      };
-    }
-
-    const animate = (timestamp: number) => {
-      if (lastTimestampRef.current === null) {
-        lastTimestampRef.current = timestamp;
-      }
-
-      const deltaTime =
-        Math.max(0, timestamp - lastTimestampRef.current) / 1000;
-      lastTimestampRef.current = timestamp;
-
-      const target = pauseOnHover && isHovered ? 0 : targetVelocity;
-
-      const easingFactor =
-        1 - Math.exp(-deltaTime / ANIMATION_CONFIG.SMOOTH_TAU);
-      velocityRef.current += (target - velocityRef.current) * easingFactor;
-
-      if (seqWidth > 0) {
-        let nextOffset = offsetRef.current + velocityRef.current * deltaTime;
-        nextOffset = ((nextOffset % seqWidth) + seqWidth) % seqWidth;
-        offsetRef.current = nextOffset;
-
-        const translateX = -offsetRef.current;
-        track.style.transform = `translate3d(${translateX}px, 0, 0)`;
-      }
-
-      rafRef.current = requestAnimationFrame(animate);
-    };
-
-    rafRef.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (rafRef.current !== null) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-      lastTimestampRef.current = null;
-    };
-  }, [targetVelocity, seqWidth, isHovered, pauseOnHover]);
-
-  // Mouse hover handlers
-  const handleMouseEnter = useCallback(() => {
-    if (pauseOnHover) setIsHovered(true);
-  }, [pauseOnHover]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (pauseOnHover) setIsHovered(false);
-  }, [pauseOnHover]);
 
   return (
     <div className="bg-background dark:bg-[#181a20] sm:border-b sm:border-border sm:dark:border-[#23262f] pt-2 pb-0 sm:py-4 mt-0">
       <div className="container mx-auto px-2 sm:px-4">
-        <div
-          ref={containerRef}
-          className="relative overflow-hidden"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          {/* Infinite Loop Animation Track */}
-          <div
-            ref={trackRef}
-            className="flex w-max will-change-transform select-none motion-reduce:transform-none py-2"
+        <div className="relative">
+          {/* Navigation Buttons - Hidden on mobile */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 dark:bg-[#23262f]/80 hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300 rounded-full shadow-md hidden sm:flex"
+            onClick={prevSlide}
           >
-            {Array.from({ length: copyCount }, (_, copyIndex) => (
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-background/80 dark:bg-[#23262f]/80 hover:bg-sport-green/10 hover:text-sport-green transition-all duration-300 rounded-full shadow-md hidden sm:flex"
+            onClick={nextSlide}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+
+          {/* Teams Logos Carousel */}
+          <div className="overflow-hidden sm:mx-8">
+            {/* Mobile: horizontal scrollable row so all logos are reachable and fixed visually */}
+            {visibleTeams <= 4 ? (
+              <div className="flex gap-3 overflow-x-auto py-2 px-2 -mx-2 sm:hidden">
+                {teams.map((team) => (
+                  <div key={team.id} className="flex-shrink-0 w-20">
+                    <div
+                      className="group cursor-pointer w-20 h-20 bg-white dark:bg-[#181a20] rounded-2xl shadow hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center border border-gray-100 dark:border-[#23262f]"
+                      onClick={() => navigate(`/team/${team.id}`, { state: { leagueId: (team as any).leagueId } })}
+                    >
+                      <img
+                        src={team.logo}
+                        alt={team.name}
+                        className="w-12 h-12 object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Desktop / tablet: horizontal scroll row with arrows */
               <div
-                key={`copy-${copyIndex}`}
-                ref={copyIndex === 0 ? seqRef : undefined}
-                className="flex gap-4 px-2"
+                ref={scrollContainerRef}
+                className="flex gap-4 overflow-x-hidden py-2 px-6"
               >
                 {teams.map((team) => (
-                  <div
-                    key={`${copyIndex}-${team.id}`}
-                    className="flex-shrink-0"
-                  >
+                  <div key={team.id} className="flex-shrink-0">
                     <div
                       className="group cursor-pointer"
                       onClick={() =>
                         navigate(`/team/${team.id}`, {
-                          state: { leagueId: team.leagueId },
+                          state: { leagueId: (team as any).leagueId },
                         })
                       }
                     >
@@ -368,8 +310,25 @@ const TeamsLogos = () => {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* Mobile swipe indicators */}
+          <div className="flex justify-center mt-0 space-x-1 sm:hidden">
+            {Array.from({ length: Math.ceil(teams.length / visibleTeams) }).map((_, index) => (
+              <button
+                key={index}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                  Math.floor(currentIndex / visibleTeams) === index
+                    ? 'bg-sport-green'
+                    : 'bg-gray-300'
+                }`}
+                onClick={() => setCurrentIndex(index * visibleTeams)}
+              />
             ))}
           </div>
+
+          
         </div>
       </div>
     </div>
