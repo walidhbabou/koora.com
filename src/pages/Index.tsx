@@ -732,40 +732,67 @@ const Index = () => {
 
           {/* Featured News Carousel Section - Mobile */}
           {!loading && newsItems.length > 0 && (
-            <section className="mb-6">
-              <div className="space-y-4">
+            <section className="mb-2">
+              <div className="space-y-1">
                 {/* Main Featured Article */}
                 {newsItems.length > 2 && (
-                  <Link to={`/news/${newsItems[2].id}`} className="block">
-                    <Card className="relative overflow-hidden h-64 group cursor-pointer">
-                      <img
-                        src={newsItems[2].imageUrl || "/placeholder.svg"}
-                        alt={newsItems[2].title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  <>
+                    <Link to={`/news/${newsItems[2].id}`} className="block">
+                      <Card className="relative overflow-hidden h-64 group cursor-pointer">
+                        <img
+                          src={newsItems[2].imageUrl || "/placeholder.svg"}
+                          alt={newsItems[2].title}
+                          className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-                      {/* Date Badge */}
-                      <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                        {/* Date Badge */}
+                        {/* <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
                         فبراير 4, 2025
-                      </div>
+                      </div> */}
 
-                      {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                        <h2 className="font-bold text-lg leading-tight mb-2 line-clamp-2">
-                          {newsItems[2].title}
-                        </h2>
-                        <p className="text-sm text-gray-200 line-clamp-2">
-                          {newsItems[2].summary}
-                        </p>
-                      </div>
-                    </Card>
-                  </Link>
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                          <h2 className="font-bold text-lg leading-tight mb-2 line-clamp-2">
+                            {newsItems[2].title}
+                          </h2>
+                          {/* <p className="text-sm text-gray-200 line-clamp-2">
+                            {newsItems[2].summary}
+                          </p> */}
+                        </div>
+                      </Card>
+                    </Link>
+                    <Link to={`/news/${newsItems[1].id}`} className="block">
+                      <Card className="relative overflow-hidden h-64 group cursor-pointer">
+                        <img
+                          src={newsItems[1].imageUrl || "/placeholder.svg"}
+                          alt={newsItems[1].title}
+                          className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+
+                        {/* Date Badge */}
+                        {/* <div className="absolute top-3 right-3 bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                        فبراير 4, 2025
+                      </div> */}
+
+                        {/* Content */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
+                          <h2 className="font-bold text-lg leading-tight mb-2 line-clamp-2">
+                            {newsItems[1].title}
+                          </h2>
+                          {/* <p className="text-sm text-gray-200 line-clamp-2">
+                            {newsItems[1].summary}
+                          </p> */}
+                        </div>
+                      </Card>
+                    </Link>
+                  </>
                 )}
 
                 {/* Two Side Articles in a Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  {newsItems.slice(0, 2).map((news, index) => (
+                <div className="grid grid-cols-2 gap-1 !mt-1">
+                  {newsItems.slice(2, 4).map((news, index) => (
                     <Link
                       key={news.id}
                       to={`/news/${news.id}`}
@@ -775,14 +802,14 @@ const Index = () => {
                         <img
                           src={news.imageUrl || "/placeholder.svg"}
                           alt={news.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-fill group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                         {/* Date Badge */}
-                        <div className="absolute top-2 right-2 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-medium">
+                        {/* <div className="absolute top-2 right-2 bg-blue-600 text-white px-1.5 py-0.5 rounded text-xs font-medium">
                           أكتوبر 4, 2025
-                        </div>
+                        </div> */}
 
                         {/* Content */}
                         <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
