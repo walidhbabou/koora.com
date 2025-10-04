@@ -732,7 +732,7 @@ const Index = () => {
 
           {/* Featured News Carousel Section - Mobile */}
           {!loading && newsItems.length > 0 && (
-            <section className="mb-2 ">
+            <section className="mb-2  w-[360] h-[480]">
               <div className="">
                 {/* Main Featured Article */}
                 {newsItems.length > 2 && (
@@ -763,11 +763,11 @@ const Index = () => {
                       </Card>
                     </Link>
                     <Link to={`/news/${newsItems[1].id}`} className="block">
-                      <Card className="relative overflow-hidden h-48 group cursor-pointer !rounded-none">
+                      <Card className="relative overflow-hidden h-36 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[1].imageUrl || "/placeholder.svg"}
                           alt={newsItems[1].title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover object-[20%_20%] group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
@@ -802,7 +802,7 @@ const Index = () => {
                         <img
                           src={news.imageUrl || "/placeholder.svg"}
                           alt={news.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-cover  group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
