@@ -1,6 +1,7 @@
 // Configuration API Football pour le site Koora
 import { apiCache } from '../services/apiCache';
 import axios from 'axios';
+import { LEAGUE_IDS } from './leagueIds';
 // Documentation: https://www.api-football.com/documentation-v3
 
 export const API_CONFIG = {
@@ -113,17 +114,25 @@ export const MAIN_LEAGUES = {
 
 // Ligues à afficher (filtrage spécifique) - Utiliser seulement les ligues gratuites
 export const SELECTED_LEAGUES = [
-  MAIN_LEAGUES.PREMIER_LEAGUE, // Premier League
-  MAIN_LEAGUES.LIGUE_1,        // Ligue 1 France
-  MAIN_LEAGUES.BUNDESLIGA,     // Bundesliga
-  MAIN_LEAGUES.LA_LIGA,        // La Liga
-  MAIN_LEAGUES.SERIE_A,        // Serie A
-  MAIN_LEAGUES.BOTOLA_MAROC,   // Botola Pro (Morocco)
-  MAIN_LEAGUES.CHAMPIONS_LEAGUE, // UEFA Champions League
-  MAIN_LEAGUES.EUROPA_LEAGUE,    // UEFA Europa League
-  MAIN_LEAGUES.AFRICA_CHAMPIONS_LEAGUE, // CAF Champions League (ID corrigé)
-  MAIN_LEAGUES.AFRICA_CONFED_CUP,       // CAF Confederation Cup (ID corrigé)
-  MAIN_LEAGUES.EGYPTIAN_PREMIER_LEAGUE, // Egyptian Premier League (ID ajouté)
+  LEAGUE_IDS.PREMIER_LEAGUE, // Premier League
+  LEAGUE_IDS.LIGUE_1,        // Ligue 1 France
+  LEAGUE_IDS.BUNDESLIGA,     // Bundesliga
+  LEAGUE_IDS.LA_LIGA,        // La Liga
+  LEAGUE_IDS.SERIE_A,        // Serie A
+  LEAGUE_IDS.BOTOLA_MAROC,   // Botola Pro (Morocco)
+  LEAGUE_IDS.CHAMPIONS_LEAGUE, // UEFA Champions League
+  LEAGUE_IDS.EUROPA_LEAGUE,    // UEFA Europa League
+  LEAGUE_IDS.CAF_CHAMPIONS_LEAGUE, // CAF Champions League
+  LEAGUE_IDS.CAF_CONFEDERATION_CUP, // CAF Confederation Cup
+  LEAGUE_IDS.EGYPTIAN_PREMIER_LEAGUE, // Egyptian Premier League
+  LEAGUE_IDS.EREDIVISIE,       // Eredivisie (Pays-Bas)
+  LEAGUE_IDS.PRIMEIRA_LIGA,    // Primeira Liga (Portugal)
+  LEAGUE_IDS.ALGERIA_LIGUE_1,  // Algeria Ligue 1
+  LEAGUE_IDS.SAUDI_PRO_LEAGUE, // Saudi Pro League
+  LEAGUE_IDS.LIBYA_PREMIER_LEAGUE, // Libya Premier League
+  LEAGUE_IDS.AFRICA_CUP_OF_NATIONS, // Africa Cup of Nations
+  LEAGUE_IDS.WORLD_CUP_QUALIFICATION_AFRICA, // World Cup Qualification Africa
+  LEAGUE_IDS.AFRICA_CUP_QUALIFICATION, // Africa Cup Qualification
 ];
 
 // Configuration des appels API avec gestion d'erreurs et fallback mock

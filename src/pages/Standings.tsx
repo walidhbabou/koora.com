@@ -3,22 +3,42 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TeamsLogos from "@/components/TeamsLogos";
 import LeagueStandingTable from "@/components/LeagueStandingTable";
+import GroupStandingsTable from "@/components/GroupStandingsTable";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useAllLeagueStandings, useMockStandings } from "@/hooks/useStandings";
+import { useGroupStandings } from "@/hooks/useGroupStandings";
 import { useTranslation } from "@/hooks/useTranslation";
 import { maybeTransliterateName } from "@/utils/transliterate";
 import { useTopScorers, useTopAssists, useFixtures } from "@/hooks/useFootballAPI";
 import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
+import { LEAGUES, getLeagueName, getLeagueCountry } from "@/config/leagues";
+import { LEAGUE_GROUPS, LEAGUE_IDS } from "@/config/leagueIds";
 import { getTeamTranslation } from "@/utils/teamNameMap";
 import { useSingleTeamTranslation } from "@/hooks/useTeamTranslation";
 
 const Standings = () => {
   const { currentLanguage, t, isRTL, direction } = useTranslation();
+
+  // Fonction pour déterminer si une ligue utilise des groupes
+  const isGroupBasedLeague = (leagueId: number): boolean => {
+    const groupBasedLeagues = [
+      LEAGUE_IDS.CHAMPIONS_LEAGUE,
+      LEAGUE_IDS.EUROPA_LEAGUE,
+      LEAGUE_IDS.CONFERENCE_LEAGUE,
+      LEAGUE_IDS.CAF_CHAMPIONS_LEAGUE,
+      LEAGUE_IDS.CAF_CONFEDERATION_CUP,
+      LEAGUE_IDS.WORLD_CUP_QUALIFICATION_EUROPE,
+      LEAGUE_IDS.WORLD_CUP_QUALIFICATION_AFRICA,
+      LEAGUE_IDS.AFRICA_CUP_QUALIFICATION,
+      LEAGUE_IDS.AFRICA_CUP_OF_NATIONS
+    ];
+    return groupBasedLeagues.includes(leagueId);
+  };
 
   // Fonction pour obtenir le nom de l'équipe dans la langue appropriée
   const getTeamName = (team: any) => {
@@ -79,114 +99,24 @@ const Standings = () => {
     translateContent: true
   });
   
+  // Hook pour les classements par groupes (pour les compétitions comme Champions League)
+  const { standings: groupStandings, loading: loadingGroupStandings } = useGroupStandings(
+    selectedLeague && isGroupBasedLeague(selectedLeague) ? selectedLeague : 0,
+    seasonYear
+  );
+  
   // Données mock en cas d'erreur API
   const mockPremierLeague = useMockStandings(MAIN_LEAGUES.PREMIER_LEAGUE);
   const mockLaLiga = useMockStandings(MAIN_LEAGUES.LA_LIGA);
 
-  // Données des ligues pour l'affichage en liste
-  const leaguesList = [
-    {
-      id: MAIN_LEAGUES.CHAMPIONS_LEAGUE,
-      name: currentLanguage === 'ar' ? 'دوري أبطال أوروبا' : 'Champions League',
-      logo: 'https://media.api-sports.io/football/leagues/2.png',
-      country: currentLanguage === 'ar' ? 'أوروبا' : 'Europe',
-      flag: '🇪🇺'
-    },
-    {
-      id: MAIN_LEAGUES.PREMIER_LEAGUE,
-      name: currentLanguage === 'ar' ? 'الدوري الإنجليزي الممتاز' : 'Premier League',
-      logo: 'https://media.api-sports.io/football/leagues/39.png',
-      country: currentLanguage === 'ar' ? 'إنجلترا' : 'England',
-      flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿'
-    },
-    {
-      id: MAIN_LEAGUES.LA_LIGA,
-      name: currentLanguage === 'ar' ? 'الدوري الإسباني الممتاز' : 'La Liga',
-      logo: 'https://media.api-sports.io/football/leagues/140.png',
-      country: currentLanguage === 'ar' ? 'إسبانيا' : 'Spain',
-      flag: '🇪🇸'
-    },
-    {
-      id: MAIN_LEAGUES.SERIE_A,
-      name: currentLanguage === 'ar' ? 'الدوري الإيطالي الممتاز' : 'Serie A',
-      logo: 'https://media.api-sports.io/football/leagues/135.png',
-      country: currentLanguage === 'ar' ? 'إيطاليا' : 'Italy',
-      flag: '🇮🇹'
-    },
-    {
-      id: MAIN_LEAGUES.BUNDESLIGA,
-      name: currentLanguage === 'ar' ? 'الدوري الألماني الممتاز' : 'Bundesliga',
-      logo: 'https://media.api-sports.io/football/leagues/78.png',
-      country: currentLanguage === 'ar' ? 'ألمانيا' : 'Germany',
-      flag: '🇩🇪'
-    },
-    {
-      id: MAIN_LEAGUES.LIGUE_1,
-      name: currentLanguage === 'ar' ? 'الدوري الفرنسي الممتاز' : 'Ligue 1',
-      logo: 'https://media.api-sports.io/football/leagues/61.png',
-      country: currentLanguage === 'ar' ? 'فرنسا' : 'France',
-      flag: '🇫🇷'
-    },
-    {
-      id: MAIN_LEAGUES.BOTOLA_MAROC,
-      name: currentLanguage === 'ar' ? 'البطولة المغربية - البطولة برو' : 'Botola Pro',
-      logo: 'https://media.api-sports.io/football/leagues/200.png',
-      country: currentLanguage === 'ar' ? 'المغرب' : 'Morocco',
-      flag: '🇲🇦'
-    },
-    // Saudi Pro League
-    {
-      id: 307,
-      name: currentLanguage === 'ar' ? 'الدوري السعودي للمحترفين' : 'Saudi Pro League',
-      logo: 'https://media.api-sports.io/football/leagues/307.png',
-      country: currentLanguage === 'ar' ? 'السعودية' : 'Saudi Arabia',
-      flag: '🇸🇦'
-    },
-    // Qatar QSL Cup
-    {
-      id: 677,
-      name: currentLanguage === 'ar' ? 'كأس قطر QSL' : 'QSL Cup',
-      logo: 'https://media.api-sports.io/football/leagues/677.png',
-      country: currentLanguage === 'ar' ? 'قطر' : 'Qatar',
-      flag: '🇶🇦'
-    },
-    // Algeria Ligue 1
-    {
-      id: 186,
-      name: currentLanguage === 'ar' ? 'الدوري الجزائري - الرابطة المحترفة الأولى' : 'Algeria Ligue 1',
-      logo: 'https://media.api-sports.io/football/leagues/186.png',
-      country: currentLanguage === 'ar' ? 'الجزائر' : 'Algeria',
-      flag: '🇩🇿'
-    },
-     {
-      name: currentLanguage === 'ar' ? "الدوري الأوروبي" : "Europa League",
-      id: MAIN_LEAGUES.EUROPA_LEAGUE,
-      logo: "https://media.api-sports.io/football/leagues/3.png",
-      country: currentLanguage === 'ar' ? 'أوروبا' : 'Europe',
-      flag: '🇪🇺'
-    },
-    {
-      name: currentLanguage === 'ar' ? "دوري أبطال أفريقيا" : "CAF Champions League",
-      id: 12,
-      logo: "https://media.api-sports.io/football/leagues/12.png",
-      country: currentLanguage === 'ar' ? 'أفريقيا' : 'Africa',
-      flag: '🌍'
-    },
-    {
-      name: currentLanguage === 'ar' ? "كأس الكونفدرالية الأفريقية" : "CAF Confederation Cup",
-      id: 20,
-      logo: "https://media.api-sports.io/football/leagues/20.png",
-      country: currentLanguage === 'ar' ? 'أفريقيا' : 'Africa',
-      flag: '🌍'
-    },
-    {
-      name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
-      id: 233,
-      logo: "https://media.api-sports.io/football/leagues/233.png",
-      country: currentLanguage === 'ar' ? 'مصر' : 'Egypt',
-      flag: '🇪🇬'
-    },
-  ];
+  // Données des ligues pour l'affichage en liste - Afficher toutes les ligues
+  const leaguesList = LEAGUES.map(league => ({
+    id: league.id,
+    name: getLeagueName(league, currentLanguage),
+    logo: league.logo,
+    country: getLeagueCountry(league, currentLanguage),
+    flag: league.flag || '🏆'
+  }));
 
   // Filtrer les ligues selon la recherche
   const filteredLeagues = leaguesList.filter(league => 
@@ -326,7 +256,7 @@ const Standings = () => {
                   {currentLanguage === 'ar' ? 'كوورة - ترتيب البطولات' : 'koora - Classement des tournois'}
                 </h1>
                 <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base md:text-lg font-medium">
-                  {currentLanguage === 'ar' ? 'اختر البطولة لعرض الترتيب' : 'Sélectionnez un tournoi pour voir le classement'}
+                  {currentLanguage === 'ar' ? 'اختر البطولة لعرض الترتيب والإحصائيات' : 'Sélectionnez un tournoi pour voir le classement et les statistiques'}
                 </p>
               </div>
               
@@ -343,8 +273,6 @@ const Standings = () => {
 
             {/* Liste des ligues (style simple comme la maquette) */}
             <div className="w-full max-w-2xl mx-auto" dir="rtl">
-              
-
               <ul className="space-y-2 sm:space-y-3" dir="rtl">
                 {filteredLeagues.map((league) => (
                   <li key={league.id}>
@@ -389,8 +317,8 @@ const Standings = () => {
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
                     {currentLanguage === 'ar' 
-                      ? 'جرب البحث بكلمات مختلفة' 
-                      : 'Essayez avec des mots-clés différents'
+                      ? 'جرب البحث بكلمات مختلفة أو اسم البطولة' 
+                      : 'Essayez avec des mots-clés différents ou le nom du tournoi'
                     }
                   </p>
                   <Button onClick={() => setSearchTerm("")} variant="outline">
@@ -402,8 +330,7 @@ const Standings = () => {
           </>
         )}
 
-        {/* Vue détail du classement */
-        }
+        {/* Vue détail du classement */}
         {showLeagueDetail && selectedLeague && (
           <>
             {/* Header Card + Tabs (match mockup style) */}
@@ -475,18 +402,34 @@ const Standings = () => {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                        {currentLanguage === 'ar' ? 'البيانات غير متوفرة' : 'Données non disponibles'}
+                        {currentLanguage === 'ar' ? 'البيانات غير متوفرة حالياً' : 'Données non disponibles actuellement'}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">
                         {currentLanguage === 'ar' 
-                          ? 'عذراً، لا يمكن تحميل بيانات هذه البطولة حالياً' 
-                          : 'Désolé, impossible de charger les données de ce tournoi actuellement'
+                          ? 'قد تكون هذه البطولة من نوع الكؤوس (بدون ترتيب) أو البيانات غير متاحة مؤقتاً' 
+                          : 'Ce tournoi peut être une compétition à élimination directe (sans classement) ou les données sont temporairement indisponibles'
                         }
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {currentLanguage === 'ar' ? 'جرب تصفح الإحصائيات أو المباريات بدلاً من ذلك' : 'Essayez de consulter les statistiques ou les matchs à la place'}
                       </p>
                     </Card>
                   );
                 }
 
+                // Vérifier si c'est une ligue basée sur des groupes
+                if (selectedLeague && isGroupBasedLeague(selectedLeague)) {
+                  return (
+                    <GroupStandingsTable
+                      standings={groupStandings}
+                      leagueName={leagueData?.leagueName || 'Competition'}
+                      leagueLogo={leagueData?.leagueLogo || ''}
+                      loading={loadingGroupStandings}
+                    />
+                  );
+                }
+
+                // Affichage normal pour les ligues traditionnelles
                 return (
                   <LeagueStandingTable
                     leagueId={selectedLeague}

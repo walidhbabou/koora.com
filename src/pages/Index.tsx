@@ -44,7 +44,7 @@ const SPECIFIC_LEAGUES = [
 ];
 import React, { useEffect, useMemo, useState } from "react";
 
-const NEWS_PER_PAGE = 15;
+const NEWS_PER_PAGE = 15; // Changer à 15 actualités par page
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -61,6 +61,7 @@ import {
 } from "@/components/AdWrapper";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
+import { fetchWordPressNews } from "@/utils/newsUtils";
 import { footballAPI } from "@/config/api";
 import { Filter } from "lucide-react";
 import { useMatchesByDateAndLeague, useLeagues } from "@/hooks/useFootballAPI";
@@ -114,10 +115,12 @@ type NewsCardItem = {
 
 const Index = () => {
   const [newsItems, setNewsItems] = useState<NewsCardItem[]>([]);
+  const [allNewsItems, setAllNewsItems] = useState<NewsCardItem[]>([]); // Stocker toutes les news
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(1);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
   const [search, setSearch] = useState("");
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
   // Matches (dynamic by date + filter)
@@ -211,7 +214,21 @@ const Index = () => {
     return Array.from(map.values());
   }, [matchesData]);
 
-  const fetchNews = async (nextPage: number, append: boolean = false) => {
+  // Fonction pour paginer les news
+  const paginateNews = (allNews: NewsCardItem[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * NEWS_PER_PAGE;
+    const endIndex = startIndex + NEWS_PER_PAGE;
+    const paginatedNews = allNews.slice(startIndex, endIndex);
+    const totalPagesCount = Math.ceil(allNews.length / NEWS_PER_PAGE);
+    
+    setNewsItems(paginatedNews);
+    setTotalPages(totalPagesCount);
+    setTotalCount(allNews.length);
+    
+    return paginatedNews;
+  };
+
+  const fetchNews = async (nextPage: number = 1, append: boolean = false) => {
     setLoading(true);
     try {
       // Fetch Supabase news
@@ -236,7 +253,6 @@ const Index = () => {
       try {
         const mysqlResp = await fetch("/api/news");
         if (mysqlResp.ok) {
-          // Try to parse JSON, fallback to empty array if error
           try {
             mysqlData = await mysqlResp.json();
           } catch (jsonErr) {
@@ -253,6 +269,19 @@ const Index = () => {
       } catch (apiErr) {
         console.error("Failed to fetch MySQL news:", apiErr);
         mysqlData = [];
+      }
+
+      // Fetch WordPress news avec la nouvelle fonction améliorée
+      let wordPressNews: NewsCardItem[] = [];
+      try {
+        wordPressNews = await fetchWordPressNews({
+          perPage: 100,
+          page: 1,
+          maxTotal: 150 // Limiter pour éviter la surcharge
+        });
+      } catch (wpError) {
+        console.error("Failed to fetch WordPress news:", wpError);
+        wordPressNews = [];
       }
 
       // Helper: extract text from Editor.js JSON
@@ -352,7 +381,7 @@ const Index = () => {
           const summaryRaw = n.post_excerpt || n.post_content || "";
           const plain = stripHtml(summaryRaw);
           return {
-            id: String(n.ID),
+            id: `mysql_${n.ID}`,
             title: n.post_title ?? "-",
             summary: plain.slice(0, 160) + (plain.length > 160 ? "…" : ""),
             imageUrl: "/placeholder.svg", // You can update if you have image field
@@ -360,19 +389,29 @@ const Index = () => {
               ? new Date(n.post_date).toISOString().slice(0, 10)
               : "",
             category: "أخبار",
+            source: 'mysql' as const
           };
         }
       );
 
       // Merge and sort all news by publishedAt desc
-      const allNews = [...supabaseMapped, ...mysqlMapped].sort((a, b) =>
+      const allNews = [...supabaseMapped, ...mysqlMapped, ...wordPressNews].sort((a, b) =>
         b.publishedAt.localeCompare(a.publishedAt)
       );
-      setTotalCount(allNews.length);
-      setNewsItems((prev) => (append ? [...prev, ...allNews] : allNews));
+      
+      // Stocker toutes les news et paginer
+      if (!append) {
+        setAllNewsItems(allNews);
+        paginateNews(allNews, nextPage);
+      } else {
+        const updatedAllNews = [...allNewsItems, ...allNews];
+        setAllNewsItems(updatedAllNews);
+        paginateNews(updatedAllNews, nextPage);
+      }
     } catch (e) {
       console.error("Failed to load news", e);
       setNewsItems([]);
+      setAllNewsItems([]);
     } finally {
       setLoading(false);
     }
@@ -380,12 +419,21 @@ const Index = () => {
 
   useEffect(() => {
     fetchNews(1, false);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fetch news on page change
-  useEffect(() => {
-    fetchNews(page, false);
-  }, [page]);
+  // Fonction pour changer de page
+  const handlePageChange = (newPage: number) => {
+    if (loading || newPage < 1 || newPage > totalPages) return;
+    paginateNews(allNewsItems, newPage);
+    setPage(newPage);
+    // Scroll vers le haut quand on change de page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Re-fetch news on page change - Commenté car on utilise la pagination locale
+  // useEffect(() => {
+  //   fetchNews(page, false);
+  // }, [page]);
 
   // Carousel navigation functions
   const nextSlide = () => {
@@ -650,25 +698,57 @@ const Index = () => {
             )}
 
             {/* Pagination Controls */}
-            {totalCount > NEWS_PER_PAGE && (
-              <div className="flex justify-center items-center mt-8">
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
                 <button
-                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50"
-                  onClick={() => setPage(page - 1)}
+                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
+                  onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
                 >
                   السابق
                 </button>
-                <span className="mx-2">
-                  صفحة {page} من {Math.ceil(totalCount / NEWS_PER_PAGE)}
-                </span>
+                
+                <div className="flex items-center gap-1">
+                  {/* Afficher les numéros de page */}
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (page <= 3) {
+                      pageNum = i + 1;
+                    } else if (page >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = page - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={pageNum}
+                        className={`w-8 h-8 text-sm rounded ${
+                          page === pageNum 
+                            ? "bg-sport-dark text-white" 
+                            : "bg-gray-200 text-gray-700 hover:bg-sport-dark hover:text-white"
+                        }`}
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                
                 <button
-                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page >= Math.ceil(totalCount / NEWS_PER_PAGE)}
+                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === totalPages}
                 >
                   التالي
                 </button>
+                
+                <span className="text-sm text-gray-600 ml-4">
+                  صفحة {page} من {totalPages} ({totalCount} مقال)
+                </span>
               </div>
             )}
           </div>
@@ -835,22 +915,24 @@ const Index = () => {
                 </Link>
               ))}
             {/* Pagination Controls Mobile */}
-            {totalCount > NEWS_PER_PAGE && (
-              <div className="flex justify-center items-center mt-8">
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-8">
                 <button
-                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50"
-                  onClick={() => setPage(page - 1)}
+                  className="px-3 py-2 mx-1 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
+                  onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
                 >
                   السابق
                 </button>
-                <span className="mx-2">
-                  صفحة {page} من {Math.ceil(totalCount / NEWS_PER_PAGE)}
+                
+                <span className="text-sm text-gray-600 mx-2">
+                  {page} / {totalPages}
                 </span>
+                
                 <button
-                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50"
-                  onClick={() => setPage(page + 1)}
-                  disabled={page >= Math.ceil(totalCount / NEWS_PER_PAGE)}
+                  className="px-3 py-2 mx-1 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === totalPages}
                 >
                   التالي
                 </button>

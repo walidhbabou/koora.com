@@ -106,22 +106,22 @@ const TeamsLogos = () => {
       name: currentLanguage === 'ar' ? "الوداد الرياضي" : "Wydad Casablanca", 
       logo: "https://media.api-sports.io/football/teams/968.png",
       league: "Botola Pro",
-      leagueId: 564
+      leagueId: 200
     },
     { 
       id: 976, 
       name: currentLanguage === 'ar' ? "الرجاء الرياضي" : "Raja Casablanca", 
       logo: "https://media.api-sports.io/football/teams/976.png",
       league: "Botola Pro",
-      leagueId: 564
+      leagueId: 200
     },
       // New teams added
       { 
         id: 1577, 
         name: currentLanguage === 'ar' ? "الأهلي" : "Al Ahly (Libya)", 
-        logo: "https://media.api-sports.io/football/teams/1029.png",
+        logo: "https://media.api-sports.io/football/teams/1577.png",
         league: "Libyan Premier League",
-        leagueId: 1040
+        leagueId: 233
       },
       { 
         id: 1040, 
@@ -178,6 +178,131 @@ const TeamsLogos = () => {
         logo: "https://media.api-sports.io/football/teams/9568.png",
         league: "Major League Soccer",
         leagueId: 253
+      },
+      // Équipes nationales
+      { 
+        id: 31, 
+        name: currentLanguage === 'ar' ? "المنتخب المغربي" : "Morocco National Team", 
+        logo: "https://media.api-sports.io/football/teams/31.png",
+        league: "International",
+        leagueId: 1
+      },
+      { 
+        id: 32, 
+        name: currentLanguage === 'ar' ? "المنتخب المصري" : "Egypt National Team", 
+        logo: "https://media.api-sports.io/football/teams/32.png",
+        league: "International",
+        leagueId: 1
+      },
+      // Équipes espagnoles supplémentaires
+      { 
+        id: 543, 
+        name: currentLanguage === 'ar' ? "ريال بيتيس" : "Real Betis", 
+        logo: "https://media.api-sports.io/football/teams/543.png",
+        league: "La Liga",
+        leagueId: 140
+      },
+      { 
+        id: 548, 
+        name: currentLanguage === 'ar' ? "ريال سوسيداد" : "Real Sociedad", 
+        logo: "https://media.api-sports.io/football/teams/548.png",
+        league: "La Liga",
+        leagueId: 140
+      },
+      // Équipes marocaines supplémentaires
+      { 
+        id: 962, 
+        name: currentLanguage === 'ar' ? "نهضة بركان" : "Renaissance Berkane", 
+        logo: "https://media.api-sports.io/football/teams/962.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 971, 
+        name: currentLanguage === 'ar' ? "كوكب مراكش" : "Kawkab Marrakech", 
+        logo: "https://media.api-sports.io/football/teams/971.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 972, 
+        name: currentLanguage === 'ar' ? "أولمبيك خريبكة" : "Olympique Khouribga", 
+        logo: "https://media.api-sports.io/football/teams/972.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 973, 
+        name: currentLanguage === 'ar' ? "حسنية أكادير" : "Hassania Agadir", 
+        logo: "https://media.api-sports.io/football/teams/973.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 974, 
+        name: currentLanguage === 'ar' ? "اتحاد طنجة" : "Ittihad Tanger", 
+        logo: "https://media.api-sports.io/football/teams/974.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      { 
+        id: 975, 
+        name: currentLanguage === 'ar' ? "أولمبيك آسفي" : "Olympique Safi", 
+        logo: "https://media.api-sports.io/football/teams/975.png",
+        league: "Botola Pro",
+        leagueId: 200
+      },
+      // Équipes égyptiennes supplémentaires
+      { 
+        id: 1036, 
+        name: currentLanguage === 'ar' ? "بيراميدز" : "Pyramids FC", 
+        logo: "https://media.api-sports.io/football/teams/1036.png",
+        league: "Egyptian Premier League",
+        leagueId: 233
+      },
+      // Équipes algériennes
+      { 
+        id: 904, 
+        name: currentLanguage === 'ar' ? "شباب بلوزداد" : "CR Belouizdad", 
+        logo: "https://media.api-sports.io/football/teams/904.png",
+        league: "Algerian Ligue 1",
+        leagueId: 186
+      },
+      { 
+        id: 905, 
+        name: currentLanguage === 'ar' ? "وفاق سطيف" : "ES Setif", 
+        logo: "https://media.api-sports.io/football/teams/905.png",
+        league: "Algerian Ligue 1",
+        leagueId: 186
+      },
+      { 
+        id: 910, 
+        name: currentLanguage === 'ar' ? "اتحاد الجزائر" : "USM Alger", 
+        logo: "https://media.api-sports.io/football/teams/910.png",
+        league: "Algerian Ligue 1",
+        leagueId: 186
+      },
+      // Équipes tunisiennes
+      { 
+        id: 980, 
+        name: currentLanguage === 'ar' ? "الترجي التونسي" : "ES Tunis", 
+        logo: "https://media.api-sports.io/football/teams/980.png",
+        league: "Tunisian Ligue 1",
+        leagueId: 202
+      },
+      { 
+        id: 988, 
+        name: currentLanguage === 'ar' ? "النادي الأفريقي" : "Club Africain", 
+        logo: "https://media.api-sports.io/football/teams/988.png",
+        league: "Tunisian Ligue 1",
+        leagueId: 202
+      },
+      { 
+        id: 990, 
+        name: currentLanguage === 'ar' ? "النجم الساحلي" : "ES Sahel", 
+        logo: "https://media.api-sports.io/football/teams/990.png",
+        league: "Tunisian Ligue 1",
+        leagueId: 202
       },
   ];
 

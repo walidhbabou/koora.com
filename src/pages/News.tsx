@@ -1,6 +1,7 @@
 import {
   stripHtml,
   parseEditorJsContent,
+  fetchWordPressNews,
   transformWordPressNews,
 } from "@/utils/newsUtils";
 import {
@@ -44,9 +45,11 @@ const News = () => {
   // ...existing code...
 
   const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
+  const [displayedNews, setDisplayedNews] = useState<NewsCardItem[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 15; // Limiter à 15 actualités par page
+  const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const { currentLanguage } = useTranslation();
   const { toast } = useToast();
@@ -71,6 +74,20 @@ const News = () => {
   // Fonction pour transformer les données WordPress en format NewsCardItem
   // ...existing code...
 
+  // Fonction pour paginer les news déjà chargées
+  const paginateNews = useCallback((newsArray: NewsCardItem[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedNews = newsArray.slice(startIndex, endIndex);
+    const totalPagesCount = Math.ceil(newsArray.length / pageSize);
+    
+    setDisplayedNews(paginatedNews);
+    setTotalPages(totalPagesCount);
+    setHasMore(currentPage < totalPagesCount);
+    
+    return paginatedNews;
+  }, [pageSize]);
+
   // Fonction pour récupérer les news Supabase
   const fetchSupabaseNews = useCallback(
     async (nextPage: number): Promise<NewsCardItem[]> => {
@@ -79,7 +96,7 @@ const News = () => {
         .select("*", { count: "exact" })
         .eq("status", "published")
         .order("created_at", { ascending: false })
-        .range((nextPage - 1) * pageSize, nextPage * pageSize - 1);
+        .range(0, 99); // Récupérer les 100 premières actualités
 
       // Filter by category header selection
       if (selectedHeaderCategory && selectedSubCategory) {
@@ -151,9 +168,13 @@ const News = () => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase error:", error);
+        return [];
+      }
 
       if (data) {
+        console.log(`Supabase news fetched: ${data.length} articles`);
         return data.map((n: NewsDBRow) => {
           const parsedContent = parseEditorJsContent(String(n.content || ""));
           const plain = stripHtml(parsedContent);
@@ -173,21 +194,20 @@ const News = () => {
 
       return [];
     },
-    [selectedChampion, selectedHeaderCategory, selectedSubCategory, pageSize]
+    [selectedChampion, selectedHeaderCategory, selectedSubCategory]
   );
 
   // Fonction pour récupérer les news WordPress
-  const fetchWordPressNews = async (): Promise<NewsCardItem[]> => {
+  const fetchWordPressNewsData = async (): Promise<NewsCardItem[]> => {
     try {
-      const response = await fetch(
-        "https://koora.com/wp-json/wp/v2/posts?_embed"
-      );
-      if (!response.ok) throw new Error("WordPress fetch failed");
-
-      const wpNews: WordPressNewsItem[] = await response.json();
-      console.log("WordPress news loaded:", wpNews.length, "articles");
-
-      return transformWordPressNews(wpNews);
+      console.log("Fetching WordPress news...");
+      const result = await fetchWordPressNews({
+        perPage: 100,
+        page: 1,
+        maxTotal: 200 // Limiter à 200 articles WordPress pour éviter la surcharge
+      });
+      console.log(`WordPress news fetched: ${result.length} articles`);
+      return result;
     } catch (error) {
       console.error("WordPress news fetch failed:", error);
       return [];
@@ -196,27 +216,35 @@ const News = () => {
 
   // Fonction principale pour récupérer et combiner toutes les news
   const fetchAllNews = useCallback(
-    async (nextPage: number, append: boolean = false) => {
+    async (nextPage: number = 1, append: boolean = false) => {
+      console.log(`Fetching news for page ${nextPage}, append: ${append}`);
       setLoadingNews(true);
       try {
         const promises = [];
 
-        // Récupérer les news Supabase
-        promises.push(fetchSupabaseNews(nextPage));
+        // Récupérer les news Supabase (toutes en une fois)
+        console.log("Starting Supabase fetch...");
+        promises.push(fetchSupabaseNews(1)); // Récupérer toutes les news Supabase
 
-        // Récupérer les news WordPress seulement pour la première page
-        if (nextPage === 1) {
-          promises.push(fetchWordPressNews());
+        // Récupérer les news WordPress seulement si pas déjà chargées
+        if (allNews.length === 0 || !append) {
+          console.log("Starting WordPress fetch...");
+          promises.push(fetchWordPressNewsData());
+        } else {
+          promises.push(Promise.resolve([])); // Placeholder vide
         }
 
         const results = await Promise.all(promises);
         const supabaseNews = results[0] || [];
         const wordpressNews = results[1] || [];
 
+        console.log(`Supabase news: ${supabaseNews.length}`);
+        console.log(`WordPress news: ${wordpressNews.length}`);
+
         let combinedNews: NewsCardItem[];
 
-        if (nextPage === 1) {
-          // Pour la première page, mélanger WordPress et Supabase
+        if (!append || allNews.length === 0) {
+          // Pour la première charge, mélanger WordPress et Supabase
           combinedNews = [...wordpressNews, ...supabaseNews];
 
           // Trier par date (plus récent en premier)
@@ -229,28 +257,44 @@ const News = () => {
           console.log("Combined news:", combinedNews.length);
           console.log("WordPress articles:", wordpressNews.length);
           console.log("Supabase articles:", supabaseNews.length);
-        } else {
-          // Pour les autres pages, seulement Supabase
-          combinedNews = supabaseNews;
-        }
-
-        if (append) {
-          setAllNews((prev) => [...prev, ...combinedNews]);
-        } else {
+          
           setAllNews(combinedNews);
+        } else {
+          combinedNews = allNews;
         }
 
-        setHasMore(supabaseNews.length === pageSize);
-        if (!append) setPage(nextPage);
+        // Paginer les résultats
+        if (combinedNews.length > 0) {
+          paginateNews(combinedNews, nextPage);
+          setPage(nextPage);
+        } else {
+          // Si aucune news n'est trouvée, essayer de charger quelques news de test
+          console.warn("No news found, creating placeholder news");
+          const placeholderNews: NewsCardItem[] = [
+            {
+              id: "placeholder-1",
+              title: "أخبار كرة القدم اليوم",
+              summary: "تابع آخر الأخبار الرياضية والمباريات اليوم...",
+              imageUrl: "/placeholder.svg",
+              publishedAt: new Date().toISOString().slice(0, 10),
+              category: "أخبار",
+              source: "supabase"
+            }
+          ];
+          setAllNews(placeholderNews);
+          paginateNews(placeholderNews, 1);
+          setPage(1);
+        }
       } catch (e) {
         console.error("Failed to load news", e);
-        if (!append) setAllNews([]);
+        setAllNews([]);
+        setDisplayedNews([]);
         setHasMore(false);
       } finally {
         setLoadingNews(false);
       }
     },
-    [fetchSupabaseNews]
+    [fetchSupabaseNews, allNews, paginateNews]
   );
 
   // useEffect pour charger les news WordPress (pour debug et état séparé)
@@ -270,8 +314,19 @@ const News = () => {
 
   // useEffect principal pour charger toutes les news
   useEffect(() => {
+    console.log("News component mounted, fetching news...");
     fetchAllNews(1, false);
-  }, [fetchAllNews]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // useEffect pour recharger quand les filtres changent
+  useEffect(() => {
+    if (selectedHeaderCategory !== null || selectedSubCategory !== null || selectedChampion !== null) {
+      console.log("Filters changed, refetching news...");
+      setAllNews([]);
+      setDisplayedNews([]);
+      fetchAllNews(1, false);
+    }
+  }, [selectedHeaderCategory, selectedSubCategory, selectedChampion, fetchAllNews]);
 
   const reportNews = async (newsId: string, description: string) => {
     if (reportingId) return;
@@ -338,20 +393,29 @@ const News = () => {
 
   const handleLoadMore = async () => {
     if (loadingNews || !hasMore) return;
-    const next = page + 1;
-    await fetchAllNews(next, true);
-    setPage(next);
+    const nextPage = page + 1;
+    paginateNews(allNews, nextPage);
+    setPage(nextPage);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (loadingNews || newPage < 1 || newPage > totalPages) return;
+    paginateNews(allNews, newPage);
+    setPage(newPage);
+    // Scroll vers le haut quand on change de page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleChampionClick = (championId: number | null) => {
     setSelectedChampion(championId);
     setPage(1);
     setAllNews([]);
+    setDisplayedNews([]);
     fetchAllNews(1);
   };
 
   // Trending topics derived from latest news titles
-  const trendingTopics = allNews.slice(0, 5).map((n) => n.title);
+  const trendingTopics = displayedNews.slice(0, 5).map((n) => n.title);
 
   // Mapping between league IDs and competition IDs (adjust these based on your actual data)
   const leagueToCompetitionMap: { [key: number]: number } = {
@@ -408,7 +472,9 @@ const News = () => {
 
   // Debug logs - only in development
   if (process.env.NODE_ENV === "development") {
-    console.log("Total news to display:", allNews.length);
+    console.log("Total news loaded:", allNews.length);
+    console.log("Displayed news (current page):", displayedNews.length);
+    console.log("Current page:", page, "of", totalPages);
     console.log(
       "WordPress news count:",
       allNews.filter((n) => n.source === "wordpress").length
@@ -470,17 +536,17 @@ const News = () => {
           )} */}
 
           {/* Featured News en grand sous le slider */}
-          {!loadingNews && allNews.length > 0 && (
+          {!loadingNews && displayedNews.length > 0 && (
             <div className="mb-6">
-              <Link to={`/news/${allNews[0].id}`}>
+              <Link to={`/news/${displayedNews[0].id}`}>
                 <div className="relative">
                   <FeaturedNewsCard
-                    title={allNews[0].title}
-                    imageUrl={allNews[0].imageUrl}
-                    publishedAt={allNews[0].publishedAt}
-                    category={allNews[0].category}
+                    title={displayedNews[0].title}
+                    imageUrl={displayedNews[0].imageUrl}
+                    publishedAt={displayedNews[0].publishedAt}
+                    category={displayedNews[0].category}
                   />
-                  {allNews[0].source === "wordpress" && (
+                  {displayedNews[0].source === "wordpress" && (
                     <div className="absolute top-4 right-4 bg-blue-600 text-white text-sm px-3 py-1 rounded-full font-medium">
                       {currentLanguage === "ar" ? "كورة نيوز" : "Koora News"}
                     </div>
@@ -494,7 +560,7 @@ const News = () => {
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
               {/* Loading state - Responsive Grid */}
-              {loadingNews && allNews.length === 0 && (
+              {loadingNews && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
                   {[...Array(6)].map((_, index) => (
                     <div
@@ -512,10 +578,12 @@ const News = () => {
                 </div>
               )}
 
+            
+
               {/* News Grid - Responsive - Starting from index 1 to avoid duplicating featured news */}
-              {!loadingNews && allNews.length > 1 && (
+              {!loadingNews && displayedNews.length > 1 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
-                  {allNews.slice(1).map((newsItem) => (
+                  {displayedNews.slice(1).map((newsItem) => (
                     <div key={newsItem.id} className="relative">
                       <Link to={`/news/${newsItem.id}`}>
                         <NewsCard news={newsItem} size="medium" />
@@ -531,7 +599,7 @@ const News = () => {
               )}
 
               {/* No news state */}
-              {!loadingNews && allNews.length === 0 && (
+              {!loadingNews && displayedNews.length === 0 && allNews.length === 0 && (
                 <div className="flex justify-center py-8 sm:py-12">
                   <NewsCard
                     news={{
@@ -553,8 +621,69 @@ const News = () => {
                 </div>
               )}
 
-              {/* Load More Button */}
-              {!loadingNews && allNews.length > 0 && (
+              {/* Pagination Controls */}
+              {!loadingNews && allNews.length > pageSize && (
+                <div className="flex justify-center items-center gap-2 pt-4 sm:pt-6 lg:pt-8">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
+                  >
+                    السابق
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {/* Afficher les numéros de page */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (page <= 3) {
+                        pageNum = i + 1;
+                      } else if (page >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = page - 2 + i;
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          size="sm"
+                          variant={page === pageNum ? "default" : "outline"}
+                          className={`w-8 h-8 p-0 ${
+                            page === pageNum 
+                              ? "bg-blue-600 text-white" 
+                              : "border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
+                          }`}
+                          onClick={() => handlePageChange(pageNum)}
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page === totalPages}
+                  >
+                    التالي
+                  </Button>
+                  
+                  <span className="text-sm text-gray-600 ml-4">
+                    صفحة {page} من {totalPages} 
+                  </span>
+                </div>
+              )}
+
+              {/* Load More Button - Keep for backward compatibility */}
+              {!loadingNews && displayedNews.length > 0 && hasMore && totalPages <= 1 && (
                 <div className="flex justify-center pt-2 sm:pt-3 lg:pt-4">
                   <Button
                     size="lg"

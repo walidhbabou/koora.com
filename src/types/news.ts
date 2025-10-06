@@ -35,7 +35,7 @@ export type NewsCardItem = {
   imageUrl: string;
   publishedAt: string;
   category: string;
-  source?: 'wordpress' | 'supabase';
+  source?: 'wordpress' | 'supabase' | 'mysql';
 };
 
 export interface Category {

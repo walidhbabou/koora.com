@@ -7,6 +7,7 @@ import TeamsLogos from "@/components/TeamsLogos";
 import DatePicker from "@/components/DatePicker";
 import LeagueSelector from "@/components/LeagueSelector";
 import MockAPIAlert from "@/components/MockAPIAlert";
+import { LEAGUES, getLeagueName } from "@/config/leagues";
 
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -325,81 +326,10 @@ const Matches = () => {
   });
 
   // Données statiques pour les ligues demandées
-  const leagues = [
-    {
-      name: currentLanguage === 'ar' ? "البريمير ليغ" : "Premier League",
-      id: MAIN_LEAGUES.PREMIER_LEAGUE,
-      logo: "https://media.api-sports.io/football/leagues/39.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "الليج 1" : "Ligue 1",
-      id: MAIN_LEAGUES.LIGUE_1,
-      logo: "https://media.api-sports.io/football/leagues/61.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "دوري أبطال أوروبا" : "Champions League",
-      id: MAIN_LEAGUES.CHAMPIONS_LEAGUE,
-      logo: "https://media.api-sports.io/football/leagues/2.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "الدوري الأوروبي" : "Europa League",
-      id: MAIN_LEAGUES.EUROPA_LEAGUE,
-      logo: "https://media.api-sports.io/football/leagues/3.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "دوري أبطال أفريقيا" : "CAF Champions League",
-      id: 12,
-      logo: "https://media.api-sports.io/football/leagues/12.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "كأس الكونفدرالية الأفريقية" : "CAF Confederation Cup",
-      id: 20,
-      logo: "https://media.api-sports.io/football/leagues/20.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "الدوري المصري الممتاز" : "Egyptian Premier League",
-      id: 233,
-      logo: "https://media.api-sports.io/football/leagues/233.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "الليغا الإسبانية" : "La Liga",
-      id: MAIN_LEAGUES.LA_LIGA,
-      logo: "https://media.api-sports.io/football/leagues/140.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "البطولة المغربية" : "Botola Maroc",
-      id: MAIN_LEAGUES.BOTOLA_MAROC,
-      logo: "https://media.api-sports.io/football/leagues/200.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "البوندسليجا" : "Bundesliga",
-      id: MAIN_LEAGUES.BUNDESLIGA,
-      logo: "https://media.api-sports.io/football/leagues/78.png"
-    },
-    {
-      name: currentLanguage === 'ar' ? "الدوري الإيطالي" : "Serie A",
-      id: MAIN_LEAGUES.SERIE_A,
-      logo: "https://media.api-sports.io/football/leagues/135.png"
-    },
-    // Saudi Pro League
-    {
-      name: currentLanguage === 'ar' ? 'الدوري السعودي للمحترفين' : 'Saudi Pro League',
-      id: 307,
-      logo: 'https://media.api-sports.io/football/leagues/307.png'
-    },
-    // Qatar QSL Cup
-    {
-      name: currentLanguage === 'ar' ? 'كأس قطر QSL' : 'QSL Cup',
-      id: 677,
-      logo: 'https://media.api-sports.io/football/leagues/677.png'
-    },
-    // Algeria Ligue 1
-    {
-      name: currentLanguage === 'ar' ? 'الدوري الجزائري - الرابطة المحترفة الأولى' : 'Algeria Ligue 1',
-      id: 186,
-      logo: 'https://media.api-sports.io/football/leagues/186.png'
-    }
-  ];
+  const leagues = LEAGUES.map(league => ({
+    ...league,
+    name: getLeagueName(league, currentLanguage)
+  }));
 
   // Fonction pour vérifier si un match est en direct
   const isLiveMatch = (match: unknown): boolean => {

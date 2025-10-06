@@ -11,16 +11,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
   let connection;
+  const dbConfig = {
+    host: 'srv1540.hstgr.io',
+    user: 'u772497629_eZrQf',
+    password: '8SsJwwgSkH', 
+    database: 'u772497629_CwWyn'
+  };
+  console.log('Attempting MySQL connection with config:', dbConfig);
   try {
-    connection = await mysql.createConnection({
-      host: 'srv1540.hstgr.io', 
-      user: 'u772497629_eZrQf',
-      password: '8SsJwwgSkH',
-      database: 'u772497629_CwWyn'
-    });
+    connection = await mysql.createConnection(dbConfig);
+    console.log('MySQL connection established successfully');
   } catch (connErr) {
     console.error('MySQL connection error:', connErr);
-    res.status(500).json({ error: 'MySQL connection error', details: connErr instanceof Error ? connErr.message : connErr });
+    res.status(500).json({ error: 'MySQL connection error', details: connErr instanceof Error ? connErr.message : connErr, config: dbConfig });
     return;
   }
   try {
