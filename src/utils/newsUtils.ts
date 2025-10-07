@@ -194,56 +194,71 @@ export const parseEditorJsContent = (content: string): string => {
 };
 
 import { WordPressNewsItem, NewsCardItem } from '../types/news';
+import { SUPABASE_TO_WORDPRESS_MAPPING } from '../config/wordpressCategories';
+
+// Mapping between Supabase categories and WordPress categories
+export const getWordPressCategoriesForFilter = (
+  selectedHeaderCategory: number | null,
+  selectedSubCategory: number | null
+): number[] => {
+  // If no filter is selected, return empty array (fetch all)
+  if (!selectedHeaderCategory) {
+    return [];
+  }
+
+  const categoryMapping = SUPABASE_TO_WORDPRESS_MAPPING[selectedHeaderCategory as keyof typeof SUPABASE_TO_WORDPRESS_MAPPING];
+  
+  if (!categoryMapping) {
+    console.warn(`No WordPress category mapping found for Supabase category ${selectedHeaderCategory}`);
+    return [];
+  }
+
+  // If a specific subcategory is selected
+  if (selectedSubCategory && categoryMapping.subCategories[selectedSubCategory]) {
+    const categories = categoryMapping.subCategories[selectedSubCategory];
+    console.log(`Mapping Supabase category ${selectedHeaderCategory}.${selectedSubCategory} to WordPress categories: ${categories.join(', ')}`);
+    return categories;
+  }
+
+  // Return all categories for this header category
+  const categories = categoryMapping.all;
+  console.log(`Mapping Supabase category ${selectedHeaderCategory} (all) to WordPress categories: ${categories.join(', ')}`);
+  return categories;
+};
 
 // Fonction pour récupérer les news WordPress avec pagination améliorée
 export const fetchWordPressNews = async (options: {
   perPage?: number;
   page?: number;
   maxTotal?: number;
+  categories?: number[]; // Add categories filter
 } = {}): Promise<NewsCardItem[]> => {
-  const { perPage = 100, page = 1, maxTotal = 300 } = options;
+  const { perPage = 20, page = 1, maxTotal = 100, categories } = options; // Reduced defaults
   
   try {
-    const urls = [
-      `https://koora.com/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`,
-    ];
-
-    // Si c'est la première page, récupérer aussi les autres pages
-    if (page === 1) {
-      urls.push(
-        `https://koora.com/wp-json/wp/v2/posts?per_page=20&page=2&_embed`,
-        `https://koora.com/wp-json/wp/v2/posts?per_page=100&page=2&_embed`,
-        `https://koora.com/wp-json/wp/v2/posts?per_page=100&page=3&_embed`
-      );
+    // Build URL with category filter if provided
+    let url = `https://koora.com/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`;
+    
+    // Add categories filter if specified
+    if (categories && categories.length > 0) {
+      const categoriesParam = categories.join(',');
+      url += `&categories=${categoriesParam}`;
+      console.log(`Fetching WordPress news with categories: ${categoriesParam}`);
     }
 
-    const promises = urls.map(async (url) => {
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn(`WordPress fetch failed for ${url}:`, response.status);
-          return [];
-        }
-        const data: WordPressNewsItem[] = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error(`Error fetching WordPress news from ${url}:`, error);
-        return [];
-      }
-    });
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`WordPress fetch failed for ${url}:`, response.status);
+      return [];
+    }
+    
+    const data: WordPressNewsItem[] = await response.json();
+    const validData = Array.isArray(data) ? data : [];
+    
+    // Limit the number if specified
+    const limitedNews = maxTotal ? validData.slice(0, maxTotal) : validData;
 
-    const results = await Promise.all(promises);
-    const allNews = results.flat();
-
-    // Supprimer les doublons basés sur l'ID
-    const uniqueNews = allNews.filter((item, index, self) => 
-      index === self.findIndex(t => t.id === item.id)
-    );
-
-    // Limiter le nombre total si spécifié
-    const limitedNews = maxTotal ? uniqueNews.slice(0, maxTotal) : uniqueNews;
-
-    console.log(`WordPress news loaded: ${limitedNews.length} unique articles from ${allNews.length} total`);
+    console.log(`WordPress news loaded: ${limitedNews.length} articles${categories ? ` for categories ${categories.join(',')}` : ''}`);
 
     return transformWordPressNews(limitedNews);
   } catch (error) {

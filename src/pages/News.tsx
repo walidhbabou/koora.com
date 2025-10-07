@@ -3,6 +3,7 @@ import {
   parseEditorJsContent,
   fetchWordPressNews,
   transformWordPressNews,
+  getWordPressCategoriesForFilter,
 } from "@/utils/newsUtils";
 import {
   EditorJsBlock,
@@ -30,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
+import { requestCache, debounce } from "@/utils/requestCache";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +40,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 // Types for Editor.js content
 
 const News = () => {
@@ -60,7 +62,14 @@ const News = () => {
   const [selectedChampion, setSelectedChampion] = useState<number | null>(null);
   const [news, setNews] = useState<WordPressNewsItem[]>([]);
 
-  // States pour CategoryFilterHeader
+  // Add request throttling to prevent infinite loops
+  const lastRequestTime = useRef<number>(0);
+  const MIN_REQUEST_INTERVAL = 2000; // Minimum 2 seconds between requests
+  const requestCount = useRef<number>(0);
+  const MAX_REQUESTS_PER_MINUTE = 5; // Maximum 5 requests per minute
+  const requestTimes = useRef<number[]>([]);
+
+  // States pour CategoryFilterHeader - set to non-null initially to prevent immediate API calls
   const [selectedHeaderCategory, setSelectedHeaderCategory] = useState<
     number | null
   >(null);
@@ -68,11 +77,36 @@ const News = () => {
     null
   );
 
-  // Fonction utilitaire pour nettoyer le HTML
-  // ...existing code...
+  // Flag to prevent initial filter-triggered requests
+  const initialLoadComplete = useRef(false);
 
-  // Fonction pour transformer les données WordPress en format NewsCardItem
-  // ...existing code...
+  // Function to check if we should throttle requests
+  const shouldThrottleRequest = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTime.current;
+    
+    // Check minimum interval
+    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+      console.warn('Request throttled: too soon since last request');
+      return true;
+    }
+    
+    // Clean old request times (older than 1 minute)
+    requestTimes.current = requestTimes.current.filter(time => now - time < 60000);
+    
+    // Check rate limit
+    if (requestTimes.current.length >= MAX_REQUESTS_PER_MINUTE) {
+      console.warn('Request throttled: rate limit exceeded');
+      return true;
+    }
+    
+    // Update tracking
+    lastRequestTime.current = now;
+    requestTimes.current.push(now);
+    requestCount.current++;
+    
+    return false;
+  }, []);
 
   // Fonction pour paginer les news déjà chargées
   const paginateNews = useCallback((newsArray: NewsCardItem[], currentPage: number) => {
@@ -91,55 +125,62 @@ const News = () => {
   // Fonction pour récupérer les news Supabase
   const fetchSupabaseNews = useCallback(
     async (nextPage: number): Promise<NewsCardItem[]> => {
-      let query = supabase
-        .from("news")
-        .select("*", { count: "exact" })
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .range(0, 99); // Récupérer les 100 premières actualités
+      // Check throttling first
+      if (shouldThrottleRequest()) {
+        console.warn('Supabase request throttled');
+        return [];
+      }
 
-      // Filter by category header selection
-      if (selectedHeaderCategory && selectedSubCategory) {
-        switch (selectedHeaderCategory) {
-          case 1:
-            query = query.eq(
-              "competition_internationale_id",
-              selectedSubCategory
-            );
-            break;
-          case 2:
-            query = query.eq("competition_mondiale_id", selectedSubCategory);
-            break;
-          case 3:
-            query = query.eq(
-              "competition_continentale_id",
-              selectedSubCategory
-            );
-            break;
-          case 4:
-            query = query.eq("competition_locale_id", selectedSubCategory);
-            break;
-          case 5:
-            query = query.eq("transfert_news_id", selectedSubCategory);
-            break;
-        }
-      } else if (selectedHeaderCategory) {
-        switch (selectedHeaderCategory) {
-          case 1:
-            query = query.not("competition_internationale_id", "is", null);
-            break;
-          case 2:
-            query = query.not("competition_mondiale_id", "is", null);
-            break;
-          case 3:
-            query = query.not("competition_continentale_id", "is", null);
-            break;
-          case 4:
-            query = query.not("competition_locale_id", "is", null);
-            break;
-          case 5:
-            query = query.not("transfert_news_id", "is", null);
-            break;
+      try {
+        let query = supabase
+          .from("news")
+          .select("*", { count: "exact" })
+          .eq("status", "published")
+          .order("created_at", { ascending: false })
+          .range(0, 49); // Reduced from 99 to 49 to limit resource usage
+
+        // Filter by category header selection
+        if (selectedHeaderCategory && selectedSubCategory) {
+          switch (selectedHeaderCategory) {
+            case 1:
+              query = query.eq(
+                "competition_internationale_id",
+                selectedSubCategory
+              );
+              break;
+            case 2:
+              query = query.eq("competition_mondiale_id", selectedSubCategory);
+              break;
+            case 3:
+              query = query.eq(
+                "competition_continentale_id",
+                selectedSubCategory
+              );
+              break;
+            case 4:
+              query = query.eq("competition_locale_id", selectedSubCategory);
+              break;
+            case 5:
+              query = query.eq("transfert_news_id", selectedSubCategory);
+              break;
+          }
+        } else if (selectedHeaderCategory) {
+          switch (selectedHeaderCategory) {
+            case 1:
+              query = query.not("competition_internationale_id", "is", null);
+              break;
+            case 2:
+              query = query.not("competition_mondiale_id", "is", null);
+              break;
+            case 3:
+              query = query.not("competition_continentale_id", "is", null);
+              break;
+            case 4:
+              query = query.not("competition_locale_id", "is", null);
+              break;
+            case 5:
+              query = query.not("transfert_news_id", "is", null);
+              break;
         }
       }
 
@@ -193,30 +234,46 @@ const News = () => {
       }
 
       return [];
+    } catch (error) {
+      console.error("Supabase fetch error:", error);
+      return [];
+    }
     },
-    [selectedChampion, selectedHeaderCategory, selectedSubCategory]
+    [selectedChampion, selectedHeaderCategory, selectedSubCategory, shouldThrottleRequest]
   );
 
   // Fonction pour récupérer les news WordPress
-  const fetchWordPressNewsData = async (): Promise<NewsCardItem[]> => {
+  const fetchWordPressNewsData = useCallback(async (): Promise<NewsCardItem[]> => {
     try {
       console.log("Fetching WordPress news...");
+      
+      // Get WordPress categories based on current filter selection
+      const wpCategories = getWordPressCategoriesForFilter(selectedHeaderCategory, selectedSubCategory);
+      
       const result = await fetchWordPressNews({
-        perPage: 100,
+        perPage: 20, // Reduced from 100
         page: 1,
-        maxTotal: 200 // Limiter à 200 articles WordPress pour éviter la surcharge
+        maxTotal: 50, // Reduced from 200 to prevent overwhelming the server
+        categories: wpCategories.length > 0 ? wpCategories : undefined // Only add categories if we have specific filters
       });
-      console.log(`WordPress news fetched: ${result.length} articles`);
+      
+      console.log(`WordPress news fetched: ${result.length} articles${wpCategories.length > 0 ? ` for categories ${wpCategories.join(',')}` : ''}`);
       return result;
     } catch (error) {
       console.error("WordPress news fetch failed:", error);
       return [];
     }
-  };
+  }, [selectedHeaderCategory, selectedSubCategory]); // Add dependencies for filtering
 
   // Fonction principale pour récupérer et combiner toutes les news
   const fetchAllNews = useCallback(
     async (nextPage: number = 1, append: boolean = false) => {
+      // Check throttling first
+      if (shouldThrottleRequest()) {
+        console.warn('fetchAllNews request throttled');
+        return;
+      }
+
       console.log(`Fetching news for page ${nextPage}, append: ${append}`);
       setLoadingNews(true);
       try {
@@ -226,13 +283,9 @@ const News = () => {
         console.log("Starting Supabase fetch...");
         promises.push(fetchSupabaseNews(1)); // Récupérer toutes les news Supabase
 
-        // Récupérer les news WordPress seulement si pas déjà chargées
-        if (allNews.length === 0 || !append) {
-          console.log("Starting WordPress fetch...");
-          promises.push(fetchWordPressNewsData());
-        } else {
-          promises.push(Promise.resolve([])); // Placeholder vide
-        }
+        // TOUJOURS récupérer les news WordPress avec les filtres actuels
+        console.log("Starting WordPress fetch with current filters...");
+        promises.push(fetchWordPressNewsData());
 
         const results = await Promise.all(promises);
         const supabaseNews = results[0] || [];
@@ -294,39 +347,51 @@ const News = () => {
         setLoadingNews(false);
       }
     },
-    [fetchSupabaseNews, allNews, paginateNews]
+    [fetchSupabaseNews, fetchWordPressNewsData, allNews, paginateNews, shouldThrottleRequest]
   );
 
   // useEffect pour charger les news WordPress (pour debug et état séparé)
-  useEffect(() => {
-    fetch("/api/news")
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(
-          "MySQL news loaded in separate effect:",
-          data.length,
-          "articles"
-        );
-        setNews(data);
-      })
-      .catch((error) => console.error("Error fetching MySQL news:", error));
-  }, []);
+
 
   // useEffect principal pour charger toutes les news
   useEffect(() => {
     console.log("News component mounted, fetching news...");
+    initialLoadComplete.current = true;
     fetchAllNews(1, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // useEffect pour recharger quand les filtres changent
-  useEffect(() => {
-    if (selectedHeaderCategory !== null || selectedSubCategory !== null || selectedChampion !== null) {
-      console.log("Filters changed, refetching news...");
+  const prevFiltersRef = useRef({ selectedHeaderCategory, selectedSubCategory, selectedChampion });
+  const filterChangeDebounced = useRef(
+    debounce(() => {
+      console.log("Filters changed (debounced), refetching news...");
+      // Clear cache for WordPress requests when filters change
+      requestCache.clearCache('wordpress');
       setAllNews([]);
       setDisplayedNews([]);
       fetchAllNews(1, false);
+    }, 2000) // Debounce filter changes by 2 seconds
+  );
+
+  useEffect(() => {
+    // Don't trigger on initial mount
+    if (!initialLoadComplete.current) {
+      return;
     }
-  }, [selectedHeaderCategory, selectedSubCategory, selectedChampion, fetchAllNews]);
+
+    const prev = prevFiltersRef.current;
+    const hasFilterChanged = 
+      prev.selectedHeaderCategory !== selectedHeaderCategory ||
+      prev.selectedSubCategory !== selectedSubCategory ||
+      prev.selectedChampion !== selectedChampion;
+
+    if (hasFilterChanged && (selectedHeaderCategory !== null || selectedSubCategory !== null || selectedChampion !== null)) {
+      // Use debounced version to prevent rapid fire requests
+      filterChangeDebounced.current();
+    }
+
+    prevFiltersRef.current = { selectedHeaderCategory, selectedSubCategory, selectedChampion };
+  }, [selectedHeaderCategory, selectedSubCategory, selectedChampion]);
 
   const reportNews = async (newsId: string, description: string) => {
     if (reportingId) return;

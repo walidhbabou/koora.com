@@ -36,7 +36,7 @@ export const UserSettings: React.FC<UserSettingsProps> = ({ className = '' }) =>
     const stored = typeof window !== 'undefined' ? window.localStorage.getItem('theme') : null;
     const dark = stored ? stored === 'dark' : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDark(dark);
-  }, []);
+  }, []); // Add empty dependency array to run only once
 
   const toggleDark = (val: boolean) => {
     setIsDark(val);
