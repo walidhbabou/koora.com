@@ -8,25 +8,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { WORDPRESS_CATEGORIES } from "@/utils/newsUtils";
+import { useNavigate } from "react-router-dom";
 
 const CategoryFilterHeader = ({ 
   selectedHeaderCategory, 
   setSelectedHeaderCategory,
   selectedSubCategory,
   setSelectedSubCategory,
-  currentLanguage 
+  currentLanguage,
+  selectedWPCategory,
+  setSelectedWPCategory
 }) => {
   const [subCategories, setSubCategories] = useState({});
   const [loading, setLoading] = useState(true);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileOpenCategory, setMobileOpenCategory] = useState(null);
+  const navigate = useNavigate();
 
   const headerCategories = useMemo(() => [
     { id: 1, name: 'Internationales', name_ar: 'البطولات الدولية', table: 'competitions_internationales', lightColor: 'from-blue-500 to-blue-600', darkColor: 'from-blue-600 to-blue-800' },
     { id: 2, name: 'Mondiales', name_ar: 'البطولات العالمية', table: 'competitions_mondiales', lightColor: 'from-green-500 to-green-600', darkColor: 'from-green-600 to-green-800' },
     { id: 3, name: 'Continentales', name_ar: 'البطولات القارية', table: 'competitions_continentales', lightColor: 'from-purple-500 to-purple-600', darkColor: 'from-purple-600 to-purple-800' },
     { id: 4, name: 'Locales', name_ar: 'البطولات المحلية', table: 'competitions_locales', lightColor: 'from-orange-500 to-orange-600', darkColor: 'from-orange-600 to-orange-800' },
-    { id: 5, name: 'Transferts', name_ar: 'الانتقالات وأخبار اللاعبين', table: 'transferts_news', lightColor: 'from-red-500 to-red-600', darkColor: 'from-red-600 to-red-800' }
+    { id: 5, name: 'Transferts', name_ar: 'الانتقالات وأخبار اللاعبين', table: 'transferts_news', lightColor: 'from-red-500 to-red-600', darkColor: 'from-red-600 to-red-800' },
+    { id: 6, name: 'WordPress News', name_ar: 'فئات الأخبار', table: 'wordpress_categories', lightColor: 'from-indigo-500 to-indigo-600', darkColor: 'from-indigo-600 to-indigo-800' }
   ], []);
 
   useEffect(() => {
@@ -35,11 +41,17 @@ const CategoryFilterHeader = ({
         setLoading(true);
         const subCatData = {};
         for (const category of headerCategories) {
-          const { data, error } = await supabase
-            .from(category.table)
-            .select("id, nom")
-            .order("id");
-          subCatData[category.id] = !error && data ? data : [];
+          if (category.table === 'wordpress_categories') {
+            // Pour WordPress, utiliser les catégories statiques
+            subCatData[category.id] = Object.values(WORDPRESS_CATEGORIES);
+          } else {
+            // Pour les autres catégories, utiliser Supabase
+            const { data, error } = await supabase
+              .from(category.table)
+              .select("id, nom")
+              .order("id");
+            subCatData[category.id] = !error && data ? data : [];
+          }
         }
         setSubCategories(subCatData);
       } catch (error) {
@@ -60,14 +72,27 @@ const CategoryFilterHeader = ({
   };
 
   const handleMobileSubCategoryClick = (categoryId, subCategoryId) => {
-    setSelectedHeaderCategory(categoryId);
-    setSelectedSubCategory(subCategoryId);
+    if (categoryId === 6) { // WordPress category
+      setSelectedWPCategory(subCategoryId);
+      const category = WORDPRESS_CATEGORIES[subCategoryId];
+      if (category) {
+        navigate(`/news/category/${category.slug}`);
+      }
+    } else {
+      setSelectedHeaderCategory(categoryId);
+      setSelectedSubCategory(subCategoryId);
+    }
     setMobileOpenCategory(null);
   };
 
   const handleMobileAllCategoryClick = (categoryId) => {
-    setSelectedHeaderCategory(categoryId);
-    setSelectedSubCategory(null);
+    if (categoryId === 6) { // WordPress category
+      setSelectedWPCategory(null);
+      navigate('/news');
+    } else {
+      setSelectedHeaderCategory(categoryId);
+      setSelectedSubCategory(null);
+    }
     setMobileOpenCategory(null);
   };
 
@@ -80,7 +105,7 @@ const CategoryFilterHeader = ({
         {/* Desktop */}
         <div className="hidden lg:flex justify-center items-center py-4 gap-1">
           {headerCategories.map((category) => {
-            const isActive = selectedHeaderCategory === category.id;
+            const isActive = category.id === 6 ? selectedWPCategory !== null : selectedHeaderCategory === category.id;
             return (
               <DropdownMenu 
                 key={category.id}
@@ -128,8 +153,13 @@ const CategoryFilterHeader = ({
                   <DropdownMenuItem
                     className="text-gray-800 dark:text-sport-green hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 hover:text-white cursor-pointer font-medium px-4 py-3"
                     onClick={() => {
-                      setSelectedHeaderCategory(category.id);
-                      setSelectedSubCategory(null);
+                      if (category.id === 6) { // WordPress category
+                        setSelectedWPCategory(null);
+                        navigate('/news');
+                      } else {
+                        setSelectedHeaderCategory(category.id);
+                        setSelectedSubCategory(null);
+                      }
                     }}
                   >
                     {currentLanguage === "ar" ? `جميع ${category.name_ar}` : `Toutes ${category.name}`}
@@ -141,11 +171,22 @@ const CategoryFilterHeader = ({
                         key={subCat.id}
                         className="text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700/50 hover:text-sport-green cursor-pointer px-4 py-2"
                         onClick={() => {
-                          setSelectedHeaderCategory(category.id);
-                          setSelectedSubCategory(subCat.id);
+                          if (category.id === 6) { // WordPress category
+                            setSelectedWPCategory(subCat.id);
+                            const wpCategory = WORDPRESS_CATEGORIES[subCat.id];
+                            if (wpCategory) {
+                              navigate(`/news/category/${wpCategory.slug}`);
+                            }
+                          } else {
+                            setSelectedHeaderCategory(category.id);
+                            setSelectedSubCategory(subCat.id);
+                          }
                         }}
                       >
-                        {subCat.nom}
+                        {category.id === 6 ? 
+                          (currentLanguage === "ar" ? subCat.name : subCat.name_en) : 
+                          subCat.nom
+                        }
                       </DropdownMenuItem>
                     ))}
                   </div>
@@ -160,7 +201,7 @@ const CategoryFilterHeader = ({
           {/* Categories principales */}
           <div className="flex overflow-x-auto gap-2 py-3 scrollbar-hide">
             {headerCategories.map((category) => {
-              const isActive = selectedHeaderCategory === category.id;
+              const isActive = category.id === 6 ? selectedWPCategory !== null : selectedHeaderCategory === category.id;
               const isOpen = mobileOpenCategory === category.id;
               return (
                 <button
@@ -224,7 +265,10 @@ const CategoryFilterHeader = ({
                       onClick={() => handleMobileSubCategoryClick(mobileOpenCategory, subCat.id)}
                       className="w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm border-b border-gray-100 dark:border-slate-600 last:border-b-0"
                     >
-                      {subCat.nom}
+                      {mobileOpenCategory === 6 ? 
+                        (currentLanguage === "ar" ? subCat.name : subCat.name_en) : 
+                        subCat.nom
+                      }
                     </button>
                   ))}
                 </div>

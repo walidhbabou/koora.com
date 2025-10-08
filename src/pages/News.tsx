@@ -4,6 +4,9 @@ import {
   fetchWordPressNews,
   transformWordPressNews,
   getWordPressCategoriesForFilter,
+  getWordPressCategoryBySlug,
+  getWordPressCategoryById,
+  WORDPRESS_CATEGORIES,
 } from "@/utils/newsUtils";
 import {
   EditorJsBlock,
@@ -14,7 +17,7 @@ import {
   DisplayCategory,
   NewsDBRow,
 } from "@/types/news";
-import { Link } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import NewsCard from "../components/NewsCard";
 import FeaturedNewsCard from "../components/FeaturedNewsCard";
 import NewsSlider from "../components/NewsSlider";
@@ -45,6 +48,9 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 
 const News = () => {
   // ...existing code...
+  const { category } = useParams<{ category?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
   const [displayedNews, setDisplayedNews] = useState<NewsCardItem[]>([]);
@@ -54,6 +60,7 @@ const News = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isPageTransition, setIsPageTransition] = useState<boolean>(false);
+  const [selectedWPCategory, setSelectedWPCategory] = useState<number | null>(null);
   const { currentLanguage } = useTranslation();
   const { toast } = useToast();
   const [reportingId, setReportingId] = useState<string | null>(null);
@@ -244,17 +251,20 @@ const News = () => {
   );
 
   // Fonction pour récupérer les news WordPress
-  const fetchWordPressNewsData = useCallback(async (): Promise<NewsCardItem[]> => {
+  const fetchWordPressNewsData = useCallback(async (categoryId?: number): Promise<NewsCardItem[]> => {
     try {
       console.log("Fetching WordPress news...");
       
-      // Get WordPress categories based on current filter selection
-      const wpCategories = getWordPressCategoriesForFilter(selectedHeaderCategory, selectedSubCategory);
+      // Get WordPress categories based on current filter selection or URL parameter
+      const wpCategories = categoryId 
+        ? [categoryId] 
+        : getWordPressCategoriesForFilter(selectedHeaderCategory, selectedSubCategory);
       
       const result = await fetchWordPressNews({
         perPage: 100, // Augmenté de 20 à 100
         page: 1,
         maxTotal: 300, // Augmenté de 50 à 300 pour utiliser la nouvelle fonction
+        categories: categoryId ? [categoryId] : (wpCategories.length > 0 ? wpCategories : undefined),
       });
       
       console.log(`WordPress news fetched: ${result.length} articles${wpCategories.length > 0 ? ` for categories ${wpCategories.join(',')}` : ''}`);
@@ -280,7 +290,7 @@ const News = () => {
         // Charger les sources en parallèle pour améliorer la performance
         const [supabaseNews, wordpressNews] = await Promise.allSettled([
           fetchSupabaseNews(1),
-          fetchWordPressNewsData(),
+          fetchWordPressNewsData(selectedWPCategory || undefined),
         ]);
 
         const supabaseResult = supabaseNews.status === 'fulfilled' ? supabaseNews.value : [];
@@ -342,11 +352,26 @@ const News = () => {
         setLoadingNews(false);
       }
     },
-    [fetchSupabaseNews, fetchWordPressNewsData, allNews, paginateNews, shouldThrottleRequest]
+    [fetchSupabaseNews, fetchWordPressNewsData, allNews, paginateNews, shouldThrottleRequest, selectedWPCategory]
   );
 
   // useEffect pour charger les news WordPress (pour debug et état séparé)
 
+
+  // useEffect pour gérer les paramètres d'URL
+  useEffect(() => {
+    if (category) {
+      const categoryInfo = getWordPressCategoryBySlug(category);
+      if (categoryInfo) {
+        setSelectedWPCategory(categoryInfo.id);
+      } else {
+        // Si la catégorie n'existe pas, rediriger vers /news
+        navigate('/news', { replace: true });
+      }
+    } else {
+      setSelectedWPCategory(null);
+    }
+  }, [category, navigate]);
 
   // useEffect principal pour charger toutes les news
   useEffect(() => {
@@ -365,7 +390,7 @@ const News = () => {
           setLoadingNews(false);
           
           // Charger WordPress en arrière-plan
-          fetchWordPressNewsData().then(wpNews => {
+          fetchWordPressNewsData(selectedWPCategory || undefined).then(wpNews => {
             if (wpNews.length > 0) {
               const combined = [...wpNews, ...quickSupabaseNews].sort(
                 (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
@@ -388,7 +413,7 @@ const News = () => {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // useEffect pour recharger quand les filtres changent
-  const prevFiltersRef = useRef({ selectedHeaderCategory, selectedSubCategory, selectedChampion });
+  const prevFiltersRef = useRef({ selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory });
   const filterChangeDebounced = useRef(
     debounce(() => {
       console.log("Filters changed (debounced), refetching news...");
@@ -410,15 +435,16 @@ const News = () => {
     const hasFilterChanged = 
       prev.selectedHeaderCategory !== selectedHeaderCategory ||
       prev.selectedSubCategory !== selectedSubCategory ||
-      prev.selectedChampion !== selectedChampion;
+      prev.selectedChampion !== selectedChampion ||
+      prev.selectedWPCategory !== selectedWPCategory;
 
-    if (hasFilterChanged && (selectedHeaderCategory !== null || selectedSubCategory !== null || selectedChampion !== null)) {
+    if (hasFilterChanged && (selectedHeaderCategory !== null || selectedSubCategory !== null || selectedChampion !== null || selectedWPCategory !== null)) {
       // Use debounced version to prevent rapid fire requests
       filterChangeDebounced.current();
     }
 
-    prevFiltersRef.current = { selectedHeaderCategory, selectedSubCategory, selectedChampion };
-  }, [selectedHeaderCategory, selectedSubCategory, selectedChampion]);
+    prevFiltersRef.current = { selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory };
+  }, [selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory]);
 
   const reportNews = async (newsId: string, description: string) => {
     if (reportingId) return;
@@ -518,6 +544,27 @@ const News = () => {
     fetchAllNews(1);
   };
 
+  // Fonction pour naviguer vers une catégorie
+  const handleCategoryChange = (categoryId: number | null) => {
+    if (categoryId === null) {
+      navigate('/news');
+    } else {
+      const categoryInfo = getWordPressCategoryById(categoryId);
+      if (categoryInfo) {
+        navigate(`/news/category/${categoryInfo.slug}`);
+      }
+    }
+  };
+
+  // Fonction pour gérer les changements de catégorie WordPress
+  const handleWordPressCategoryChange = (categoryId: number | null) => {
+    setSelectedWPCategory(categoryId);
+    setPage(1);
+    setAllNews([]);
+    setDisplayedNews([]);
+    handleCategoryChange(categoryId);
+  };
+
   // Trending topics derived from latest news titles
   const trendingTopics = displayedNews.slice(0, 5).map((n) => n.title);
 
@@ -580,7 +627,11 @@ const News = () => {
     <React.Fragment>
       <div className="min-h-screen bg-gradient-to-br from-background via-sport-light/20 to-background">
         <SEO
-          title="الأخبار | كورة - آخر أخبار كرة القدم والرياضة"
+          title={
+            selectedWPCategory 
+              ? `${getWordPressCategoryById(selectedWPCategory)?.name || 'أخبار'} | كورة - آخر أخبار كرة القدم والرياضة`
+              : "الأخبار | كورة - آخر أخبار كرة القدم والرياضة"
+          }
           description="تابع آخر أخبار كرة القدم العربية والعالمية، أخبار الانتقالات، تحليلات المباريات، وكل ما يخص عالم الرياضة على كورة."
           keywords={[
             "أخبار كرة القدم",
@@ -602,14 +653,24 @@ const News = () => {
           setSelectedHeaderCategory={setSelectedHeaderCategory}
           selectedSubCategory={selectedSubCategory}
           setSelectedSubCategory={setSelectedSubCategory}
+          selectedWPCategory={selectedWPCategory}
+          setSelectedWPCategory={setSelectedWPCategory}
           currentLanguage={currentLanguage}
         />
+        
         <TeamsLogos />
+
+       
+
+       
 
         {/* Mobile Ad - Compact version */}
         <MobileAd testMode={process.env.NODE_ENV === "development"} />
 
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
+          {/* Current Category Indicator */}
+         
+
           
 
          

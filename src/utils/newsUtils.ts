@@ -226,33 +226,87 @@ export const getWordPressCategoriesForFilter = (
   return categories;
 };
 
+// Mapping des catégories WordPress (basé sur votre liste)
+export const WORDPRESS_CATEGORIES = {
+  2: { id: 2, name: 'الانتقالات واخر الاخبار', name_en: 'Transfers and Latest News', slug: 'الانتقالات-واخر-الاخبار', slug_en: 'transfers-news' },
+  3: { id: 3, name: 'اخر الاخبار', name_en: 'Latest News', slug: 'اخر-الاخبار', slug_en: 'latest-news' },
+  4: { id: 4, name: 'الاصابات', name_en: 'Injuries', slug: 'الاصابات', slug_en: 'injuries' },
+  5: { id: 5, name: 'سوق الانتقالات', name_en: 'Transfer Market', slug: 'سوق-الانتقالات', slug_en: 'transfer-market' },
+  6: { id: 6, name: 'صفقات الخروج', name_en: 'Outgoing Deals', slug: 'صفقات-الخروج', slug_en: 'outgoing-deals' },
+  7: { id: 7, name: 'التعاقدات الخارجية', name_en: 'External Contracts', slug: 'التعاقدات-الخارجية', slug_en: 'external-contracts' },
+  8: { id: 8, name: 'كاب كت', name_en: 'Cap Cut', slug: 'كاب-كت', slug_en: 'cap-cut' },
+  9: { id: 9, name: 'كل امريكا', name_en: 'All America', slug: 'كل-امريكا', slug_en: 'all-america' },
+  10: { id: 10, name: 'كل اوروبا', name_en: 'All Europe', slug: 'كل-اوروبا', slug_en: 'all-europe' },
+  11: { id: 11, name: 'كل العرب', name_en: 'All Arab', slug: 'كل-العرب', slug_en: 'all-arab' },
+  12: { id: 12, name: 'غير مصنف', name_en: 'Uncategorized', slug: 'غير-مصنف', slug_en: 'uncategorized' },
+  13: { id: 13, name: 'التعديلات المحليّة', name_en: 'Local Modifications', slug: 'التعديلات-المحلية', slug_en: 'local-modifications' },
+  14: { id: 14, name: 'البرازيل ومقومي (مكسيكو)', name_en: 'Brazil and Mexico', slug: 'البرازيل-والمكسيك', slug_en: 'brazil-mexico' },
+  15: { id: 15, name: 'الليجوز الاوربي (ولايم)', name_en: 'European Leagues', slug: 'الدوريات-الاوروبية', slug_en: 'european-leagues' },
+  16: { id: 16, name: 'الدوري الالمان ومصر', name_en: 'German and Egyptian League', slug: 'الدوري-الالماني-والمصري', slug_en: 'german-egyptian-league' },
+  17: { id: 17, name: 'الدوري الهولندي', name_en: 'Dutch League', slug: 'الدوري-الهولندي', slug_en: 'dutch-league' },
+  18: { id: 18, name: 'الدوري العربي (ق ن)', name_en: 'Arab League', slug: 'الدوري-العربي', slug_en: 'arab-league' },
+  19: { id: 19, name: 'التعديلات المثيرة', name_en: 'Exciting Modifications', slug: 'التعديلات-المثيرة', slug_en: 'exciting-modifications' },
+  20: { id: 20, name: 'الدوري الاردني', name_en: 'Jordanian League', slug: 'الدوري-الاردني', slug_en: 'jordanian-league' },
+  21: { id: 21, name: 'دوري جمل الجن', name_en: 'Camel League', slug: 'دوري-جمل-الجن', slug_en: 'camel-league' },
+  22: { id: 22, name: 'دوري كورن ايفري', name_en: 'Corn Ivory League', slug: 'دوري-كورن-ايفري', slug_en: 'corn-ivory-league' },
+  23: { id: 23, name: 'دوري كول ابفيد', name_en: 'Col Abfid League', slug: 'دوري-كول-ابفيد', slug_en: 'col-abfid-league' },
+  24: { id: 24, name: 'كل لايفصنتيس', name_en: 'All Lifesantis', slug: 'كل-لايفصنتيس', slug_en: 'all-lifesantis' },
+  25: { id: 25, name: 'التعديلات المحلية', name_en: 'Local Edits', slug: 'التعديلات-المحلية-2', slug_en: 'local-edits' },
+} as const;
+
+// Fonction pour obtenir les informations d'une catégorie par ID
+export const getWordPressCategoryById = (id: number) => {
+  return WORDPRESS_CATEGORIES[id as keyof typeof WORDPRESS_CATEGORIES] || null;
+};
+
+// Fonction pour obtenir une catégorie par slug (support des slugs arabes et anglais)
+export const getWordPressCategoryBySlug = (slug: string) => {
+  return Object.values(WORDPRESS_CATEGORIES).find(cat => 
+    cat.slug === slug || cat.slug_en === slug
+  ) || null;
+};
+
 // Fonction pour récupérer les news WordPress avec pagination améliorée
 export const fetchWordPressNews = async (options: {
   perPage?: number;
   page?: number;
   maxTotal?: number;
+  categories?: number | number[];
 } = {}): Promise<NewsCardItem[]> => {
-  const { perPage = 100, page = 1, maxTotal = 300 } = options;
+  const { perPage = 100, page = 1, maxTotal = 300, categories } = options;
   
   try {
+    // Construction de l'URL avec catégories si spécifiées
+    const buildUrl = (pageNum: number, itemsPerPage: number) => {
+      let url = `https://koora.com/wp-json/wp/v2/posts?per_page=${itemsPerPage}&page=${pageNum}&_embed`;
+      
+      if (categories) {
+        const categoryParam = Array.isArray(categories) ? categories.join(',') : categories.toString();
+        url += `&categories=${categoryParam}`;
+      }
+      
+      return url;
+    };
+
     const urls = [
-      `https://koora.com/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`,
+      buildUrl(page, perPage),
     ];
 
     // Si c'est la première page, récupérer beaucoup plus de pages pour avoir 300+ articles
     if (page === 1) {
       // Ajouter les pages 2 à 8 pour avoir suffisamment d'articles
       for (let p = 2; p <= 8; p++) {
-        urls.push(`https://koora.com/wp-json/wp/v2/posts?per_page=100&page=${p}&_embed`);
+        urls.push(buildUrl(p, 100));
       }
       // Ajouter quelques pages avec per_page=50 pour plus de diversité
       urls.push(
-        `https://koora.com/wp-json/wp/v2/posts?per_page=50&page=9&_embed`,
-        `https://koora.com/wp-json/wp/v2/posts?per_page=50&page=10&_embed`
+        buildUrl(9, 50),
+        buildUrl(10, 50)
       );
     }
 
-    console.log(`Fetching WordPress news from ${urls.length} URLs...`);
+    const categoriesText = categories ? ` with categories: ${categories}` : '';
+    console.log(`Fetching WordPress news from ${urls.length} URLs${categoriesText}...`);
 
     const promises = urls.map(async (url) => {
       try {
