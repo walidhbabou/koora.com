@@ -53,6 +53,7 @@ const News = () => {
   const pageSize = 15; // Limiter à 15 actualités par page
   const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [isPageTransition, setIsPageTransition] = useState<boolean>(false);
   const { currentLanguage } = useTranslation();
   const { toast } = useToast();
   const [reportingId, setReportingId] = useState<string | null>(null);
@@ -64,9 +65,9 @@ const News = () => {
 
   // Add request throttling to prevent infinite loops
   const lastRequestTime = useRef<number>(0);
-  const MIN_REQUEST_INTERVAL = 2000; // Minimum 2 seconds between requests
+  const MIN_REQUEST_INTERVAL = 500; // Réduit de 2000 à 500ms
   const requestCount = useRef<number>(0);
-  const MAX_REQUESTS_PER_MINUTE = 5; // Maximum 5 requests per minute
+  const MAX_REQUESTS_PER_MINUTE = 10; // Augmenté de 5 à 10 requêtes par minute
   const requestTimes = useRef<number[]>([]);
 
   // States pour CategoryFilterHeader - set to non-null initially to prevent immediate API calls
@@ -137,7 +138,7 @@ const News = () => {
           .select("*", { count: "exact" })
           .eq("status", "published")
           .order("created_at", { ascending: false })
-          .range(0, 49); // Reduced from 99 to 49 to limit resource usage
+          .range(0, 99); // Augmenté de 49 à 99 pour récupérer plus d'articles
 
         // Filter by category header selection
         if (selectedHeaderCategory && selectedSubCategory) {
@@ -251,10 +252,9 @@ const News = () => {
       const wpCategories = getWordPressCategoriesForFilter(selectedHeaderCategory, selectedSubCategory);
       
       const result = await fetchWordPressNews({
-        perPage: 20, // Reduced from 100
+        perPage: 100, // Augmenté de 20 à 100
         page: 1,
-        maxTotal: 50, // Reduced from 200 to prevent overwhelming the server
-        categories: wpCategories.length > 0 ? wpCategories : undefined // Only add categories if we have specific filters
+        maxTotal: 300, // Augmenté de 50 à 300 pour utiliser la nouvelle fonction
       });
       
       console.log(`WordPress news fetched: ${result.length} articles${wpCategories.length > 0 ? ` for categories ${wpCategories.join(',')}` : ''}`);
@@ -268,8 +268,8 @@ const News = () => {
   // Fonction principale pour récupérer et combiner toutes les news
   const fetchAllNews = useCallback(
     async (nextPage: number = 1, append: boolean = false) => {
-      // Check throttling first
-      if (shouldThrottleRequest()) {
+      // Réduire le throttling pour les requêtes normales
+      if (shouldThrottleRequest() && requestCount.current > 3) {
         console.warn('fetchAllNews request throttled');
         return;
       }
@@ -277,28 +277,23 @@ const News = () => {
       console.log(`Fetching news for page ${nextPage}, append: ${append}`);
       setLoadingNews(true);
       try {
-        const promises = [];
+        // Charger les sources en parallèle pour améliorer la performance
+        const [supabaseNews, wordpressNews] = await Promise.allSettled([
+          fetchSupabaseNews(1),
+          fetchWordPressNewsData(),
+        ]);
 
-        // Récupérer les news Supabase (toutes en une fois)
-        console.log("Starting Supabase fetch...");
-        promises.push(fetchSupabaseNews(1)); // Récupérer toutes les news Supabase
+        const supabaseResult = supabaseNews.status === 'fulfilled' ? supabaseNews.value : [];
+        const wordpressResult = wordpressNews.status === 'fulfilled' ? wordpressNews.value : [];
 
-        // TOUJOURS récupérer les news WordPress avec les filtres actuels
-        console.log("Starting WordPress fetch with current filters...");
-        promises.push(fetchWordPressNewsData());
-
-        const results = await Promise.all(promises);
-        const supabaseNews = results[0] || [];
-        const wordpressNews = results[1] || [];
-
-        console.log(`Supabase news: ${supabaseNews.length}`);
-        console.log(`WordPress news: ${wordpressNews.length}`);
+        console.log(`Supabase news: ${supabaseResult.length}`);
+        console.log(`WordPress news: ${wordpressResult.length}`);
 
         let combinedNews: NewsCardItem[];
 
         if (!append || allNews.length === 0) {
           // Pour la première charge, mélanger WordPress et Supabase
-          combinedNews = [...wordpressNews, ...supabaseNews];
+          combinedNews = [...wordpressResult, ...supabaseResult];
 
           // Trier par date (plus récent en premier)
           combinedNews.sort(
@@ -308,8 +303,8 @@ const News = () => {
           );
 
           console.log("Combined news:", combinedNews.length);
-          console.log("WordPress articles:", wordpressNews.length);
-          console.log("Supabase articles:", supabaseNews.length);
+          console.log("WordPress articles:", wordpressResult.length);
+          console.log("Supabase articles:", supabaseResult.length);
           
           setAllNews(combinedNews);
         } else {
@@ -357,7 +352,39 @@ const News = () => {
   useEffect(() => {
     console.log("News component mounted, fetching news...");
     initialLoadComplete.current = true;
-    fetchAllNews(1, false);
+    
+    // Chargement immédiat sans attendre
+    const loadNewsImmediately = async () => {
+      setLoadingNews(true);
+      try {
+        // Essayer d'abord Supabase (plus rapide)
+        const quickSupabaseNews = await fetchSupabaseNews(1);
+        if (quickSupabaseNews.length > 0) {
+          setAllNews(quickSupabaseNews);
+          paginateNews(quickSupabaseNews, 1);
+          setLoadingNews(false);
+          
+          // Charger WordPress en arrière-plan
+          fetchWordPressNewsData().then(wpNews => {
+            if (wpNews.length > 0) {
+              const combined = [...wpNews, ...quickSupabaseNews].sort(
+                (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+              );
+              setAllNews(combined);
+              paginateNews(combined, 1);
+            }
+          }).catch(err => console.warn('WordPress background fetch failed:', err));
+        } else {
+          // Si Supabase est vide, charger WordPress
+          fetchAllNews(1, false);
+        }
+      } catch (error) {
+        console.error('Quick load failed, falling back to full fetch:', error);
+        fetchAllNews(1, false);
+      }
+    };
+    
+    loadNewsImmediately();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // useEffect pour recharger quand les filtres changent
@@ -370,7 +397,7 @@ const News = () => {
       setAllNews([]);
       setDisplayedNews([]);
       fetchAllNews(1, false);
-    }, 2000) // Debounce filter changes by 2 seconds
+    }, 1000) // Réduit le debounce de 2000 à 1000ms pour une réactivité plus rapide
   );
 
   useEffect(() => {
@@ -457,10 +484,22 @@ const News = () => {
   };
 
   const handleLoadMore = async () => {
-    if (loadingNews || !hasMore) return;
+    if (loadingNews || isPageTransition || page >= totalPages) return;
+    
+    setIsPageTransition(true);
+    
+    // Charger la page suivante et ajouter au contenu existant
     const nextPage = page + 1;
-    paginateNews(allNews, nextPage);
-    setPage(nextPage);
+    const startIndex = (nextPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const newItems = allNews.slice(startIndex, endIndex);
+    
+    setTimeout(() => {
+      setDisplayedNews(prevItems => [...prevItems, ...newItems]);
+      setPage(nextPage);
+      setHasMore(nextPage < totalPages);
+      setIsPageTransition(false);
+    }, 100); // Réduit de 300ms à 100ms pour une réactivité plus rapide
   };
 
   const handlePageChange = (newPage: number) => {
@@ -535,20 +574,7 @@ const News = () => {
     },
   ];
 
-  // Debug logs - only in development
-  if (process.env.NODE_ENV === "development") {
-    console.log("Total news loaded:", allNews.length);
-    console.log("Displayed news (current page):", displayedNews.length);
-    console.log("Current page:", page, "of", totalPages);
-    console.log(
-      "WordPress news count:",
-      allNews.filter((n) => n.source === "wordpress").length
-    );
-    console.log(
-      "Supabase news count:",
-      allNews.filter((n) => n.source === "supabase").length
-    );
-  }
+
 
   return (
     <React.Fragment>
@@ -584,48 +610,15 @@ const News = () => {
         <MobileAd testMode={process.env.NODE_ENV === "development"} />
 
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
-          {/* Slider des dernières news */}
-          {/* {!loadingNews && allNews.length > 0 && (
-            <div className="flex justify-center mb-6">
-              <div className="w-full max-w-3xl">
-                <NewsSlider
-                  news={allNews.slice(0, 5).map(n => ({
-                    id: n.id,
-                    title: n.title,
-                    imageUrl: n.imageUrl,
-                    publishedAt: n.publishedAt,
-                  }))}
-                />
-              </div>
-            </div>
-          )} */}
+          
 
-          {/* Featured News en grand sous le slider */}
-          {!loadingNews && displayedNews.length > 0 && (
-            <div className="mb-6">
-              <Link to={`/news/${displayedNews[0].id}`}>
-                <div className="relative">
-                  <FeaturedNewsCard
-                    title={displayedNews[0].title}
-                    imageUrl={displayedNews[0].imageUrl}
-                    publishedAt={displayedNews[0].publishedAt}
-                    category={displayedNews[0].category}
-                  />
-                  {displayedNews[0].source === "wordpress" && (
-                    <div className="absolute top-4 right-4 bg-blue-600 text-white text-sm px-3 py-1 rounded-full font-medium">
-                      {currentLanguage === "ar" ? "كورة نيوز" : "Koora News"}
-                    </div>
-                  )}
-                </div>
-              </Link>
-            </div>
-          )}
+         
 
           <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
             {/* Main Content - Grid Layout */}
             <div className="flex-1">
               {/* Loading state - Responsive Grid */}
-              {loadingNews && (
+              {loadingNews && displayedNews.length === 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
                   {[...Array(6)].map((_, index) => (
                     <div
@@ -643,24 +636,33 @@ const News = () => {
                 </div>
               )}
 
-            
-
-              {/* News Grid - Responsive - Starting from index 1 to avoid duplicating featured news */}
-              {!loadingNews && displayedNews.length > 1 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
-                  {displayedNews.slice(1).map((newsItem) => (
-                    <div key={newsItem.id} className="relative">
-                      <Link to={`/news/${newsItem.id}`}>
-                        <NewsCard news={newsItem} size="medium" />
-                        {newsItem.source === "wordpress" && (
-                          <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
-                            {currentLanguage === "ar" ? "كورة" : "Koora"}
-                          </div>
-                        )}
-                      </Link>
+              {/* Afficher le contenu existant même pendant le chargement de nouvelles données */}
+              {displayedNews.length > 0 && (
+                <>
+                  {/* News Grid - Responsive - Tous les articles disponibles */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
+                    {displayedNews.map((newsItem) => (
+                      <div key={newsItem.id} className="relative">
+                        <Link to={`/news/${newsItem.id}`}>
+                          <NewsCard news={newsItem} size="medium" />
+                          {newsItem.source === "wordpress" && (
+                            <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                              {currentLanguage === "ar" ? "كورة" : "Koora"}
+                            </div>
+                          )}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Indicateur de chargement de contenu supplémentaire */}
+                  {loadingNews && (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sport-dark"></div>
+                      <span className="ml-2 text-gray-600">جاري تحميل المزيد...</span>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
 
               {/* No news state */}
@@ -686,86 +688,20 @@ const News = () => {
                 </div>
               )}
 
-              {/* Pagination Controls */}
-              {!loadingNews && allNews.length > pageSize && (
-                <div className="flex justify-center items-center gap-2 pt-4 sm:pt-6 lg:pt-8">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60"
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={page === 1}
-                  >
-                    السابق
-                  </Button>
-                  
-                  <div className="flex items-center gap-1">
-                    {/* Afficher les numéros de page */}
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (page <= 3) {
-                        pageNum = i + 1;
-                      } else if (page >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = page - 2 + i;
-                      }
-                      
-                      return (
-                        <Button
-                          key={pageNum}
-                          size="sm"
-                          variant={page === pageNum ? "default" : "outline"}
-                          className={`w-8 h-8 p-0 ${
-                            page === pageNum 
-                              ? "bg-blue-600 text-white" 
-                              : "border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white"
-                          }`}
-                          onClick={() => handlePageChange(pageNum)}
-                        >
-                          {pageNum}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60"
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={page === totalPages}
-                  >
-                    التالي
-                  </Button>
-                  
-                  <span className="text-sm text-gray-600 ml-4">
-                    صفحة {page} من {totalPages} 
-                  </span>
-                </div>
-              )}
-
-              {/* Load More Button - Keep for backward compatibility */}
-              {!loadingNews && displayedNews.length > 0 && hasMore && totalPages <= 1 && (
-                <div className="flex justify-center pt-2 sm:pt-3 lg:pt-4">
+              {/* Load More Button */}
+              {page < totalPages && (
+                <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
                   <Button
                     size="lg"
                     variant="outline"
-                    className="border-blue-600 text-blue-600 hover:bg-blue-600 hover:text-white disabled:opacity-60 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm lg:text-base py-1.5 sm:py-2"
-                    onClick={handleLoadMore}
-                    disabled={loadingNews || !hasMore}
+                    className="bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50 px-6 py-3"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleLoadMore();
+                    }}
+                    disabled={loadingNews || isPageTransition}
                   >
-                    {loadingNews
-                      ? "جاري التحميل..."
-                      : hasMore
-                      ? currentLanguage === "ar"
-                        ? "تحميل المزيد"
-                        : "Charger plus"
-                      : currentLanguage === "ar"
-                      ? "لا مزيد من الأخبار"
-                      : "Plus d'actualités"}
+                    {loadingNews || isPageTransition ? 'جاري التحميل...' : 'اظهر المزيد'}
                   </Button>
                 </div>
               )}

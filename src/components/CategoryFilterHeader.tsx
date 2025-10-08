@@ -71,22 +71,7 @@ const CategoryFilterHeader = ({
     setMobileOpenCategory(null);
   };
 
-  if (loading) {
-    return (
-      <div className="bg-gradient-to-r from-gray-100 to-gray-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-gray-300 dark:border-slate-700/50">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-center items-center py-6">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-sport-green border-t-transparent rounded-full animate-spin"></div>
-              <span className="text-sport-green text-lg font-medium">
-                {currentLanguage === "ar" ? "جاري تحميل الفئات..." : "Chargement..."}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Afficher toujours l'UI, même si loading
 
   return (
     <div className="bg-gradient-to-r from-white via-gray-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-b border-gray-200 dark:border-slate-700/50 shadow-xl">
@@ -106,15 +91,16 @@ const CategoryFilterHeader = ({
                     variant="ghost"
                     className={`
                       relative group flex items-center gap-2 px-6 py-4 mx-1
+                      shadow-md ${isActive ? 'shadow-2xl' : ''}
                       ${isActive 
-                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} shadow-lg text-white`
-                        : "text-gray-800 dark:text-white hover:text-white"}
+                        ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white`
+                        : "text-gray-800 dark:text-white hover:text-white bg-white/10 dark:bg-slate-800/50"}
                       font-bold text-base
                       hover:bg-gradient-to-r hover:from-sport-green hover:to-green-600 dark:hover:from-sport-green dark:hover:to-green-800 hover:text-white
                       transition-all duration-300 border-none outline-none
                       rounded-lg backdrop-blur-sm
                       ${isActive ? "transform scale-105" : "hover:transform hover:scale-105"}
-                      bg-white/10 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-600/50
+                      border border-gray-200 dark:border-slate-600/50
                     `}
                   >
                     {openDropdown === category.id ? (
@@ -176,7 +162,6 @@ const CategoryFilterHeader = ({
             {headerCategories.map((category) => {
               const isActive = selectedHeaderCategory === category.id;
               const isOpen = mobileOpenCategory === category.id;
-              
               return (
                 <button
                   key={category.id}
@@ -184,8 +169,9 @@ const CategoryFilterHeader = ({
                   className={`
                     flex-shrink-0 px-4 py-3 rounded-lg text-sm font-semibold transition-all
                     flex items-center gap-2 min-w-[120px] justify-center
+                    shadow-md ${isActive ? 'shadow-2xl' : ''}
                     ${isActive || isOpen
-                      ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white shadow-md`
+                      ? `bg-gradient-to-r ${category.lightColor} dark:${category.darkColor} text-white`
                       : "bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600"}
                   `}
                 >

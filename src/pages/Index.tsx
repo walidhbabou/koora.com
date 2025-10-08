@@ -123,6 +123,7 @@ const Index = () => {
   const [totalPages, setTotalPages] = useState<number>(0);
   const [search, setSearch] = useState("");
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
+  const [isPageTransition, setIsPageTransition] = useState<boolean>(false);
   // Matches (dynamic by date + filter)
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
@@ -421,13 +422,23 @@ const Index = () => {
     fetchNews(1, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fonction pour changer de page
-  const handlePageChange = (newPage: number) => {
-    if (loading || newPage < 1 || newPage > totalPages) return;
-    paginateNews(allNewsItems, newPage);
-    setPage(newPage);
-    // Scroll vers le haut quand on change de page
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Fonction pour charger plus d'articles
+  const handleLoadMore = () => {
+    if (loading || isPageTransition || page >= totalPages) return;
+    
+    setIsPageTransition(true);
+    
+    // Charger la page suivante et ajouter au contenu existant
+    const nextPage = page + 1;
+    const startIndex = (nextPage - 1) * NEWS_PER_PAGE;
+    const endIndex = startIndex + NEWS_PER_PAGE;
+    const newItems = allNewsItems.slice(startIndex, endIndex);
+    
+    setTimeout(() => {
+      setNewsItems(prevItems => [...prevItems, ...newItems]);
+      setPage(nextPage);
+      setIsPageTransition(false);
+    }, 300);
   };
 
   // Re-fetch news on page change - Commenté car on utilise la pagination locale
@@ -477,7 +488,7 @@ const Index = () => {
         {/* Desktop layout */}
         <div className="hidden lg:flex flex-row xl:flex-row gap-5 lg:gap-8 xl:gap-10 items-start">
           {/* Main Content */}
-          <div className="flex-1 space-y-6 lg:space-y-8">
+          <div className="flex-1 space-y-6 lg:space-y-8 order-1">
             {/* Featured News Slider */}
             {!loading && newsItems.length > 0 && (
               <div className="mb-8">
@@ -697,72 +708,34 @@ const Index = () => {
               </div>
             )}
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-8">
+            {/* Load More Button */}
+            {page < totalPages && (
+              <div className="flex justify-center mt-8">
                 <button
-                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page === 1}
+                  type="button"
+                  className="px-6 py-3 bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLoadMore();
+                  }}
+                  disabled={loading || isPageTransition}
                 >
-                  السابق
+                  {loading || isPageTransition ? 'جاري التحميل...' : 'اظهر المزيد'}
                 </button>
-                
-                <div className="flex items-center gap-1">
-                  {/* Afficher les numéros de page */}
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNum;
-                    if (totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (page <= 3) {
-                      pageNum = i + 1;
-                    } else if (page >= totalPages - 2) {
-                      pageNum = totalPages - 4 + i;
-                    } else {
-                      pageNum = page - 2 + i;
-                    }
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        className={`w-8 h-8 text-sm rounded ${
-                          page === pageNum 
-                            ? "bg-sport-dark text-white" 
-                            : "bg-gray-200 text-gray-700 hover:bg-sport-dark hover:text-white"
-                        }`}
-                        onClick={() => handlePageChange(pageNum)}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                </div>
-                
-                <button
-                  className="px-4 py-2 mx-2 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page === totalPages}
-                >
-                  التالي
-                </button>
-                
-                <span className="text-sm text-gray-600 ml-4">
-                  صفحة {page} من {totalPages} ({totalCount} مقال)
-                </span>
               </div>
             )}
           </div>
 
           {/* Right Sidebar (Today Matches + Ads) */}
-          <div className="lg:w-80 xl:w-80 space-y-6">
+          <div className="lg:w-80 xl:w-80 space-y-6 order-2 lg:order-2 xl:order-2" style={{direction: 'ltr'}}>
             <Sidebar />
             {/* Sidebar Ad */}
             <SidebarAd testMode={process.env.NODE_ENV === "development"} />
           </div>
         </div>
 
-        {/* Mobile layout */}
-        <div className="flex flex-col lg:hidden gap-5 items-stretch">
+  {/* Mobile layout */}
+  <div className="flex flex-col lg:hidden gap-5 items-stretch">
           {/* Featured News Slider - Mobile */}
           {!loading && newsItems.length > 0 && (
             <div className="mb-6">
@@ -914,27 +887,19 @@ const Index = () => {
                   <NewsCard news={news} size="medium" />
                 </Link>
               ))}
-            {/* Pagination Controls Mobile */}
-            {totalPages > 1 && (
-              <div className="flex justify-center items-center gap-2 mt-8">
+            {/* Load More Button Mobile */}
+            {page < totalPages && (
+              <div className="flex justify-center mt-8">
                 <button
-                  className="px-3 py-2 mx-1 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
-                  onClick={() => handlePageChange(page - 1)}
-                  disabled={page === 1}
+                  type="button"
+                  className="px-6 py-3 bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLoadMore();
+                  }}
+                  disabled={loading || isPageTransition}
                 >
-                  السابق
-                </button>
-                
-                <span className="text-sm text-gray-600 mx-2">
-                  {page} / {totalPages}
-                </span>
-                
-                <button
-                  className="px-3 py-2 mx-1 bg-sport-dark text-white rounded disabled:opacity-50 text-sm"
-                  onClick={() => handlePageChange(page + 1)}
-                  disabled={page === totalPages}
-                >
-                  التالي
+                  {loading || isPageTransition ? 'جاري التحميل...' : 'اظهر المزيد'}
                 </button>
               </div>
             )}
@@ -944,7 +909,9 @@ const Index = () => {
               </Card>
             )}
           </div>
-          <Sidebar />
+          <div style={{direction: 'ltr'}}>
+            <Sidebar />
+          </div>
         </div>
       </div>
       <Footer />

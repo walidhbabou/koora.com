@@ -87,10 +87,10 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
   if (max === 0) return null;
 
   return (
-    <div className={`relative w-full mx-auto ${className}`}>
+  <div className={`relative w-full mx-auto ${className}`}>
       {/* Main Slider */}
       <div
-        className="relative overflow-hidden rounded-2xl shadow-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900"
+        className="relative overflow-hidden shadow-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900" // removed rounded-2xl
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -116,7 +116,7 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
                 <img
                   src={item.imageUrl}
                   alt={item.title}
-                  className="w-full h-72 sm:h-80 md:h-96 object-cover group-hover:scale-110 transition-transform duration-700"
+                  className="w-full h-72 sm:h-80 md:h-96 object-cover group-hover:scale-110 transition-transform duration-700" // no rounded
                   onLoad={() => index === 0 && setIsLoading(false)}
                   loading={index === 0 ? "eager" : "lazy"}
                 />
@@ -170,14 +170,14 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
           <>
             <button
               onClick={goPrev}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-md text-white rounded-full p-3 hover:bg-white/20 transition-all duration-300 border border-white/20 group"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-md text-white p-3 hover:bg-white/20 transition-all duration-300 border border-white/20 group" // removed rounded-full
               aria-label="الخبر السابق"
             >
               <ChevronRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
             </button>
             <button
               onClick={goNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-md text-white rounded-full p-3 hover:bg-white/20 transition-all duration-300 border border-white/20 group"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 backdrop-blur-md text-white p-3 hover:bg-white/20 transition-all duration-300 border border-white/20 group" // removed rounded-full
               aria-label="الخبر التالي"
             >
               <ChevronLeft className="w-5 h-5 group-hover:scale-110 transition-transform" />
@@ -189,7 +189,7 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
         {max > 1 && autoplay && (
           <button
             onClick={() => setIsPlaying(!isPlaying)}
-            className="absolute top-4 left-4 bg-white/10 backdrop-blur-md text-white rounded-full p-2 hover:bg-white/20 transition-all duration-300 border border-white/20"
+            className="absolute top-4 left-4 bg-white/10 backdrop-blur-md text-white p-2 hover:bg-white/20 transition-all duration-300 border border-white/20" // removed rounded-full
             aria-label={isPlaying ? "إيقاف التشغيل التلقائي" : "تشغيل التلقائي"}
           >
             {isPlaying ? (
@@ -238,12 +238,12 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
                 onClick={() => setCurrent(idx)}
                 className={`flex-shrink-0 group relative ${
                   idx === current ? "ring-2 ring-sport-primary" : ""
-                } rounded-lg overflow-hidden transition-all duration-300 hover:scale-105`}
+                } overflow-hidden transition-all duration-300 hover:scale-105`} // removed rounded-lg
               >
                 <img
                   src={item.imageUrl}
                   alt={item.title}
-                  className="w-20 h-14 object-cover"
+                  className="w-20 h-14 object-cover" // no rounded
                   loading="lazy"
                 />
                 <div
@@ -255,7 +255,7 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
                 />
                 {idx === current && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full" />
+                    <div className="w-2 h-2 bg-white" />
                   </div>
                 )}
               </button>

@@ -231,34 +231,58 @@ export const fetchWordPressNews = async (options: {
   perPage?: number;
   page?: number;
   maxTotal?: number;
-  categories?: number[]; // Add categories filter
 } = {}): Promise<NewsCardItem[]> => {
-  const { perPage = 20, page = 1, maxTotal = 100, categories } = options; // Reduced defaults
+  const { perPage = 100, page = 1, maxTotal = 300 } = options;
   
   try {
-    // Build URL with category filter if provided
-    let url = `https://koora.com/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`;
-    
-    // Add categories filter if specified
-    if (categories && categories.length > 0) {
-      const categoriesParam = categories.join(',');
-      url += `&categories=${categoriesParam}`;
-      console.log(`Fetching WordPress news with categories: ${categoriesParam}`);
+    const urls = [
+      `https://koora.com/wp-json/wp/v2/posts?per_page=${perPage}&page=${page}&_embed`,
+    ];
+
+    // Si c'est la première page, récupérer beaucoup plus de pages pour avoir 300+ articles
+    if (page === 1) {
+      // Ajouter les pages 2 à 8 pour avoir suffisamment d'articles
+      for (let p = 2; p <= 8; p++) {
+        urls.push(`https://koora.com/wp-json/wp/v2/posts?per_page=100&page=${p}&_embed`);
+      }
+      // Ajouter quelques pages avec per_page=50 pour plus de diversité
+      urls.push(
+        `https://koora.com/wp-json/wp/v2/posts?per_page=50&page=9&_embed`,
+        `https://koora.com/wp-json/wp/v2/posts?per_page=50&page=10&_embed`
+      );
     }
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.warn(`WordPress fetch failed for ${url}:`, response.status);
-      return [];
-    }
-    
-    const data: WordPressNewsItem[] = await response.json();
-    const validData = Array.isArray(data) ? data : [];
-    
-    // Limit the number if specified
-    const limitedNews = maxTotal ? validData.slice(0, maxTotal) : validData;
+    console.log(`Fetching WordPress news from ${urls.length} URLs...`);
 
-    console.log(`WordPress news loaded: ${limitedNews.length} articles${categories ? ` for categories ${categories.join(',')}` : ''}`);
+    const promises = urls.map(async (url) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          console.warn(`WordPress fetch failed for ${url}:`, response.status);
+          return [];
+        }
+        const data: WordPressNewsItem[] = await response.json();
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error(`Error fetching WordPress news from ${url}:`, error);
+        return [];
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const allNews = results.flat();
+    console.log(`Total articles fetched: ${allNews.length}`);
+
+    // Supprimer les doublons basés sur l'ID
+    const uniqueNews = allNews.filter((item, index, self) => 
+      index === self.findIndex(t => t.id === item.id)
+    );
+    console.log(`Unique articles after deduplication: ${uniqueNews.length}`);
+
+    // Limiter le nombre total si spécifié
+    const limitedNews = maxTotal ? uniqueNews.slice(0, maxTotal) : uniqueNews;
+
+    console.log(`WordPress news loaded: ${limitedNews.length} unique articles from ${allNews.length} total fetched`);
 
     return transformWordPressNews(limitedNews);
   } catch (error) {

@@ -41,8 +41,8 @@ const NewsCard = ({ news, size = 'medium' }: NewsCardProps) => {
   };
 
   return (
-    <Card className={`${getCardSize()} overflow-hidden rounded-2xl shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group bg-white dark:bg-[#0f1115] border border-slate-200/70 dark:border-slate-800/60 hover:border-sport-green/40`}>
-      <div className={`${getImageHeight()} overflow-hidden relative rounded-t-2xl`}>
+    <Card className={`${getCardSize()} overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group bg-white dark:bg-[#0f1115] border border-slate-200/70 dark:border-slate-800/60 hover:border-sport-green/40`}>
+      <div className={`${getImageHeight()} overflow-hidden relative`}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <img
           src={news.imageUrl}
@@ -59,7 +59,7 @@ const NewsCard = ({ news, size = 'medium' }: NewsCardProps) => {
             <span className="text-xs text-muted-foreground">{news.publishedAt}</span>
           </div>
           {/* Left side (RTL): category */}
-          <div className="px-2 py-0.5 bg-sport-green/10 rounded-full">
+          <div className="px-2 py-0.5 bg-sport-green/10">
             <span className="text-xs text-sport-green font-semibold">{news.category}</span>
           </div>
         </div>
@@ -77,7 +77,7 @@ const NewsCard = ({ news, size = 'medium' }: NewsCardProps) => {
         )}
         
         <div className={`mt-3 sm:mt-4 ${size === 'large' ? '' : 'sm:mt-3'}`}>
-          <span className="inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-black text-sport-green text-xs sm:text-sm font-semibold shadow hover:shadow-lg transition-all group-hover:-translate-y-0.5">
+          <span className="inline-flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 bg-black text-sport-green text-xs sm:text-sm font-semibold shadow hover:shadow-lg transition-all group-hover:-translate-y-0.5">
             أكمل القراءة
           </span>
         </div>
