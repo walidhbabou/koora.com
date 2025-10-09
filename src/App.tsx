@@ -28,6 +28,8 @@ import LoginPage from "./pages/LoginPage";
 import RoleBasedRouter from "./components/RoleBasedRouter";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdTestPage from "./components/AdTestPage";
+import SimpleAdTest from "./components/SimpleAdTest";
 
 import DarkModeToggle from "./components/DarkModeToggle";
 import ResetPassword from "./pages/ResetPassword";
@@ -128,6 +130,8 @@ const App = () => {
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/team/:teamId" element={<TeamDetails />} />
                 <Route path="/test" element={<TestPage />} />
+                <Route path="/ad-test" element={<AdTestPage />} />
+                <Route path="/simple-ad-test" element={<SimpleAdTest />} />
                 <Route path="/search" element={<Search />} />
                 <Route path="/language-test" element={<LanguageTest />} />
                 <Route path="/translation-demo" element={<TranslationDemo />} />

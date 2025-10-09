@@ -1,6 +1,7 @@
 import React from 'react';
 import GoogleAdSense, { AdFormat } from './GoogleAdSense';
 import LocalSponsors from './LocalSponsors';
+import AdTestIndicator from './AdTestIndicator';
 
 interface AdWrapperProps {
   type: 'adsense' | 'sponsors' | 'mixed';
@@ -21,7 +22,7 @@ interface AdWrapperProps {
 
 const AdWrapper: React.FC<AdWrapperProps> = ({
   type,
-  adClient = import.meta.env.VITE_GOOGLE_ADSENSE_CLIENT_ID || '',
+  adClient = import.meta.env.VITE_ADSENSE_CLIENT || '',
   adSlot = '',
   adFormat = 'responsive',
   className = '',
@@ -29,19 +30,30 @@ const AdWrapper: React.FC<AdWrapperProps> = ({
   showTitle = true,
   sponsorLayout = 'horizontal',
   maxSponsors = 4,
-  testMode = import.meta.env.MODE === 'development'
+  testMode = import.meta.env.VITE_ADSENSE_TEST_MODE === 'true'
 }) => {
+  console.log('AdWrapper props:', { 
+    type, 
+    adClient, 
+    adSlot, 
+    testMode, 
+    envTestMode: import.meta.env.VITE_ADSENSE_TEST_MODE 
+  });
+
   const renderContent = () => {
     switch (type) {
       case 'adsense':
         return (
-          <GoogleAdSense
-            client={adClient}
-            slot={adSlot}
-            format={adFormat}
-            testMode={testMode}
-            className="w-full"
-          />
+          <div className="relative">
+            <GoogleAdSense
+              client={adClient}
+              slot={adSlot}
+              format={adFormat}
+              testMode={testMode}
+              className="w-full"
+            />
+            <AdTestIndicator show={testMode} />
+          </div>
         );
 
       case 'sponsors':
@@ -58,13 +70,16 @@ const AdWrapper: React.FC<AdWrapperProps> = ({
         return (
           <div className="space-y-6">
             {/* AdSense en premier */}
-            <GoogleAdSense
-              client={adClient}
-              slot={adSlot}
-              format={adFormat}
-              testMode={testMode}
-              className="w-full"
-            />
+            <div className="relative">
+              <GoogleAdSense
+                client={adClient}
+                slot={adSlot}
+                format={adFormat}
+                testMode={testMode}
+                className="w-full"
+              />
+              <AdTestIndicator show={testMode} />
+            </div>
             
             {/* Puis sponsors locaux */}
             <LocalSponsors
@@ -101,7 +116,7 @@ export const HeaderAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
     <AdWrapper
       type="adsense"
       adFormat="leaderboard"
-      adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_HEADER || ''}
+      adSlot={import.meta.env.VITE_ADSENSE_HEADER_SLOT || ''}
       title="إعلان"
       className="mb-2 sm:mb-4"
       testMode={testMode}
@@ -113,7 +128,7 @@ export const SidebarAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
   <AdWrapper
     type="adsense"
     adFormat="rectangle"
-    adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_SIDEBAR || ''}
+    adSlot={import.meta.env.VITE_ADSENSE_SIDEBAR_SLOT || ''}
     title="إعلان"
     className="mb-4"
     testMode={testMode}
@@ -125,7 +140,7 @@ export const MobileAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
     <AdWrapper
       type="adsense"
       adFormat="mobile-banner"
-      adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_MOBILE || ''}
+      adSlot={import.meta.env.VITE_ADSENSE_MOBILE_SLOT || ''}
       title="إعلان"
       className="w-full"
       testMode={testMode}
@@ -137,7 +152,7 @@ export const InArticleAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
   <AdWrapper
     type="adsense"
     adFormat="in-article"
-    adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_IN_ARTICLE || ''}
+    adSlot={import.meta.env.VITE_ADSENSE_ARTICLE_SLOT || ''}
     title="إعلان"
     className="my-6"
     testMode={testMode}
@@ -160,7 +175,7 @@ export const FooterAd: React.FC<{ testMode?: boolean }> = ({ testMode }) => (
   <AdWrapper
     type="adsense"
     adFormat="leaderboard"
-    adSlot={import.meta.env.VITE_GOOGLE_ADSENSE_SLOT_FOOTER || ''}
+    adSlot={import.meta.env.VITE_ADSENSE_FOOTER_SLOT || ''}
     title="إعلان"
     className="mt-4"
     testMode={testMode}

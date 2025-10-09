@@ -1,4 +1,6 @@
 import React, { useEffect, useRef } from 'react';
+import { loadAdSenseScript, initializeAdSense, pushAdSenseAd } from '@/utils/adsenseLoader';
+import FakeAd from './FakeAd';
 
 // Types pour les formats AdSense
 export type AdFormat = 
@@ -59,46 +61,45 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
   };
 
   useEffect(() => {
-    // Ne pas charger les pubs en mode test ou si pas de client ID
-    if (testMode || !client || !slot) {
+    // En mode test, on n'initialise pas AdSense
+    if (testMode) {
+      console.log('Mode test activé - Affichage du placeholder');
       return;
     }
 
-    try {
-      // Initialiser adsbygoogle si pas encore fait
-      if (typeof window !== 'undefined') {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      }
-    } catch (error) {
-      console.warn('Erreur lors du chargement de la publicité AdSense:', error);
+    // Ne pas charger les pubs si pas de client ID ou slot
+    if (!client || !slot) {
+      console.warn('Client ID ou Slot manquant:', { client, slot });
+      return;
     }
+
+    // Charger le script AdSense et initialiser
+    const loadAndInitialize = async () => {
+      try {
+        await loadAdSenseScript();
+        initializeAdSense();
+        
+        // Petit délai pour s'assurer que tout est prêt
+        setTimeout(() => {
+          pushAdSenseAd();
+        }, 100);
+      } catch (error) {
+        console.warn('Erreur lors du chargement de la publicité AdSense:', error);
+      }
+    };
+
+    loadAndInitialize();
   }, [client, slot, testMode]);
 
   const dimensions = getAdDimensions(format);
 
-  // Mode test - affiche un placeholder
-  if (testMode || !client || !slot) {
-    return (
-      <div 
-        className={`bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center ${className}`}
-        style={{
-          width: dimensions.width === 'auto' ? '100%' : dimensions.width,
-          height: dimensions.height === 'auto' ? '120px' : Math.min(Number(dimensions.height) || 120, 120),
-          minHeight: format === 'responsive' ? '80px' : 'auto',
-          maxHeight: format === 'mobile-banner' ? '60px' : '120px',
-          ...style
-        }}
-      >
-        <div className="text-center p-2">
-          <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-            {testMode ? 'Mode Test - Publicité' : 'Espace Publicitaire'}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-500">
-            Format: {format}
-          </div>
-        </div>
-      </div>
-    );
+  // Mode test ou configuration incomplète - affiche un placeholder
+  if (testMode === true || !client || !slot) {
+    console.log('Affichage placeholder:', { testMode, client: !!client, slot: !!slot });
+    
+    // Utiliser FakeAd pour un rendu plus réaliste
+    const adFormat = format as 'rectangle' | 'leaderboard' | 'mobile-banner' | 'in-article' | 'responsive';
+    return <FakeAd format={adFormat} className={className} />;
   }
 
   return (
@@ -119,6 +120,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         data-ad-slot={slot}
         data-ad-format={responsive ? 'auto' : format}
         data-full-width-responsive={responsive ? 'true' : 'false'}
+        data-adtest={testMode ? 'on' : 'off'}
         {...(layoutKey && { 'data-ad-layout-key': layoutKey })}
         {...(format === 'in-article' && { 'data-ad-layout': 'in-article' })}
         {...(format === 'multiplex' && { 'data-ad-layout': 'multiplex' })}

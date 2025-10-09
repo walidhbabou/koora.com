@@ -292,8 +292,8 @@ export const fetchWordPressNews = async (options: {
       buildUrl(page, perPage),
     ];
 
-    // Si c'est la première page, récupérer beaucoup plus de pages pour avoir 300+ articles
-    if (page === 1) {
+    // Si c'est la première page ET qu'on ne filtre pas par catégorie, récupérer plus de pages
+    if (page === 1 && !categories) {
       // Ajouter les pages 2 à 8 pour avoir suffisamment d'articles
       for (let p = 2; p <= 8; p++) {
         urls.push(buildUrl(p, 100));

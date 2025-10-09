@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { WORDPRESS_CATEGORIES } from "@/utils/newsUtils";
+import { WORDPRESS_CATEGORIES } from "@/config/wordpressCategories";
 import { useNavigate } from "react-router-dom";
 
 const CategoryFilterHeader = ({ 
@@ -18,7 +18,10 @@ const CategoryFilterHeader = ({
   setSelectedSubCategory,
   currentLanguage,
   selectedWPCategory,
-  setSelectedWPCategory
+  setSelectedWPCategory,
+  setPage,
+  setAllNews,
+  setDisplayedNews
 }) => {
   const [subCategories, setSubCategories] = useState({});
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ const CategoryFilterHeader = ({
         for (const category of headerCategories) {
           if (category.table === 'wordpress_categories') {
             // Pour WordPress, utiliser les catégories statiques
-            subCatData[category.id] = Object.values(WORDPRESS_CATEGORIES);
+            subCatData[category.id] = WORDPRESS_CATEGORIES;
           } else {
             // Pour les autres catégories, utiliser Supabase
             const { data, error } = await supabase
@@ -74,9 +77,14 @@ const CategoryFilterHeader = ({
   const handleMobileSubCategoryClick = (categoryId, subCategoryId) => {
     if (categoryId === 6) { // WordPress category
       setSelectedWPCategory(subCategoryId);
-      const category = WORDPRESS_CATEGORIES[subCategoryId];
+      if (typeof setPage === 'function') setPage(1);
+      if (typeof setAllNews === 'function') setAllNews([]);
+      if (typeof setDisplayedNews === 'function') setDisplayedNews([]);
+      const category = WORDPRESS_CATEGORIES.find(cat => cat.id === subCategoryId);
       if (category) {
-        navigate(`/news/category/${category.slug}`);
+        // Utiliser le slug si disponible, sinon utiliser l'ID
+        const slug = category.slug || `category-${subCategoryId}`;
+        navigate(`/news/category/${slug}`);
       }
     } else {
       setSelectedHeaderCategory(categoryId);
@@ -173,9 +181,13 @@ const CategoryFilterHeader = ({
                         onClick={() => {
                           if (category.id === 6) { // WordPress category
                             setSelectedWPCategory(subCat.id);
-                            const wpCategory = WORDPRESS_CATEGORIES[subCat.id];
+                            if (typeof setPage === 'function') setPage(1);
+                            if (typeof setAllNews === 'function') setAllNews([]);
+                            if (typeof setDisplayedNews === 'function') setDisplayedNews([]);
+                            const wpCategory = WORDPRESS_CATEGORIES.find(cat => cat.id === subCat.id);
                             if (wpCategory) {
-                              navigate(`/news/category/${wpCategory.slug}`);
+                              const slug = wpCategory.slug || `category-${subCat.id}`;
+                              navigate(`/news/category/${slug}`);
                             }
                           } else {
                             setSelectedHeaderCategory(category.id);
@@ -183,10 +195,7 @@ const CategoryFilterHeader = ({
                           }
                         }}
                       >
-                        {category.id === 6 ? 
-                          (currentLanguage === "ar" ? subCat.name : subCat.name_en) : 
-                          subCat.nom
-                        }
+                        {category.id === 6 ? subCat.name_ar : subCat.nom}
                       </DropdownMenuItem>
                     ))}
                   </div>
@@ -262,13 +271,25 @@ const CategoryFilterHeader = ({
                   {subCategories[mobileOpenCategory]?.map((subCat) => (
                     <button
                       key={subCat.id}
-                      onClick={() => handleMobileSubCategoryClick(mobileOpenCategory, subCat.id)}
+                      onClick={() => {
+                        if (mobileOpenCategory === 6) {
+                          setSelectedWPCategory(subCat.id);
+                          if (typeof setPage === 'function') setPage(1);
+                          if (typeof setAllNews === 'function') setAllNews([]);
+                          if (typeof setDisplayedNews === 'function') setDisplayedNews([]);
+                          const wpCategory = WORDPRESS_CATEGORIES.find(cat => cat.id === subCat.id);
+                          if (wpCategory) {
+                            const slug = wpCategory.slug || `category-${subCat.id}`;
+                            navigate(`/news/category/${slug}`);
+                          }
+                          setMobileOpenCategory(null);
+                        } else {
+                          handleMobileSubCategoryClick(mobileOpenCategory, subCat.id);
+                        }
+                      }}
                       className="w-full text-left p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 text-sm border-b border-gray-100 dark:border-slate-600 last:border-b-0"
                     >
-                      {mobileOpenCategory === 6 ? 
-                        (currentLanguage === "ar" ? subCat.name : subCat.name_en) : 
-                        subCat.nom
-                      }
+                      {mobileOpenCategory === 6 ? subCat.name_ar : subCat.nom}
                     </button>
                   ))}
                 </div>

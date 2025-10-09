@@ -5,35 +5,45 @@ export interface WordPressCategory {
   id: number;
   name: string;
   name_ar: string;
+  slug?: string;
   description?: string;
 }
 
-// Catégories WordPress disponibles (basées sur l'image)
+// Catégories WordPress disponibles (basées sur les vraies catégories du site koora.com)
 export const WORDPRESS_CATEGORIES: WordPressCategory[] = [
-  { id: 2, name: "Angleterre - Premier League", name_ar: "إنجلترا - بريمير ليجر" },
-  { id: 3, name: "Espagne - La Liga", name_ar: "إسبانيا - ليجا" },
-  { id: 4, name: "Italie", name_ar: "إيطاليا" },
-  { id: 5, name: "France - Ligue 1", name_ar: "فرنسا - ليجا 1" },
-  { id: 6, name: "Allemagne", name_ar: "ألمانيا" },
-  { id: 7, name: "Compétitions européennes", name_ar: "البطولات الأوروبية" },
-  { id: 8, name: "Coupe d'Asie", name_ar: "كأس آسيا" },
-  { id: 9, name: "Coupe d'Amérique", name_ar: "كأس أمريكا" },
-  { id: 10, name: "Coupe d'Afrique", name_ar: "كأس أفريقيا" },
-  { id: 11, name: "Ligue des champions", name_ar: "دوري أبطال أوروبا" },
-  { id: 12, name: "Ligue Europa", name_ar: "الدوري الأوروبي" },
-  { id: 13, name: "Compétitions nationales", name_ar: "البطولات الوطنية" },
-  { id: 14, name: "Coupe nationale (Portugal)", name_ar: "تاريخ الكأس (البرتغال)" },
-  { id: 15, name: "Coupe nationale (Espagne)", name_ar: "الكوريا الإسباني (كأس ملك)" },
-  { id: 16, name: "Coupe nationale (Argentine)", name_ar: "الكوريا الأرجنتيني للمنتخب" },
-  { id: 17, name: "Eliminatoires Mondiales", name_ar: "تصفيات كأس العالم" },
-  { id: 18, name: "Coupe du Monde", name_ar: "كأس العالم لكرة القدم" },
-  { id: 19, name: "Compétitions de clubs", name_ar: "البطولات النادية" },
-  { id: 20, name: "Coupe arabe", name_ar: "الكوريا العربي" },
-  { id: 21, name: "Coupe italienne", name_ar: "كوريا إيطالي آب" },
-  { id: 22, name: "Coupe espagnole", name_ar: "كوريا إسبانيا آب" },
-  { id: 23, name: "Transferts", name_ar: "الانتقالات" },
-  { id: 24, name: "Mercato", name_ar: "الميركاتو" },
-  { id: 29, name: "Compétitions locales", name_ar: "البطولات المحلية" }
+  // Catégories principales
+  { id: 1, name: "Uncategorized", name_ar: "غير مصنف", slug: "uncategorized" },
+  { id: 2, name: "Transfers and Player News", name_ar: "الانتقالات وأخبار اللاعبين", slug: "transfers-player-news" },
+  { id: 3, name: "Player News", name_ar: "أخبار اللاعبين", slug: "player-news" },
+  { id: 4, name: "Loans", name_ar: "الإعارات", slug: "loans" },
+  { id: 5, name: "Transfer Market", name_ar: "سوق الانتقالات", slug: "transfer-market" },
+  { id: 6, name: "Player Deals", name_ar: "صفقات اللاعبين", slug: "player-deals" },
+  { id: 7, name: "International Tournaments", name_ar: "البطولات الدولية", slug: "international-tournaments" },
+  { id: 8, name: "Asian Cup", name_ar: "كأس آسيا", slug: "asian-cup" },
+  { id: 9, name: "African Cup of Nations", name_ar: "كأس أمم أفريقيا", slug: "african-cup-nations" },
+  { id: 10, name: "European Championship", name_ar: "كأس أمم أوروبا", slug: "european-championship" },
+  { id: 11, name: "World Cup", name_ar: "كأس العالم", slug: "world-cup" },
+  { id: 12, name: "Copa America", name_ar: "كوبا أمريكا", slug: "copa-america" },
+  { id: 13, name: "World Leagues", name_ar: "البطولات العالمية", slug: "world-leagues" },
+  { id: 14, name: "Bundesliga", name_ar: "الدوري الألماني (بوندسليغا)", slug: "bundesliga" },
+  { id: 15, name: "La Liga", name_ar: "الدوري الإسباني (لا ليغا)", slug: "la-liga" },
+  { id: 16, name: "Premier League", name_ar: "الدوري الإنجليزي الممتاز", slug: "premier-league" },
+  { id: 17, name: "Serie A", name_ar: "الدوري الإيطالي (سيريا أ)", slug: "serie-a" },
+  { id: 18, name: "Ligue 1", name_ar: "الدوري الفرنسي (ليغ 1)", slug: "ligue-1" },
+  { id: 19, name: "Continental Tournaments", name_ar: "البطولات القارية", slug: "continental-tournaments" },
+  { id: 20, name: "Europa League", name_ar: "الدوري الأوروبي", slug: "europa-league" },
+  { id: 21, name: "AFC Champions League", name_ar: "دوري أبطال آسيا", slug: "afc-champions-league" },
+  { id: 22, name: "CAF Champions League", name_ar: "دوري أبطال أفريقيا", slug: "caf-champions-league" },
+  { id: 23, name: "UEFA Champions League", name_ar: "دوري أبطال أوروبا", slug: "uefa-champions-league" },
+  { id: 24, name: "Copa Libertadores", name_ar: "كوبا ليبرتادوريس", slug: "copa-libertadores" },
+  { id: 29, name: "Local Leagues", name_ar: "البطولات المحلية", slug: "local-leagues" },
+  { id: 30, name: "Algerian League", name_ar: "الدوري الجزائري", slug: "algerian-league" },
+  { id: 31, name: "Saudi League", name_ar: "الدوري السعودي", slug: "saudi-league" },
+  { id: 32, name: "Qatari League", name_ar: "الدوري القطري", slug: "qatari-league" },
+  { id: 33, name: "Egyptian League", name_ar: "الدوري المصري", slug: "egyptian-league" },
+  { id: 34, name: "Moroccan League", name_ar: "الدوري المغربي", slug: "moroccan-league" },
+  { id: 74, name: "Arabian Gulf Cup", name_ar: "كأس الخليج العربي", slug: "arabian-gulf-cup" },
+  { id: 1696, name: "FIFA Club World Cup", name_ar: "كأس العالم للأندية", slug: "fifa-club-world-cup" }
 ];
 
 // Mapping entre les catégories Supabase et WordPress
