@@ -123,7 +123,7 @@ const App = () => {
                 <Route path="/match/:id" element={<MatchDetailsPage />} />
                 <Route path="/news" element={<News />} />
                 <Route path="/news/category/:category" element={<News />} />
-                <Route path="/news/:id" element={<NewsDetails />} />
+                <Route path="/news/:slug" element={<NewsDetails />} />
                 <Route path="/standings" element={<Standings />} />
                 <Route path="/videos" element={<Videos />} />
                 <Route path="/transfers" element={<Transfers />} />

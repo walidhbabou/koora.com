@@ -3,7 +3,6 @@ import {
   parseEditorJsContent,
   fetchWordPressNews,
   transformWordPressNews,
-  getWordPressCategoriesForFilter,
 } from "@/utils/newsUtils";
 import { WORDPRESS_CATEGORIES } from "@/config/wordpressCategories";
 import {
@@ -30,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Flag } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/hooks/useTranslation";
 import { MAIN_LEAGUES } from "@/config/api";
@@ -55,7 +55,7 @@ const News = () => {
   const [displayedNews, setDisplayedNews] = useState<NewsCardItem[]>([]);
   const [loadingNews, setLoadingNews] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 15; // Limiter à 15 actualités par page
+  const pageSize = 30; // Augmenté de 15 à 30 pour plus d'articles par page
   const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isPageTransition, setIsPageTransition] = useState<boolean>(false);
@@ -75,20 +75,15 @@ const News = () => {
   const preloadQueueRef = useRef<Set<number>>(new Set());
   const isPreloadingRef = useRef(false);
 
-  // Performance monitoring
+  // Performance monitoring avec plus de détails
   const [performanceStats, setPerformanceStats] = useState({
     cacheHits: 0,
     cacheMisses: 0,
     averageLoadTime: 0,
-    lastLoadTime: 0
+    lastLoadTime: 0,
+    totalArticlesLoaded: 0,
+    lastCacheUpdate: Date.now()
   });
-
-  // Add request throttling to prevent infinite loops
-  const lastRequestTime = useRef<number>(0);
-  const MIN_REQUEST_INTERVAL = 50; // Réduit de 2000 à 500ms
-  const requestCount = useRef<number>(0);
-  const MAX_REQUESTS_PER_MINUTE = 10; // Augmenté de 5 à 10 requêtes par minute
-  const requestTimes = useRef<number[]>([]);
 
   // States pour CategoryFilterHeader - set to non-null initially to prevent immediate API calls
   const [selectedHeaderCategory, setSelectedHeaderCategory] = useState<
@@ -101,33 +96,10 @@ const News = () => {
   // Flag to prevent initial filter-triggered requests
   const initialLoadComplete = useRef(false);
 
-  // Function to check if we should throttle requests
-  const shouldThrottleRequest = useCallback(() => {
-    const now = Date.now();
-    const timeSinceLastRequest = now - lastRequestTime.current;
-    
-    // Check minimum interval
-    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-      console.warn('Request throttled: too soon since last request');
-      return true;
-    }
-    
-    // Clean old request times (older than 1 minute)
-    requestTimes.current = requestTimes.current.filter(time => now - time < 60000);
-    
-    // Check rate limit
-    if (requestTimes.current.length >= MAX_REQUESTS_PER_MINUTE) {
-      console.warn('Request throttled: rate limit exceeded');
-      return true;
-    }
-    
-    // Update tracking
-    lastRequestTime.current = now;
-    requestTimes.current.push(now);
-    requestCount.current++;
-    
-    return false;
-  }, []);
+  // Éléments supprimés pour le scroll infini automatique
+  // const [isAutoLoading, setIsAutoLoading] = useState(false);
+  // const observerRef = useRef<IntersectionObserver | null>(null);
+  // const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Fonction pour paginer les news déjà chargées
   const paginateNews = useCallback((newsArray: NewsCardItem[], currentPage: number) => {
@@ -146,12 +118,6 @@ const News = () => {
   // Fonction pour récupérer les news Supabase
   const fetchSupabaseNews = useCallback(
     async (nextPage: number): Promise<NewsCardItem[]> => {
-      // Check throttling first
-      if (shouldThrottleRequest()) {
-        console.warn('Supabase request throttled');
-        return [];
-      }
-
       try {
         let query = supabase
           .from("news")
@@ -260,7 +226,7 @@ const News = () => {
       return [];
     }
     },
-    [selectedChampion, selectedHeaderCategory, selectedSubCategory, shouldThrottleRequest]
+    [selectedChampion, selectedHeaderCategory, selectedSubCategory]
   );
 
   // Fonction pour récupérer les news WordPress avec cache
@@ -287,15 +253,11 @@ const News = () => {
       }));
       
       // Get WordPress categories based on current filter selection or URL parameter
-      const wpCategories = categoryId 
-        ? [categoryId] 
-        : getWordPressCategoriesForFilter(selectedHeaderCategory, selectedSubCategory);
-      
       const result = await fetchWordPressNews({
-        perPage: categoryId ? 50 : 30, // Moins d'articles pour le filtrage par catégorie
+        perPage: categoryId ? 100 : 100, // Plus d'articles par page
         page: 1,
-        maxTotal: categoryId ? 50 : 100, // Limite réduite pour plus de rapidité
-        categories: categoryId ? [categoryId] : (wpCategories.length > 0 ? wpCategories : undefined),
+        maxTotal: categoryId ? 300 : 500, // Beaucoup plus d'articles au total
+        categories: categoryId ? [categoryId] : undefined,
       });
       
       // Mettre en cache le résultat
@@ -306,10 +268,12 @@ const News = () => {
       setPerformanceStats(prev => ({ 
         ...prev, 
         lastLoadTime: loadTime,
-        averageLoadTime: prev.cacheMisses === 1 ? loadTime : (prev.averageLoadTime + loadTime) / 2
+        averageLoadTime: prev.cacheMisses === 1 ? loadTime : (prev.averageLoadTime + loadTime) / 2,
+        totalArticlesLoaded: result.length,
+        lastCacheUpdate: Date.now()
       }));
       
-      console.log(`✅ WordPress news fetched: ${result.length} articles in ${loadTime.toFixed(2)}ms${wpCategories.length > 0 ? ` for categories ${wpCategories.join(',')}` : ''}`);
+      console.log(`✅ WordPress news fetched: ${result.length} articles in ${loadTime.toFixed(2)}ms`);
       return result;
     } catch (error) {
       console.error("❌ WordPress news fetch failed:", error);
@@ -320,7 +284,7 @@ const News = () => {
       }));
       return [];
     }
-  }, [selectedHeaderCategory, selectedSubCategory, wpNewsCache]); // Add dependencies for filtering
+  }, [wpNewsCache]);
 
   // Background preloading system
   const preloadCategories = useCallback(async () => {
@@ -374,77 +338,62 @@ const News = () => {
     });
   }, [selectedWPCategory, queuePreload]);
 
-  // Fonction principale pour récupérer et combiner toutes les news
+  // Fonction principale pour récupérer seulement les news WordPress
   const fetchAllNews = useCallback(
     async (nextPage: number = 1, append: boolean = false) => {
-      if (shouldThrottleRequest() && requestCount.current > 3) {
-        console.warn('fetchAllNews request throttled');
+      // Éviter les rechargements si on a déjà des données en cache et qu'on pagine seulement
+      if (append && allNews.length > 0) {
+        console.log('Using cached data for pagination, no API call needed');
+        paginateNews(allNews, nextPage);
+        setPage(nextPage);
         return;
       }
 
-      console.log(`Fetching news for page ${nextPage}, append: ${append}, filters:`, {
-        selectedWPCategory,
-        selectedHeaderCategory,
-        selectedSubCategory,
-        selectedChampion
+      console.log(`Fetching WordPress news for page ${nextPage}, append: ${append}, filters:`, {
+        selectedWPCategory
       });
       setLoadingNews(true);
       
       try {
-        let combinedNews: NewsCardItem[] = [];
-
-        // Chargement parallèle avec filtres combinés
-        const startTime = Date.now();
-        
-        const [supabaseNews, wordpressNews] = await Promise.allSettled([
-          // Charger Supabase seulement si on a des filtres Supabase ou aucun filtre spécifique
-          (!selectedWPCategory || selectedHeaderCategory || selectedSubCategory || selectedChampion) 
-            ? fetchSupabaseNews(1) 
-            : Promise.resolve([]),
-          // Charger WordPress avec catégorie spécifique ou toutes si pas de filtre WP
-          fetchWordPressNewsData(selectedWPCategory || undefined),
-        ]);
-
-        const supabaseResult = supabaseNews.status === 'fulfilled' ? supabaseNews.value : [];
-        const wordpressResult = wordpressNews.status === 'fulfilled' ? wordpressNews.value : [];
-
-        console.log(`Parallel fetch completed in ${Date.now() - startTime}ms`);
-        console.log(`Supabase: ${supabaseResult.length}, WordPress: ${wordpressResult.length}`);
-
-        // Combiner selon les filtres appliqués
-        if (selectedWPCategory && !selectedHeaderCategory && !selectedSubCategory && !selectedChampion) {
-          // Filtrage exclusif WordPress si seule une catégorie WP est sélectionnée
-          combinedNews = wordpressResult;
-          console.log(`WordPress-only filter: ${combinedNews.length} articles`);
-        } else if (!selectedWPCategory && (selectedHeaderCategory || selectedSubCategory || selectedChampion)) {
-          // Filtrage exclusif Supabase si seules des catégories Supabase sont sélectionnées
-          combinedNews = supabaseResult;
-          console.log(`Supabase-only filter: ${combinedNews.length} articles`);
-        } else {
-          // Combinaison des deux sources ou aucun filtre
-          combinedNews = [...wordpressResult, ...supabaseResult];
-          console.log(`Combined sources: ${combinedNews.length} articles`);
+        // Vérifier d'abord le cache avant de faire un appel API
+        const cacheKey = selectedWPCategory ? `cat-${selectedWPCategory}` : 'all';
+        if (wpNewsCache.has(cacheKey) && !append) {
+          console.log(`🎯 Using cached WordPress data for ${cacheKey}`);
+          const cachedData = wpNewsCache.get(cacheKey)!;
+          setNews([]);
+          setFilteredNews(cachedData);
+          setAllNews(cachedData);
+          paginateNews(cachedData, nextPage);
+          setPage(nextPage);
+          setLoadingNews(false);
+          return;
         }
 
+        // Charger seulement WordPress avec catégorie spécifique ou toutes
+        const startTime = Date.now();
+        const wordpressNews = await fetchWordPressNewsData(selectedWPCategory || undefined);
+
+        console.log(`WordPress fetch completed in ${Date.now() - startTime}ms`);
+        console.log(`WordPress: ${wordpressNews.length} articles`);
+
         // Trier par date
-        combinedNews.sort((a, b) => 
+        wordpressNews.sort((a, b) => 
           new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
         );
 
         // Mise à jour des états
         setNews([]);
-        setFilteredNews(combinedNews);
-        setAllNews(combinedNews);
-        paginateNews(combinedNews, nextPage);
+        setFilteredNews(wordpressNews);
+        setAllNews(wordpressNews);
+        paginateNews(wordpressNews, nextPage);
         setPage(nextPage);
         
-        // Ajuster hasMore selon le type de filtrage
-        const isFiltered = selectedWPCategory || selectedHeaderCategory || selectedSubCategory || selectedChampion;
-        setHasMore(isFiltered ? false : combinedNews.length >= pageSize);
-        setTotalPages(isFiltered ? 1 : Math.ceil(combinedNews.length / pageSize));
+        // Plus de hasMore maintenant qu'on charge tout en une fois
+        setHasMore(wordpressNews.length > pageSize * nextPage);
+        setTotalPages(Math.ceil(wordpressNews.length / pageSize));
 
       } catch (error) {
-        console.error("Failed to load news", error);
+        console.error("Failed to load WordPress news", error);
         setAllNews([]);
         setDisplayedNews([]);
         setHasMore(false);
@@ -452,7 +401,7 @@ const News = () => {
         setLoadingNews(false);
       }
     },
-    [fetchSupabaseNews, fetchWordPressNewsData, paginateNews, shouldThrottleRequest, selectedWPCategory, selectedHeaderCategory, selectedSubCategory, selectedChampion, pageSize]
+    [fetchWordPressNewsData, paginateNews, selectedWPCategory, pageSize, allNews, wpNewsCache]
   );
 
   // useEffect pour charger les news WordPress (pour debug et état séparé)
@@ -478,98 +427,116 @@ const News = () => {
     }
   }, [category, navigate]);
 
-  // useEffect principal pour charger toutes les news - optimisé
+  // useEffect principal pour charger seulement les news WordPress - optimisé
   useEffect(() => {
-    console.log("News component mounted, quick loading...");
+    console.log("News component mounted, loading WordPress news...");
     initialLoadComplete.current = true;
     
-    // Chargement ultra-rapide avec cache
+    // Chargement rapide WordPress seulement
     const quickLoad = async () => {
       setLoadingNews(true);
       
       try {
-        // Si filtrage par catégorie WordPress, charger directement
-        if (selectedWPCategory) {
-          console.log(`Quick load for WordPress category: ${selectedWPCategory}`);
-          const wordpressNews = await fetchWordPressNewsData(selectedWPCategory);
-          setNews(wordpressNews);
-          setFilteredNews(wordpressNews);
-          setAllNews(wordpressNews);
-          setDisplayedNews(wordpressNews);
-          setLoadingNews(false);
-          return;
-        }
-
-        // Sinon, chargement rapide Supabase d'abord
-        console.log("Quick loading Supabase news first...");
-        const quickSupabase = await fetchSupabaseNews(1);
-        
-        if (quickSupabase.length > 0) {
-          setAllNews(quickSupabase);
-          setDisplayedNews(quickSupabase.slice(0, pageSize));
-          setLoadingNews(false);
-          
-          // WordPress en arrière-plan
-          fetchWordPressNewsData(undefined).then(wpNews => {
-            if (wpNews.length > 0 && !selectedWPCategory) {
-              const combined = [...wpNews, ...quickSupabase].sort(
-                (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-              );
-              setAllNews(combined);
-              paginateNews(combined, 1);
-            }
-          }).catch(err => console.warn('Background WordPress fetch failed:', err));
-        } else {
-          // Si Supabase vide, essayer WordPress
-          fetchAllNews(1, false);
-        }
+        console.log(`Loading WordPress news for category: ${selectedWPCategory || 'all'}`);
+        const wordpressNews = await fetchWordPressNewsData(selectedWPCategory);
+        setNews(wordpressNews);
+        setFilteredNews(wordpressNews);
+        setAllNews(wordpressNews);
+        paginateNews(wordpressNews, 1);
+        setLoadingNews(false);
       } catch (error) {
-        console.error('Quick load failed:', error);
+        console.error('WordPress news load failed:', error);
         fetchAllNews(1, false);
       }
     };
     
     quickLoad();
-  }, [selectedWPCategory, fetchAllNews, fetchSupabaseNews, fetchWordPressNewsData, paginateNews]); // Ajout des dépendances manquantes
+  }, [selectedWPCategory, fetchWordPressNewsData, paginateNews, fetchAllNews]);
 
-  // useEffect pour recharger quand les filtres changent - optimisé
-  const prevFiltersRef = useRef({ selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory });
+  // useEffect pour recharger quand les filtres WordPress changent - optimisé
+  const prevFiltersRef = useRef({ selectedWPCategory });
   const filterChangeDebounced = useRef(
     debounce(() => {
-      console.log("Filters changed (debounced), refetching news...");
+      console.log("WordPress category filter changed (debounced), refetching news...");
       // Clear cache for WordPress requests when filters change
       setWpNewsCache(new Map());
       requestCache.clearCache('wordpress');
       setAllNews([]);
       setDisplayedNews([]);
       fetchAllNews(1, false);
-    }, 500) // Réduit à 500ms pour plus de réactivité dans le filtrage combiné
+    }, 500)
   );
 
   useEffect(() => {
     if (!initialLoadComplete.current) return;
 
     const prev = prevFiltersRef.current;
-    const hasFilterChanged = 
-      prev.selectedHeaderCategory !== selectedHeaderCategory ||
-      prev.selectedSubCategory !== selectedSubCategory ||
-      prev.selectedChampion !== selectedChampion ||
-      prev.selectedWPCategory !== selectedWPCategory;
+    const hasFilterChanged = prev.selectedWPCategory !== selectedWPCategory;
 
     if (hasFilterChanged) {
-      console.log("Filter change detected:", {
-        headerCategory: selectedHeaderCategory,
-        subCategory: selectedSubCategory,
-        champion: selectedChampion,
+      console.log("WordPress category filter change detected:", {
         wpCategory: selectedWPCategory
       });
       
-      // Chargement immédiat pour tous les filtres avec nouvelle logique combinée
+      // Chargement immédiat pour filtres WordPress
       filterChangeDebounced.current();
     }
 
-    prevFiltersRef.current = { selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory };
-  }, [selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory, fetchWordPressNewsData]);
+    prevFiltersRef.current = { selectedWPCategory };
+  }, [selectedWPCategory, fetchWordPressNewsData]);
+
+  const handleLoadMore = useCallback(async () => {
+    if (loadingNews || isPageTransition || page >= totalPages) return;
+    
+    setIsPageTransition(true);
+    
+    // Utiliser les données déjà chargées en cache au lieu de recharger
+    const nextPage = page + 1;
+    const startIndex = (nextPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const newItems = allNews.slice(startIndex, endIndex);
+    
+    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}`);
+    
+    setTimeout(() => {
+      setDisplayedNews(prevItems => [...prevItems, ...newItems]);
+      setPage(nextPage);
+      setHasMore(nextPage < totalPages);
+      setIsPageTransition(false);
+    }, 50); // Réduit encore plus pour une réactivité maximale
+  }, [loadingNews, isPageTransition, page, totalPages, pageSize, allNews]);
+
+  // Système de scroll infini automatique - DÉSACTIVÉ
+  // useEffect(() => {
+  //   if (!loadMoreRef.current) return;
+
+  //   observerRef.current = new IntersectionObserver(
+  //     (entries) => {
+  //       const target = entries[0];
+  //       if (target.isIntersecting && hasMore && !loadingNews && !isPageTransition && !isAutoLoading) {
+  //         console.log('Scroll infini détecté, chargement automatique...');
+  //         setIsAutoLoading(true);
+  //         handleLoadMore().finally(() => {
+  //           setTimeout(() => setIsAutoLoading(false), 1000);
+  //         });
+  //       }
+  //     },
+  //     {
+  //       threshold: 0.1,
+  //       rootMargin: '100px', // Déclencher 100px avant d'atteindre l'élément
+  //     }
+  //   );
+
+  //   if (loadMoreRef.current) {
+  //     observerRef.current.observe(loadMoreRef.current);
+  //   }
+
+  //   return () => {
+  //     if (observerRef.current) {
+  //       observerRef.current.disconnect();
+  //     }
+  //   };
+  // }, [hasMore, loadingNews, isPageTransition, isAutoLoading, handleLoadMore]);
 
   const reportNews = async (newsId: string, description: string) => {
     if (reportingId) return;
@@ -634,25 +601,6 @@ const News = () => {
     }
   };
 
-  const handleLoadMore = async () => {
-    if (loadingNews || isPageTransition || page >= totalPages) return;
-    
-    setIsPageTransition(true);
-    
-    // Charger la page suivante et ajouter au contenu existant
-    const nextPage = page + 1;
-    const startIndex = (nextPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const newItems = allNews.slice(startIndex, endIndex);
-    
-    setTimeout(() => {
-      setDisplayedNews(prevItems => [...prevItems, ...newItems]);
-      setPage(nextPage);
-      setHasMore(nextPage < totalPages);
-      setIsPageTransition(false);
-    }, 100); // Réduit de 300ms à 100ms pour une réactivité plus rapide
-  };
-
   const handlePageChange = (newPage: number) => {
     if (loadingNews || newPage < 1 || newPage > totalPages) return;
     paginateNews(allNews, newPage);
@@ -691,31 +639,14 @@ const News = () => {
     handleCategoryChange(categoryId);
   };
 
-  // Fonction pour vérifier si des filtres sont actifs
+  // Fonction pour vérifier si des filtres WordPress sont actifs
   const hasActiveFilters = () => {
-    return selectedWPCategory || selectedHeaderCategory || selectedSubCategory || selectedChampion;
+    return selectedWPCategory;
   };
 
-  // Fonction pour obtenir le texte des filtres actifs
+  // Fonction pour obtenir le texte des filtres WordPress actifs
   const getActiveFiltersText = () => {
     const filters = [];
-    
-    if (selectedHeaderCategory) {
-      // Cette logique devrait être importée du CategoryFilterHeader ou refactorisée
-      const headerCategories = [
-        { id: 1, name: 'Internationales', name_ar: 'البطولات الدولية' },
-        { id: 2, name: 'Mondiales', name_ar: 'البطولات العالمية' },
-        { id: 3, name: 'Continentales', name_ar: 'البطولات القارية' },
-        { id: 4, name: 'Locales', name_ar: 'البطولات المحلية' },
-        { id: 5, name: 'Transferts', name_ar: 'الانتقالات وأخبار اللاعبين' },
-        { id: 6, name: 'WordPress News', name_ar: 'فئات الأخبار' }
-      ];
-      
-      const headerCat = headerCategories.find(c => c.id === selectedHeaderCategory);
-      if (headerCat) {
-        filters.push(currentLanguage === "ar" ? headerCat.name_ar : headerCat.name);
-      }
-    }
     
     if (selectedWPCategory) {
       const wpCat = WORDPRESS_CATEGORIES.find(c => c.id === selectedWPCategory);
@@ -724,19 +655,12 @@ const News = () => {
       }
     }
     
-    if (selectedChampion) {
-      filters.push(currentLanguage === "ar" ? "منتخب محدد" : "Équipe sélectionnée");
-    }
-    
     return filters;
   };
 
-  // Fonction pour réinitialiser tous les filtres
+  // Fonction pour réinitialiser tous les filtres WordPress
   const clearAllFilters = () => {
-    setSelectedHeaderCategory(null);
-    setSelectedSubCategory(null);
     setSelectedWPCategory(null);
-    setSelectedChampion(null);
     setPage(1);
     setAllNews([]);
     setDisplayedNews([]);
@@ -827,10 +751,10 @@ const News = () => {
         <HeaderAd testMode={process.env.NODE_ENV === "development"} />
 
         <CategoryFilterHeader
-          selectedHeaderCategory={selectedHeaderCategory}
-          setSelectedHeaderCategory={setSelectedHeaderCategory}
-          selectedSubCategory={selectedSubCategory}
-          setSelectedSubCategory={setSelectedSubCategory}
+          selectedHeaderCategory={null}
+          setSelectedHeaderCategory={() => {}}
+          selectedSubCategory={null}
+          setSelectedSubCategory={() => {}}
           selectedWPCategory={selectedWPCategory}
           setSelectedWPCategory={setSelectedWPCategory}
           currentLanguage={currentLanguage}
@@ -855,7 +779,7 @@ const News = () => {
               {/* Loading state - Responsive Grid avec indicateur de filtre */}
               {loadingNews && displayedNews.length === 0 && (
                 <div className="space-y-4">
-                  {/* Enhanced Loading Indicator for Multiple Filters */}
+                  {/* Enhanced Loading Indicator for WordPress Filters */}
                   {hasActiveFilters() && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                       <div className="flex items-center gap-2">
@@ -903,7 +827,7 @@ const News = () => {
                     {displayedNews.map((newsItem, index) => (
                       <React.Fragment key={newsItem.id}>
                         <div className="relative">
-                          <Link to={`/news/${newsItem.id}`}>
+                          <Link to={`/news/${newsItem.source === 'wordpress' ? generateWordPressSlug(newsItem.title, Number(newsItem.id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItem.title, newsItem.id)}`}>
                             <NewsCard news={newsItem} size="medium" />
                             {newsItem.source === "wordpress" && (
                               <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
@@ -963,7 +887,7 @@ const News = () => {
                 </div>
               )}
 
-              {/* Load More Button */}
+              {/* Load More Button - Pagination manuelle uniquement */}
               {page < totalPages && (
                 <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
                   <Button
@@ -976,7 +900,7 @@ const News = () => {
                     }}
                     disabled={loadingNews || isPageTransition}
                   >
-                    {loadingNews || isPageTransition ? 'جاري التحميل...' : 'اظهر المزيد'}
+                    {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`}
                   </Button>
                 </div>
               )}
@@ -1030,6 +954,7 @@ const News = () => {
         </div>
 
         <Footer />
+        
       </div>
 
       {/* Report Dialog - Mobile Responsive */}

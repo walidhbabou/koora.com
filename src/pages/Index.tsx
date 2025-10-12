@@ -42,9 +42,9 @@ const SPECIFIC_LEAGUES = [
     country: "MA المغرب",
   },
 ];
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 
-const NEWS_PER_PAGE = 15; // Changer à 15 actualités par page
+const NEWS_PER_PAGE = 30; // Augmenté à 30 actualités par page comme News.tsx
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
 import Header from "@/components/Header";
@@ -63,6 +63,7 @@ import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
 import { fetchWordPressNews } from "@/utils/newsUtils";
 import { footballAPI } from "@/config/api";
+import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 import { Filter } from "lucide-react";
 import { useMatchesByDateAndLeague, useLeagues } from "@/hooks/useFootballAPI";
 import { Fixture } from "@/config/api";
@@ -111,6 +112,7 @@ type NewsCardItem = {
   imageUrl: string;
   publishedAt: string;
   category: string;
+  source?: string;
 };
 
 const Index = () => {
@@ -124,14 +126,12 @@ const Index = () => {
   const [search, setSearch] = useState("");
   const [carouselIndex, setCarouselIndex] = useState<number>(0);
   const [isPageTransition, setIsPageTransition] = useState<boolean>(false);
-  // Matches (dynamic by date + filter)
+  
+
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
   const [mainLeaguesOnly, setMainLeaguesOnly] = useState<boolean>(true);
-  // Ligues spécifiques à afficher selon l'image
-  // (déplacé en dehors du composant)
-
   const [selectedLeagues, setSelectedLeagues] = useState<number[]>(
     SPECIFIC_LEAGUES.map((l) => l.id)
   );
@@ -232,180 +232,31 @@ const Index = () => {
   const fetchNews = async (nextPage: number = 1, append: boolean = false) => {
     setLoading(true);
     try {
-      // Fetch Supabase news
-      const query = supabase
-        .from("news")
-        .select("*", { count: "exact" })
-        .eq("status", "published")
-        .order("created_at", { ascending: false })
-        .range((nextPage - 1) * NEWS_PER_PAGE, nextPage * NEWS_PER_PAGE - 1);
-
-      const { data: supabaseData, count, error: supabaseError } = await query;
-      if (supabaseError) throw supabaseError;
-
-      // Fetch MySQL news from API
-      let mysqlData: {
-        ID: string | number;
-        post_title?: string;
-        post_excerpt?: string;
-        post_content?: string;
-        post_date?: string;
-      }[] = [];
-      try {
-        const mysqlResp = await fetch("/api/news");
-        if (mysqlResp.ok) {
-          try {
-            mysqlData = await mysqlResp.json();
-          } catch (jsonErr) {
-            console.error("MySQL API returned invalid JSON:", jsonErr);
-            mysqlData = [];
-          }
-        } else {
-          console.error(
-            "MySQL API error:",
-            mysqlResp.status,
-            await mysqlResp.text()
-          );
-        }
-      } catch (apiErr) {
-        console.error("Failed to fetch MySQL news:", apiErr);
-        mysqlData = [];
-      }
-
-      // Fetch WordPress news avec la nouvelle fonction améliorée
+      // Fetch WordPress news uniquement
       let wordPressNews: NewsCardItem[] = [];
       try {
         wordPressNews = await fetchWordPressNews({
           perPage: 100,
           page: 1,
-          maxTotal: 150 // Limiter pour éviter la surcharge
+          maxTotal: 300 // Augmenté pour charger plus d'articles
         });
+        console.log(`WordPress news fetched: ${wordPressNews.length} articles`);
       } catch (wpError) {
         console.error("Failed to fetch WordPress news:", wpError);
         wordPressNews = [];
       }
 
-      // Helper: extract text from Editor.js JSON
-      const extractTextFromEditorJs = (content: string) => {
-        try {
-          const cleanContent = content
-            .replace(/&quot;/g, '"')
-            .replace(/&amp;/g, "&")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/&#39;/g, "'")
-            .replace(/&nbsp;/g, " ")
-            .replace(/\\"/g, '"');
-          const parsed = JSON.parse(cleanContent);
-          if (parsed.blocks && Array.isArray(parsed.blocks)) {
-            return parsed.blocks
-              .map(
-                (block: {
-                  type: string;
-                  data?: { text?: string; items?: string[] };
-                }) => {
-                  if (
-                    (block.type === "paragraph" || block.type === "header") &&
-                    block.data?.text
-                  ) {
-                    return block.data.text
-                      .replace(/<[^>]*>/g, " ")
-                      .replace(/\s+/g, " ")
-                      .trim();
-                  }
-                  if (block.type === "list" && block.data?.items) {
-                    return block.data.items.join(" ");
-                  }
-                  return "";
-                }
-              )
-              .filter((text) => text.length > 0)
-              .join(" ");
-          }
-          return "";
-        } catch {
-          // Fallback: try to extract text from raw JSON or string
-          const textMatches = content.match(/"text":\s*"([^"]+)"/g);
-          if (textMatches && textMatches.length > 0) {
-            return textMatches
-              .map((match) => match.replace(/"text":\s*"([^"]+)"/, "$1"))
-              .join(" ");
-          }
-          return "";
-        }
-      };
-
-      const stripHtml = (html: string) =>
-        html
-          .replace(/<[^>]*>/g, " ")
-          .replace(/&nbsp;/gi, " ")
-          .replace(/&amp;/gi, "&")
-          .replace(/&lt;/gi, "<")
-          .replace(/&gt;/gi, ">")
-          .replace(/\s+/g, " ")
-          .trim();
-
-      // Map Supabase news
-      const supabaseMapped: NewsCardItem[] = (supabaseData || []).map(
-        (n: {
-          id: string;
-          title: string;
-          content: string;
-          image_url: string;
-          created_at: string;
-        }) => {
-          const textContent = extractTextFromEditorJs(n.content ?? "");
-          const plain = stripHtml(textContent);
-          return {
-            id: String(n.id),
-            title: n.title ?? "-",
-            summary: plain.slice(0, 160) + (plain.length > 160 ? "…" : ""),
-            imageUrl: n.image_url || "/placeholder.svg",
-            publishedAt: n.created_at
-              ? new Date(n.created_at).toISOString().slice(0, 10)
-              : "",
-            category: "أخبار",
-          };
-        }
-      );
-
-      // Map MySQL news
-      const mysqlMapped: NewsCardItem[] = (mysqlData || []).map(
-        (n: {
-          ID: string | number;
-          post_title?: string;
-          post_excerpt?: string;
-          post_content?: string;
-          post_date?: string;
-        }) => {
-          // Use excerpt if available, else first 160 chars of content
-          const summaryRaw = n.post_excerpt || n.post_content || "";
-          const plain = stripHtml(summaryRaw);
-          return {
-            id: `mysql_${n.ID}`,
-            title: n.post_title ?? "-",
-            summary: plain.slice(0, 160) + (plain.length > 160 ? "…" : ""),
-            imageUrl: "/placeholder.svg", // You can update if you have image field
-            publishedAt: n.post_date
-              ? new Date(n.post_date).toISOString().slice(0, 10)
-              : "",
-            category: "أخبار",
-            source: 'mysql' as const
-          };
-        }
-      );
-
-      // Merge and sort all news by publishedAt desc
-      const allNews = [...supabaseMapped, ...mysqlMapped, ...wordPressNews].sort((a, b) =>
+      // Trier par date
+      wordPressNews.sort((a, b) => 
         b.publishedAt.localeCompare(a.publishedAt)
       );
       
       // Stocker toutes les news et paginer
       if (!append) {
-        setAllNewsItems(allNews);
-        paginateNews(allNews, nextPage);
+        setAllNewsItems(wordPressNews);
+        paginateNews(wordPressNews, nextPage);
       } else {
-        const updatedAllNews = [...allNewsItems, ...allNews];
+        const updatedAllNews = [...allNewsItems, ...wordPressNews];
         setAllNewsItems(updatedAllNews);
         paginateNews(updatedAllNews, nextPage);
       }
@@ -422,24 +273,57 @@ const Index = () => {
     fetchNews(1, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fonction pour charger plus d'articles
-  const handleLoadMore = () => {
+  // Fonction pour charger plus d'articles à partir du cache
+  const handleLoadMore = useCallback(() => {
     if (loading || isPageTransition || page >= totalPages) return;
     
     setIsPageTransition(true);
     
-    // Charger la page suivante et ajouter au contenu existant
+    // Utiliser les données déjà chargées en cache au lieu de recharger
     const nextPage = page + 1;
     const startIndex = (nextPage - 1) * NEWS_PER_PAGE;
     const endIndex = startIndex + NEWS_PER_PAGE;
     const newItems = allNewsItems.slice(startIndex, endIndex);
     
+    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}`);
+    
     setTimeout(() => {
       setNewsItems(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
       setIsPageTransition(false);
-    }, 300);
-  };
+    }, 50); // Réduit pour une réactivité maximale
+  }, [loading, isPageTransition, page, totalPages, allNewsItems]);
+
+  // Système de scroll infini automatique - DÉSACTIVÉ
+  // useEffect(() => {
+  //   if (!loadMoreRef.current) return;
+
+  //   observerRef.current = new IntersectionObserver(
+  //     (entries) => {
+  //       const target = entries[0];
+  //       if (target.isIntersecting && page < totalPages && !loading && !isPageTransition && !isAutoLoading) {
+  //         console.log('Scroll infini détecté, chargement automatique...');
+  //         setIsAutoLoading(true);
+  //         handleLoadMore();
+  //         setTimeout(() => setIsAutoLoading(false), 1000);
+  //       }
+  //     },
+  //     {
+  //       threshold: 0.1,
+  //       rootMargin: '100px', // Déclencher 100px avant d'atteindre l'élément
+  //     }
+  //   );
+
+  //   if (loadMoreRef.current) {
+  //     observerRef.current.observe(loadMoreRef.current);
+  //   }
+
+  //   return () => {
+  //     if (observerRef.current) {
+  //       observerRef.current.disconnect();
+  //     }
+  //   };
+  // }, [page, totalPages, loading, isPageTransition, isAutoLoading, handleLoadMore]);
 
   // Re-fetch news on page change - Commenté car on utilise la pagination locale
   // useEffect(() => {
@@ -594,7 +478,7 @@ const Index = () => {
                       {/* First Row - Single Card */}
                       {currentCarouselItems[0] && (
                         <Link
-                          to={`/news/${currentCarouselItems[0].id}`}
+                          to={`/news/${generateWordPressSlug(currentCarouselItems[0].title, Number(currentCarouselItems[0].id.toString().replace('wp_', '')))}`}
                           className="block h-full"
                         >
                           <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -627,7 +511,7 @@ const Index = () => {
                         {currentCarouselItems.slice(1, 3).map((news) => (
                           <Link
                             key={news.id}
-                            to={`/news/${news.id}`}
+                            to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`}
                             className="block h-full"
                           >
                             <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -655,7 +539,7 @@ const Index = () => {
                     <div className="lg:col-span-2">
                       {currentCarouselItems[3] && (
                         <Link
-                          to={`/news/${currentCarouselItems[3].id}`}
+                          to={`/news/${generateWordPressSlug(currentCarouselItems[3].title, Number(currentCarouselItems[3].id.toString().replace('wp_', '')))}`}
                           className="block h-full"
                         >
                           <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -688,39 +572,53 @@ const Index = () => {
               </section>
             )}
 
-            {/* Additional News Section */}
-            {newsItems.length > 5 && (
+            {/* Additional News Section - Layout amélioré comme News.tsx */}
+            {newsItems.length >= 8 && (
               <div className="mt-8 pt-10 lg:mt-12">
-                <h2 className="text-lg sm:text-xl font-bold text-sport-dark mb-4 lg:mb-6">
+                <h2 className="text-lg sm:text-xl font-bold text-sport-dark mb-4 lg:mb-6 flex items-center gap-3">
+                  <div className="w-1 h-6 bg-sport-primary rounded-full"></div>
                   المزيد من الأخبار
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
-                  {newsItems.slice(5).map((news) => (
-                    <Link
-                      key={news.id}
-                      to={`/news/${news.id}`}
-                      className="block"
-                    >
-                      <NewsCard news={news} size="medium" />
-                    </Link>
+                
+                {/* Grid responsive avec cartes comme News.tsx */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  {newsItems.slice(5).map((news, index) => (
+                    <div key={news.id} className="relative">
+                      <Link
+                        to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`}
+                        className="block"
+                      >
+                        <NewsCard news={news} size="medium" />
+                        <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                          كورة
+                        </div>
+                      </Link>
+                      
+                      {/* Insérer une annonce après chaque 6 articles */}
+                      {(index + 1) % 6 === 0 && index < newsItems.slice(5).length - 1 && (
+                        <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4">
+                          <SidebarAd testMode={process.env.NODE_ENV === "development"} />
+                        </div>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Load More Button */}
+            {/* Load More Button - Pagination manuelle uniquement */}
             {page < totalPages && (
               <div className="flex justify-center mt-8">
                 <button
                   type="button"
-                  className="px-6 py-3 bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50"
+                  className="px-6 py-3 bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50 rounded-lg"
                   onClick={(e) => {
                     e.preventDefault();
                     handleLoadMore();
                   }}
                   disabled={loading || isPageTransition}
                 >
-                  {loading || isPageTransition ? 'جاري التحميل...' : 'اظهر المزيد'}
+                  {loading || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNewsItems.length - newsItems.length} متبقي)`}
                 </button>
               </div>
             )}
@@ -790,7 +688,7 @@ const Index = () => {
                 {/* Main Featured Article */}
                 {newsItems.length > 2 && (
                   <>
-                    <Link to={`/news/${newsItems[2].id}`} className="block ">
+                    <Link to={`/news/${newsItems[2].source === 'wordpress' ? generateWordPressSlug(newsItems[2].title, Number(newsItems[2].id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItems[2].title, newsItems[2].id)}`} className="block ">
                       <Card className="relative overflow-hidden h-48 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[2].imageUrl || "/placeholder.svg"}
@@ -815,7 +713,7 @@ const Index = () => {
                         </div>
                       </Card>
                     </Link>
-                    <Link to={`/news/${newsItems[1].id}`} className="block">
+                    <Link to={`/news/${newsItems[1].source === 'wordpress' ? generateWordPressSlug(newsItems[1].title, Number(newsItems[1].id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItems[1].title, newsItems[1].id)}`} className="block">
                       <Card className="relative overflow-hidden h-36 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[1].imageUrl || "/placeholder.svg"}
@@ -848,7 +746,7 @@ const Index = () => {
                   {newsItems.slice(2, 4).map((news, index) => (
                     <Link
                       key={news.id}
-                      to={`/news/${news.id}`}
+                      to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`}
                       className="block"
                     >
                       <Card className="relative overflow-hidden h-36 group cursor-pointer !rounded-none">
@@ -878,43 +776,77 @@ const Index = () => {
             </section>
           )}
 
-          {/* Additional News Grid - Mobile */}
+          {/* Additional News Grid - Mobile amélioré */}
           <div className="grid grid-cols-1 gap-4 animate-in fade-in-50">
             {!loading &&
-              newsItems.length > 5 &&
+              newsItems.length >= 8 &&
               newsItems.slice(5).map((news, idx) => (
-                <Link key={news.id} to={`/news/${news.id}`} className="block">
-                  <NewsCard news={news} size="medium" />
-                </Link>
+                <div key={news.id} className="relative">
+                  <Link 
+                    to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`} 
+                    className="block"
+                  >
+                    <NewsCard news={news} size="medium" />
+                    <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                      كورة
+                    </div>
+                  </Link>
+                  
+                  {/* Insérer une annonce après chaque 4 articles sur mobile */}
+                  {(idx + 1) % 4 === 0 && idx < newsItems.slice(5).length - 1 && (
+                    <div className="my-4">
+                      <MobileAd testMode={process.env.NODE_ENV === "development"} />
+                    </div>
+                  )}
+                </div>
               ))}
-            {/* Load More Button Mobile */}
+            
+            {!loading && newsItems.length === 0 && (
+              <Card className="mt-4 p-8 text-center text-muted-foreground">
+                لا توجد أخبار متاحة حالياً
+              </Card>
+            )}
+            
+            {/* Load More Button Mobile - Pagination manuelle uniquement */}
             {page < totalPages && (
               <div className="flex justify-center mt-8">
                 <button
                   type="button"
-                  className="px-6 py-3 bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50"
+                  className="px-6 py-3 bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50 rounded-lg"
                   onClick={(e) => {
                     e.preventDefault();
                     handleLoadMore();
                   }}
                   disabled={loading || isPageTransition}
                 >
-                  {loading || isPageTransition ? 'جاري التحميل...' : 'اظهر المزيد'}
+                  {loading || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNewsItems.length - newsItems.length} متبقي)`}
                 </button>
               </div>
             )}
+            
             {!loading && newsItems.length === 0 && (
               <Card className="mt-4 p-8 text-center text-muted-foreground">
                 لا توجد أخبار متاحة حالياً
               </Card>
             )}
           </div>
+          
           <div style={{direction: 'ltr'}}>
             <Sidebar />
           </div>
         </div>
       </div>
+      
       <Footer />
+      
+      {/* Statistiques de performance (dev mode) */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="fixed bottom-4 left-4 bg-black/80 text-white text-xs p-2 rounded-lg z-50">
+          <div>📊 Articles: {allNewsItems.length} total, {newsItems.length} affichés</div>
+          <div>📄 Page: {page}/{totalPages}</div>
+          <div>⚡ Sources: WordPress uniquement</div>
+        </div>
+      )}
     </div>
   );
 };

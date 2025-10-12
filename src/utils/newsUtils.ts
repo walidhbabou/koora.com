@@ -194,37 +194,6 @@ export const parseEditorJsContent = (content: string): string => {
 };
 
 import { WordPressNewsItem, NewsCardItem } from '../types/news';
-import { SUPABASE_TO_WORDPRESS_MAPPING } from '../config/wordpressCategories';
-
-// Mapping between Supabase categories and WordPress categories
-export const getWordPressCategoriesForFilter = (
-  selectedHeaderCategory: number | null,
-  selectedSubCategory: number | null
-): number[] => {
-  // If no filter is selected, return empty array (fetch all)
-  if (!selectedHeaderCategory) {
-    return [];
-  }
-
-  const categoryMapping = SUPABASE_TO_WORDPRESS_MAPPING[selectedHeaderCategory as keyof typeof SUPABASE_TO_WORDPRESS_MAPPING];
-  
-  if (!categoryMapping) {
-    console.warn(`No WordPress category mapping found for Supabase category ${selectedHeaderCategory}`);
-    return [];
-  }
-
-  // If a specific subcategory is selected
-  if (selectedSubCategory && categoryMapping.subCategories[selectedSubCategory]) {
-    const categories = categoryMapping.subCategories[selectedSubCategory];
-    console.log(`Mapping Supabase category ${selectedHeaderCategory}.${selectedSubCategory} to WordPress categories: ${categories.join(', ')}`);
-    return categories;
-  }
-
-  // Return all categories for this header category
-  const categories = categoryMapping.all;
-  console.log(`Mapping Supabase category ${selectedHeaderCategory} (all) to WordPress categories: ${categories.join(', ')}`);
-  return categories;
-};
 
 // Mapping des catégories WordPress (basé sur votre liste)
 export const WORDPRESS_CATEGORIES = {

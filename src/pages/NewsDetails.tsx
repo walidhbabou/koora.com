@@ -1,3 +1,23 @@
+import React, { useEffect, useState, useCallback } from "react";
+import ReactDOM from "react-dom";
+import { createRoot, Root } from "react-dom/client";
+import SEO from "@/components/SEO";
+import { useParams, Link } from "react-router-dom";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Clock, ArrowRight, Flag, ExternalLink, AlertTriangle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import CommentsSection from "@/components/CommentsSection";
+import { useToast } from "@/hooks/use-toast";
+import DOMPurify from 'dompurify';
+import { useAuth } from "@/contexts/AuthContext";
+import { extractIdFromSlug, isWordPressSlug, generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
+
 // Instagram Embed using react-instagram-embed
 // Custom Instagram Embed for React 18
 const InstagramEmbed: React.FC<{ url: string }> = ({ url }) => {
@@ -32,25 +52,6 @@ const InstagramEmbed: React.FC<{ url: string }> = ({ url }) => {
     </div>
   );
 };
-
-import React, { useEffect, useState, useCallback } from "react";
-import ReactDOM from "react-dom";
-import { createRoot, Root } from "react-dom/client";
-import SEO from "@/components/SEO";
-import { useParams, Link } from "react-router-dom";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Clock, ArrowRight, Flag, ExternalLink, AlertTriangle } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import CommentsSection from "@/components/CommentsSection";
-import { useToast } from "@/hooks/use-toast";
-import DOMPurify from 'dompurify';
-import { useAuth } from "@/contexts/AuthContext";
 
 // Types pour WordPress
 interface WordPressNewsItem {
@@ -150,9 +151,13 @@ const extractYouTubeId = (url: string): string | null => {
 
 // Fonction pour nettoyer et valider le JSON avant parsing
 const cleanJsonString = (jsonString: string): string => {
+  if (!jsonString || typeof jsonString !== 'string') {
+    throw new Error('JSON string is empty or invalid');
+  }
+  
   try {
     // Remplacer les échappements malformés
-    let cleaned = jsonString
+    const cleaned = jsonString
       .replace(/\\&quot;/g, '"')  // Remplacer \&quot; par "
       .replace(/&quot;/g, '"')   // Remplacer &quot; par "
       .replace(/\\"/g, '"')      // Remplacer \" par "
@@ -167,7 +172,7 @@ const cleanJsonString = (jsonString: string): string => {
     
     try {
       // Méthode alternative : échapper correctement les guillemets dans les valeurs HTML
-      let alternativeCleaned = jsonString.replace(
+      const alternativeCleaned = jsonString.replace(
         /"text":"([^"]*(?:\\.[^"]*)*)"/g, 
         (match, content) => {
           const cleanContent = content
@@ -204,10 +209,14 @@ export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, capti
       script.id = "twitter-wjs";
       script.src = "https://platform.twitter.com/widgets.js";
       script.async = true;
-      script.onload = () => (window as any)?.twttr?.widgets?.load();
+      script.onload = () => {
+        // @ts-expect-error - Twitter widgets API
+        window.twttr?.widgets?.load();
+      };
       document.body.appendChild(script);
     } else {
-      (window as any)?.twttr?.widgets?.load();
+      // @ts-expect-error - Twitter widgets API
+      window.twttr?.widgets?.load();
     }
   }, [normalizedUrl]);
 
@@ -228,8 +237,19 @@ export const XEmbed: React.FC<{ url: string; caption?: string }> = ({ url, capti
 // Nouveau parser React-friendly
 const parseEditorJsBlocks = (content: string): EditorJsBlock[] => {
   try {
+    if (!content || typeof content !== 'string') {
+      console.warn('Content is empty or not a string');
+      return [];
+    }
+    
     const cleanedContent = cleanJsonString(content);
     const data: EditorJsData = JSON.parse(cleanedContent);
+    
+    if (!data || !Array.isArray(data.blocks)) {
+      console.warn('Invalid Editor.js data structure');
+      return [];
+    }
+    
     return data.blocks;
   } catch (error) {
     console.error('Erreur lors du parsing du contenu Editor.js:', error);
@@ -784,7 +804,7 @@ const newsContentStyles = `
 `
 
 const NewsDetails: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [news, setNews] = useState<NewsRow | null>(null);
   const [relatedNews, setRelatedNews] = useState<RelatedNewsItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -797,15 +817,43 @@ const NewsDetails: React.FC = () => {
   const [parsedBlocks, setParsedBlocks] = useState<EditorJsBlock[]>([]);
   const [isWordPressNews, setIsWordPressNews] = useState(false);
 
-  const loadWordPressNews = useCallback(async (newsId: string) => {
+  const loadWordPressNews = useCallback(async (newsSlug: string) => {
     try {
-      // Extraire l'ID numérique du préfixe wp_
-      const wpId = newsId.replace('wp_', '');
-      const response = await fetch(`https://koora.com/wp-json/wp/v2/posts/${wpId}?_embed`);
+      console.log('Loading WordPress news with slug:', newsSlug);
       
-      if (!response.ok) throw new Error('WordPress news not found');
+      // Extraire l'ID WordPress du slug
+      let wpId: string;
+      if (newsSlug.startsWith('wp_')) {
+        // Format: wp_12345
+        wpId = newsSlug.replace('wp_', '');
+      } else if (newsSlug.includes('wp_')) {
+        // Format: titre-article-wp_12345
+        const match = newsSlug.match(/wp_(\d+)$/);
+        wpId = match ? match[1] : '';
+      } else {
+        // Fallback : essayer d'extraire un ID numérique à la fin
+        const match = newsSlug.match(/-(\d+)$/);
+        wpId = match ? match[1] : '';
+      }
+      
+      console.log('Extracted WordPress ID:', wpId);
+      
+      if (!wpId) {
+        throw new Error('Could not extract WordPress ID from slug');
+      }
+      
+      const url = `https://koora.com/wp-json/wp/v2/posts/${wpId}?_embed`;
+      console.log('Fetching from URL:', url);
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        console.error('WordPress API response not ok:', response.status, response.statusText);
+        throw new Error('WordPress news not found');
+      }
       
       const wpNews: WordPressNewsItem = await response.json();
+      console.log('WordPress news loaded successfully:', wpNews.title.rendered);
       
       // Chercher l'image principale :
       let imageUrl = wpNews._embedded?.['wp:featuredmedia']?.[0]?.source_url || null;
@@ -928,17 +976,25 @@ const NewsDetails: React.FC = () => {
   }, []);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!slug) return;
     setLoading(true);
     setError(null);
+    setParsedBlocks([]);
+    setIsWordPressNews(false);
     
     try {
-      if (id.startsWith('wp_')) {
+      // Déterminer si c'est une news WordPress ou Supabase par le slug
+      if (isWordPressSlug(slug)) {
         // C'est une news WordPress
-        await loadWordPressNews(id);
+        await loadWordPressNews(slug);
       } else {
-        // C'est une news Supabase
-        await loadSupabaseNews(id);
+        // Extraire l'ID du slug et charger depuis Supabase
+        const newsId = extractIdFromSlug(slug);
+        if (newsId) {
+          await loadSupabaseNews(newsId);
+        } else {
+          throw new Error('ID invalide dans le slug');
+        }
       }
     } catch (e: unknown) {
       const error = e as { message?: string };
@@ -946,7 +1002,7 @@ const NewsDetails: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id, loadWordPressNews, loadSupabaseNews]);
+  }, [slug, loadWordPressNews, loadSupabaseNews]);
 
   const handleReport = async () => {
     if (!user || !reportDesc.trim()) return;
@@ -968,7 +1024,7 @@ const NewsDetails: React.FC = () => {
         .insert([
           {
             user_id: user.id,
-            news_id: Number(id),
+            news_id: Number(extractIdFromSlug(slug!)),
             description: reportDesc.trim(),
           },
         ]);
@@ -1148,88 +1204,97 @@ const NewsDetails: React.FC = () => {
                     ) : (
                       // Contenu Supabase - rendu Editor.js
                       parsedBlocks.map((block, index) => {
-                        // Special handling for code blocks with Twitter embed marker or HTML
-                        if (block.type === 'code') {
-                          const code = block.data.code || '';
-                          // 1. Detect marker
-                          const reactTwitterMarker = code.match(/^__REACT_TWITTER_EMBED__(https:\/\/twitter.com\/[^_]+)__$/);
-                          if (reactTwitterMarker) {
-                            return <XEmbed key={index} url={reactTwitterMarker[1]} />;
+                        try {
+                          // Special handling for code blocks with Twitter embed marker or HTML
+                          if (block.type === 'code') {
+                            const code = block.data.code || '';
+                            // 1. Detect marker
+                            const reactTwitterMarker = code.match(/^__REACT_TWITTER_EMBED__(https:\/\/twitter.com\/[^_]+)__$/);
+                            if (reactTwitterMarker) {
+                              return <XEmbed key={index} url={reactTwitterMarker[1]} />;
+                            }
+                            // 2. Detect Twitter embed HTML directly
+                            const twitterHtmlMatch = code.match(/<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/);
+                            if (twitterHtmlMatch && twitterHtmlMatch[1]) {
+                              return <XEmbed key={index} url={twitterHtmlMatch[1]} />;
+                            }
+                            // 3. Otherwise, render as code
+                            return <pre key={index} className="news-code"><code>{code}</code></pre>;
                           }
-                          // 2. Detect Twitter embed HTML directly
-                          const twitterHtmlMatch = code.match(/<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/);
-                          if (twitterHtmlMatch && twitterHtmlMatch[1]) {
-                            return <XEmbed key={index} url={twitterHtmlMatch[1]} />;
-                          }
-                          // 3. Otherwise, render as code
-                          return <pre key={index} className="news-code"><code>{code}</code></pre>;
-                        }
-                        switch (block.type) {
-                          case 'paragraph':
-                            return <div key={index} className="news-paragraph" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
-                          case 'header': {
-                            const level = block.data.level || 1;
-                            const HeaderTag = `h${level}` as keyof JSX.IntrinsicElements;
-                            return <HeaderTag key={index} className={`news-header news-header-${level}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
-                          }
-                          case 'list': {
-                            const isOrdered = block.data.style === 'ordered';
-                            const ListTag = isOrdered ? 'ol' : 'ul';
-                            const items = Array.isArray(block.data.items) ? block.data.items : [];
-                            const listStyle = isOrdered ? { listStyleType: 'decimal', paddingRight: 0 } : { listStyleType: 'disc', paddingRight: 0 };
-                            return (
-                              <ListTag key={index} className="news-list" style={listStyle}>
-                                {items.map((item, i) => {
-                                  if (typeof item === 'string') {
-                                    return <li key={i} className="news-list-item">{item}</li>;
-                                  }
-                                  if (item && typeof item === 'object' && 'content' in item && typeof item.content === 'string') {
-                                    return <li key={i} className="news-list-item">{item.content}</li>;
-                                  }
-                                  return null;
-                                })}
-                              </ListTag>
-                            );
-                          }
-                          case 'image': {
-                            const imageUrl = block.data.file?.url || block.data.url || '';
-                            return (
-                              <div key={index} className="news-image">
-                                <img src={imageUrl} alt={block.data.caption || ''} className="news-image-img" loading="lazy" />
-                                {block.data.caption && <div className="news-image-caption">{block.data.caption}</div>}
-                              </div>
-                            );
-                          }
-                          case 'embed': {
-                            const linkUrl = block.data.source || block.data.embed || '';
-                            if (/(?:twitter\.com|x\.com)/.test(linkUrl)) {
-                              const tweetId = extractTweetId(linkUrl);
-                              const caption = block.data.caption;
-                              if (tweetId) {
-                                return <XEmbed key={index} url={linkUrl} caption={caption} />;
+                          switch (block.type) {
+                            case 'paragraph':
+                              return <div key={index} className="news-paragraph" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
+                            case 'header': {
+                              const level = block.data.level || 1;
+                              const HeaderTag = `h${level}` as keyof JSX.IntrinsicElements;
+                              return <HeaderTag key={index} className={`news-header news-header-${level}`} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.data.text || '') }} />;
+                            }
+                            case 'list': {
+                              const isOrdered = block.data.style === 'ordered';
+                              const ListTag = isOrdered ? 'ol' : 'ul';
+                              const items = Array.isArray(block.data.items) ? block.data.items : [];
+                              const listStyle = isOrdered ? { listStyleType: 'decimal', paddingRight: 0 } : { listStyleType: 'disc', paddingRight: 0 };
+                              return (
+                                <ListTag key={index} className="news-list" style={listStyle}>
+                                  {items.map((item, i) => {
+                                    if (typeof item === 'string') {
+                                      return <li key={i} className="news-list-item">{item}</li>;
+                                    }
+                                    if (item && typeof item === 'object' && 'content' in item && typeof item.content === 'string') {
+                                      return <li key={i} className="news-list-item">{item.content}</li>;
+                                    }
+                                    return null;
+                                  })}
+                                </ListTag>
+                              );
+                            }
+                            case 'image': {
+                              const imageUrl = block.data.file?.url || block.data.url || '';
+                              return (
+                                <div key={index} className="news-image">
+                                  <img src={imageUrl} alt={block.data.caption || ''} className="news-image-img" loading="lazy" />
+                                  {block.data.caption && <div className="news-image-caption">{block.data.caption}</div>}
+                                </div>
+                              );
+                            }
+                            case 'embed': {
+                              const linkUrl = block.data.source || block.data.embed || '';
+                              if (/(?:twitter\.com|x\.com)/.test(linkUrl)) {
+                                const tweetId = extractTweetId(linkUrl);
+                                const caption = block.data.caption;
+                                if (tweetId) {
+                                  return <XEmbed key={index} url={linkUrl} caption={caption} />;
+                                }
                               }
-                            }
-                            if (/instagram\.com/.test(linkUrl)) {
-                              return <InstagramEmbed key={index} url={linkUrl} />;
-                            }
-                            return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
-                          }
-                          case 'linkTool': {
-                            const linkUrl = block.data.link || block.data.url || block.data.source || '';
-                            if (/(?:twitter\.com|x\.com)/.test(linkUrl)) {
-                              const tweetId = extractTweetId(linkUrl);
-                              const caption = block.data.caption;
-                              if (tweetId) {
-                                return <XEmbed key={index} url={linkUrl} caption={caption} />;
+                              if (/instagram\.com/.test(linkUrl)) {
+                                return <InstagramEmbed key={index} url={linkUrl} />;
                               }
+                              return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
                             }
-                            if (/instagram\.com/.test(linkUrl)) {
-                              return <InstagramEmbed key={index} url={linkUrl} />;
+                            case 'linkTool': {
+                              const linkUrl = block.data.link || block.data.url || block.data.source || '';
+                              if (/(?:twitter\.com|x\.com)/.test(linkUrl)) {
+                                const tweetId = extractTweetId(linkUrl);
+                                const caption = block.data.caption;
+                                if (tweetId) {
+                                  return <XEmbed key={index} url={linkUrl} caption={caption} />;
+                                }
+                              }
+                              if (/instagram\.com/.test(linkUrl)) {
+                                return <InstagramEmbed key={index} url={linkUrl} />;
+                              }
+                              return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
                             }
-                            return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
+                            default:
+                              return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
                           }
-                          default:
-                            return <div key={index} dangerouslySetInnerHTML={{ __html: parseOtherBlocksToHtml(block) }} />;
+                        } catch (renderError) {
+                          console.error('Error rendering block:', renderError, block);
+                          return (
+                            <div key={index} className="error">
+                              <p>خطأ في عرض المحتوى</p>
+                            </div>
+                          );
                         }
                       })
                     )}
@@ -1238,7 +1303,9 @@ const NewsDetails: React.FC = () => {
               </article>
 
               {/* Comments Section - Only for Supabase news */}
-              {!isWordPressNews && <CommentsSection newsId={Number(id)} />}
+              {!isWordPressNews && slug && extractIdFromSlug(slug) && (
+                <CommentsSection newsId={Number(extractIdFromSlug(slug))} />
+              )}
               
               
             </div>
@@ -1254,7 +1321,7 @@ const NewsDetails: React.FC = () => {
                   <div className="space-y-4">
                     {relatedNews.map((item) => (
                       <Card key={item.id} className="hover:shadow-md transition-shadow dark:bg-gray-800">
-                        <Link to={`/news/${item.id}`} className="block">
+                        <Link to={`/news/${generateUniqueSlug(item.title, item.id)}`} className="block">
                           {item.image_url && (
                             <img
                               src={item.image_url}
