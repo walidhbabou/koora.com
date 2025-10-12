@@ -382,52 +382,67 @@ const News = () => {
         return;
       }
 
-      console.log(`Fetching news for page ${nextPage}, append: ${append}, selectedWPCategory: ${selectedWPCategory}`);
+      console.log(`Fetching news for page ${nextPage}, append: ${append}, filters:`, {
+        selectedWPCategory,
+        selectedHeaderCategory,
+        selectedSubCategory,
+        selectedChampion
+      });
       setLoadingNews(true);
       
       try {
-        let combinedNews: NewsCardItem[];
+        let combinedNews: NewsCardItem[] = [];
 
-        if (selectedWPCategory) {
-          // Filtrage exclusif par catégorie WordPress
-          console.log(`Loading ONLY WordPress category: ${selectedWPCategory}`);
-          const wordpressNews = await fetchWordPressNewsData(selectedWPCategory);
-          
-          // Mise à jour immédiate des états pour le filtrage
-          setNews(wordpressNews);
-          setFilteredNews(wordpressNews);
-          setAllNews(wordpressNews);
-          setDisplayedNews(wordpressNews);
-          setHasMore(false);
-          setPage(1);
-          setTotalPages(1);
-          
-          console.log(`WordPress category filter complete: ${wordpressNews.length} articles`);
+        // Chargement parallèle avec filtres combinés
+        const startTime = Date.now();
+        
+        const [supabaseNews, wordpressNews] = await Promise.allSettled([
+          // Charger Supabase seulement si on a des filtres Supabase ou aucun filtre spécifique
+          (!selectedWPCategory || selectedHeaderCategory || selectedSubCategory || selectedChampion) 
+            ? fetchSupabaseNews(1) 
+            : Promise.resolve([]),
+          // Charger WordPress avec catégorie spécifique ou toutes si pas de filtre WP
+          fetchWordPressNewsData(selectedWPCategory || undefined),
+        ]);
+
+        const supabaseResult = supabaseNews.status === 'fulfilled' ? supabaseNews.value : [];
+        const wordpressResult = wordpressNews.status === 'fulfilled' ? wordpressNews.value : [];
+
+        console.log(`Parallel fetch completed in ${Date.now() - startTime}ms`);
+        console.log(`Supabase: ${supabaseResult.length}, WordPress: ${wordpressResult.length}`);
+
+        // Combiner selon les filtres appliqués
+        if (selectedWPCategory && !selectedHeaderCategory && !selectedSubCategory && !selectedChampion) {
+          // Filtrage exclusif WordPress si seule une catégorie WP est sélectionnée
+          combinedNews = wordpressResult;
+          console.log(`WordPress-only filter: ${combinedNews.length} articles`);
+        } else if (!selectedWPCategory && (selectedHeaderCategory || selectedSubCategory || selectedChampion)) {
+          // Filtrage exclusif Supabase si seules des catégories Supabase sont sélectionnées
+          combinedNews = supabaseResult;
+          console.log(`Supabase-only filter: ${combinedNews.length} articles`);
         } else {
-          // Chargement normal - parallèle optimisé
-          const startTime = Date.now();
-          
-          const [supabaseNews, wordpressNews] = await Promise.allSettled([
-            fetchSupabaseNews(1),
-            fetchWordPressNewsData(undefined),
-          ]);
-
-          const supabaseResult = supabaseNews.status === 'fulfilled' ? supabaseNews.value : [];
-          const wordpressResult = wordpressNews.status === 'fulfilled' ? wordpressNews.value : [];
-
-          console.log(`Parallel fetch completed in ${Date.now() - startTime}ms`);
-          console.log(`Supabase: ${supabaseResult.length}, WordPress: ${wordpressResult.length}`);
-
-          // Combiner et trier
+          // Combinaison des deux sources ou aucun filtre
           combinedNews = [...wordpressResult, ...supabaseResult];
-          combinedNews.sort((a, b) => 
-            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-          );
-
-          setAllNews(combinedNews);
-          paginateNews(combinedNews, nextPage);
-          setPage(nextPage);
+          console.log(`Combined sources: ${combinedNews.length} articles`);
         }
+
+        // Trier par date
+        combinedNews.sort((a, b) => 
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        );
+
+        // Mise à jour des états
+        setNews([]);
+        setFilteredNews(combinedNews);
+        setAllNews(combinedNews);
+        paginateNews(combinedNews, nextPage);
+        setPage(nextPage);
+        
+        // Ajuster hasMore selon le type de filtrage
+        const isFiltered = selectedWPCategory || selectedHeaderCategory || selectedSubCategory || selectedChampion;
+        setHasMore(isFiltered ? false : combinedNews.length >= pageSize);
+        setTotalPages(isFiltered ? 1 : Math.ceil(combinedNews.length / pageSize));
+
       } catch (error) {
         console.error("Failed to load news", error);
         setAllNews([]);
@@ -437,7 +452,7 @@ const News = () => {
         setLoadingNews(false);
       }
     },
-    [fetchSupabaseNews, fetchWordPressNewsData, paginateNews, shouldThrottleRequest, selectedWPCategory]
+    [fetchSupabaseNews, fetchWordPressNewsData, paginateNews, shouldThrottleRequest, selectedWPCategory, selectedHeaderCategory, selectedSubCategory, selectedChampion, pageSize]
   );
 
   // useEffect pour charger les news WordPress (pour debug et état séparé)
@@ -515,7 +530,7 @@ const News = () => {
     };
     
     quickLoad();
-  }, [selectedWPCategory]); // Seulement quand la catégorie WP change
+  }, [selectedWPCategory, fetchAllNews, fetchSupabaseNews, fetchWordPressNewsData, paginateNews]); // Ajout des dépendances manquantes
 
   // useEffect pour recharger quand les filtres changent - optimisé
   const prevFiltersRef = useRef({ selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory });
@@ -528,7 +543,7 @@ const News = () => {
       setAllNews([]);
       setDisplayedNews([]);
       fetchAllNews(1, false);
-    }, 800) // Réduit à 800ms pour plus de réactivité
+    }, 500) // Réduit à 500ms pour plus de réactivité dans le filtrage combiné
   );
 
   useEffect(() => {
@@ -549,20 +564,8 @@ const News = () => {
         wpCategory: selectedWPCategory
       });
       
-      // Pour les catégories WordPress, chargement immédiat
-      if (selectedWPCategory && prev.selectedWPCategory !== selectedWPCategory) {
-        setLoadingNews(true);
-        fetchWordPressNewsData(selectedWPCategory).then(wpNews => {
-          setNews(wpNews);
-          setFilteredNews(wpNews);
-          setAllNews(wpNews);
-          setDisplayedNews(wpNews);
-          setLoadingNews(false);
-        });
-      } else {
-        // Pour les autres filtres, utiliser le debounce
-        filterChangeDebounced.current();
-      }
+      // Chargement immédiat pour tous les filtres avec nouvelle logique combinée
+      filterChangeDebounced.current();
     }
 
     prevFiltersRef.current = { selectedHeaderCategory, selectedSubCategory, selectedChampion, selectedWPCategory };
@@ -688,6 +691,58 @@ const News = () => {
     handleCategoryChange(categoryId);
   };
 
+  // Fonction pour vérifier si des filtres sont actifs
+  const hasActiveFilters = () => {
+    return selectedWPCategory || selectedHeaderCategory || selectedSubCategory || selectedChampion;
+  };
+
+  // Fonction pour obtenir le texte des filtres actifs
+  const getActiveFiltersText = () => {
+    const filters = [];
+    
+    if (selectedHeaderCategory) {
+      // Cette logique devrait être importée du CategoryFilterHeader ou refactorisée
+      const headerCategories = [
+        { id: 1, name: 'Internationales', name_ar: 'البطولات الدولية' },
+        { id: 2, name: 'Mondiales', name_ar: 'البطولات العالمية' },
+        { id: 3, name: 'Continentales', name_ar: 'البطولات القارية' },
+        { id: 4, name: 'Locales', name_ar: 'البطولات المحلية' },
+        { id: 5, name: 'Transferts', name_ar: 'الانتقالات وأخبار اللاعبين' },
+        { id: 6, name: 'WordPress News', name_ar: 'فئات الأخبار' }
+      ];
+      
+      const headerCat = headerCategories.find(c => c.id === selectedHeaderCategory);
+      if (headerCat) {
+        filters.push(currentLanguage === "ar" ? headerCat.name_ar : headerCat.name);
+      }
+    }
+    
+    if (selectedWPCategory) {
+      const wpCat = WORDPRESS_CATEGORIES.find(c => c.id === selectedWPCategory);
+      if (wpCat) {
+        filters.push(currentLanguage === "ar" ? wpCat.name_ar : wpCat.name);
+      }
+    }
+    
+    if (selectedChampion) {
+      filters.push(currentLanguage === "ar" ? "منتخب محدد" : "Équipe sélectionnée");
+    }
+    
+    return filters;
+  };
+
+  // Fonction pour réinitialiser tous les filtres
+  const clearAllFilters = () => {
+    setSelectedHeaderCategory(null);
+    setSelectedSubCategory(null);
+    setSelectedWPCategory(null);
+    setSelectedChampion(null);
+    setPage(1);
+    setAllNews([]);
+    setDisplayedNews([]);
+    navigate('/news');
+  };
+
   // Trending topics derived from latest news titles
   const trendingTopics = displayedNews.slice(0, 5).map((n) => n.title);
 
@@ -791,25 +846,8 @@ const News = () => {
         <MobileAd testMode={process.env.NODE_ENV === "development"} />
 
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
-          {/* Current Filter Indicator */}
-          {selectedWPCategory && (
-            <div className="mb-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-3 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🔍</span>
-                  <span className="font-semibold">
-                    فلترة حسب: {WORDPRESS_CATEGORIES.find(cat => cat.id === selectedWPCategory)?.name_ar}
-                  </span>
-                </div>
-                <button 
-                  onClick={() => handleWordPressCategoryChange(null)}
-                  className="bg-white bg-opacity-20 hover:bg-opacity-30 px-3 py-1 rounded-full text-sm transition-colors"
-                >
-                  إلغاء الفلتر ✕
-                </button>
-              </div>
-            </div>
-          )}
+          
+
 
           <div className="flex flex-col lg:flex-row gap-1 sm:gap-2 lg:gap-4">
             {/* Main Content - Grid Layout */}
@@ -817,14 +855,24 @@ const News = () => {
               {/* Loading state - Responsive Grid avec indicateur de filtre */}
               {loadingNews && displayedNews.length === 0 && (
                 <div className="space-y-4">
-                  {/* Indicateur de filtrage */}
-                  {selectedWPCategory && (
+                  {/* Enhanced Loading Indicator for Multiple Filters */}
+                  {hasActiveFilters() && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                       <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                         <span className="text-blue-800 dark:text-blue-200 text-sm">
-                          جاري تحميل أخبار فئة: {WORDPRESS_CATEGORIES.find(cat => cat.id === selectedWPCategory)?.name_ar}
+                          {currentLanguage === "ar" 
+                            ? `جاري تحميل الأخبار المفلترة...` 
+                            : "Chargement des actualités filtrées..."
+                          }
                         </span>
+                        <div className="flex gap-1 flex-wrap">
+                          {getActiveFiltersText().map((filter, index) => (
+                            <span key={index} className="bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-1 py-0.5 rounded text-xs">
+                              {filter}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}

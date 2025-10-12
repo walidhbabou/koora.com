@@ -46,62 +46,64 @@ export const WORDPRESS_CATEGORIES: WordPressCategory[] = [
   { id: 1696, name: "FIFA Club World Cup", name_ar: "كأس العالم للأندية", slug: "fifa-club-world-cup" }
 ];
 
-// Mapping entre les catégories Supabase et WordPress
+// Mapping entre les catégories Supabase et WordPress (IDs corrigés selon la logique)
 export const SUPABASE_TO_WORDPRESS_MAPPING = {
-  // Compétitions internationales (selectedHeaderCategory = 1)
+  // Compétitions internationales (selectedHeaderCategory = 1) - Ligues européennes
   1: {
-    all: [2, 3, 4, 5, 6, 7], // Toutes les compétitions européennes
+    all: [13, 14, 15, 16, 17, 18], // Toutes les ligues européennes/internationales
     subCategories: {
-      1: [2], // Premier League anglaise
-      2: [3], // La Liga espagnole
-      3: [4], // Serie A italienne
-      4: [5], // Ligue 1 française
-      5: [6], // Bundesliga allemande
-      6: [7], // Compétitions européennes (UCL, UEL)
+      1: [14], // الدوري الألماني (Bundesliga) → WordPress ID 14
+      2: [16], // الدوري الإنجليزي (Premier League) → WordPress ID 16  
+      3: [17], // الدوري الإيطالي (Serie A) → WordPress ID 17
+      4: [15], // الدوري الإسباني (La Liga) → WordPress ID 15
+      5: [18], // الدوري الفرنسي (Ligue 1) → WordPress ID 18
     }
   },
   
-  // Compétitions mondiales (selectedHeaderCategory = 2)
+  // Compétitions mondiales (selectedHeaderCategory = 2) - Coupes du monde
   2: {
-    all: [8, 9, 10, 17, 18], // Toutes les compétitions mondiales
+    all: [7, 8, 9, 10, 11, 12, 74, 1696], // Toutes les compétitions mondiales
     subCategories: {
-      1: [18], // Coupe du Monde
-      2: [17], // Eliminatoires Mondiales
-      3: [8],  // Coupe d'Asie
-      4: [9],  // Coupe d'Amérique
-      5: [10], // Coupe d'Afrique
+      1: [1696], // كأس العالم للأندية (FIFA Club World Cup) → WordPress ID 1696
+      2: [11],   // كأس العالم (World Cup) → WordPress ID 11
+      3: [8],    // كأس آسيا (Asian Cup) → WordPress ID 8
+      4: [9],    // كأس أم أفريقيا (African Cup) → WordPress ID 9
+      5: [74],   // كأس الخليج العربي (Gulf Cup) → WordPress ID 74
+      6: [10],   // كأس أم أوروبا (European Championship) → WordPress ID 10
+      7: [12],   // كوبا أمريكا (Copa America) → WordPress ID 12
     }
   },
   
-  // Compétitions continentales (selectedHeaderCategory = 3)
+  // Compétitions continentales (selectedHeaderCategory = 3) - Ligues champions continentales
   3: {
-    all: [11, 12, 20], // Compétitions continentales
+    all: [19, 20, 21, 22, 23, 24], // Compétitions continentales
     subCategories: {
-      1: [11], // Ligue des champions
-      2: [12], // Ligue Europa
-      3: [20], // Coupe arabe
+      1: [23], // دوري أبطال أوروبا (UEFA Champions League) → WordPress ID 23
+      2: [20], // الدوري الأوروبي (Europa League) → WordPress ID 20  
+      3: [21], // دوري أبطال آسيا (AFC Champions League) → WordPress ID 21
+      4: [22], // دوري أبطال أفريقيا (CAF Champions League) → WordPress ID 22
+      5: [24], // كوبا ليبرتادوريس (Copa Libertadores) → WordPress ID 24
     }
   },
   
-  // Compétitions locales (selectedHeaderCategory = 4)
+  // Compétitions locales (selectedHeaderCategory = 4) - Ligues arabes/locales
   4: {
-    all: [13, 14, 15, 16, 21, 22, 29], // Toutes les compétitions locales
+    all: [29, 30, 31, 32, 33, 34], // Toutes les compétitions locales
     subCategories: {
-      1: [13], // Compétitions nationales générales
-      2: [14], // Coupe Portugal
-      3: [15], // Coupe Espagne
-      4: [16], // Coupe Argentine
-      5: [21], // Coupe italienne
-      6: [22], // Coupe espagnole
+      1: [30], // الدوري الجزائري → WordPress ID 30
+      2: [31], // الدوري السعودي → WordPress ID 31
+      3: [32], // الدوري القطري → WordPress ID 32
+      4: [33], // الدوري المصري → WordPress ID 33
+      5: [34], // الدوري المغربي → WordPress ID 34
     }
   },
   
   // Transferts et mercato (selectedHeaderCategory = 5)
   5: {
-    all: [23, 24], // Transferts et mercato
+    all: [2, 3, 4, 5, 6], // Transferts et mercato
     subCategories: {
-      1: [23], // Transferts
-      2: [24], // Mercato
+      // Les transferts n'ont pas de sous-catégories spécifiques visibles
+      // On utilise toutes les catégories de transferts
     }
   }
 };
