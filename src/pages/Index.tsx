@@ -61,7 +61,11 @@ import {
 } from "@/components/AdWrapper";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
-import { fetchWordPressNews } from "@/utils/newsUtils";
+import { 
+  fetchWordPressNews, 
+  fetchWordPressNewsFirstPage, 
+  fetchWordPressNewsBackground 
+} from "@/utils/newsUtils";
 import { footballAPI } from "@/config/api";
 import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 import { Filter } from "lucide-react";
@@ -232,39 +236,69 @@ const Index = () => {
   const fetchNews = async (nextPage: number = 1, append: boolean = false) => {
     setLoading(true);
     try {
-      // Fetch WordPress news uniquement
-      let wordPressNews: NewsCardItem[] = [];
+      // Chargement rapide en deux étapes
+      console.log('🚀 Chargement rapide des news pour la page d\'accueil...');
+      
+      // Étape 1: Charger rapidement la première page (30 articles)
+      let firstPageNews: NewsCardItem[] = [];
       try {
-        wordPressNews = await fetchWordPressNews({
-          perPage: 100,
-          page: 1,
-          maxTotal: 300 // Augmenté pour charger plus d'articles
-        });
-        console.log(`WordPress news fetched: ${wordPressNews.length} articles`);
-      } catch (wpError) {
-        console.error("Failed to fetch WordPress news:", wpError);
-        wordPressNews = [];
+        firstPageNews = await fetchWordPressNewsFirstPage({});
+        console.log(`✅ Première page chargée: ${firstPageNews.length} articles`);
+      } catch (firstPageError) {
+        console.error("Failed to fetch WordPress first page:", firstPageError);
+        firstPageNews = [];
       }
 
       // Trier par date
-      wordPressNews.sort((a, b) => 
+      firstPageNews.sort((a, b) => 
         b.publishedAt.localeCompare(a.publishedAt)
       );
       
-      // Stocker toutes les news et paginer
+      // Afficher immédiatement la première page
       if (!append) {
-        setAllNewsItems(wordPressNews);
-        paginateNews(wordPressNews, nextPage);
-      } else {
-        const updatedAllNews = [...allNewsItems, ...wordPressNews];
-        setAllNewsItems(updatedAllNews);
-        paginateNews(updatedAllNews, nextPage);
+        setAllNewsItems(firstPageNews);
+        paginateNews(firstPageNews, nextPage);
       }
+      
+      setLoading(false);
+      
+      // Étape 2: Charger le reste en arrière-plan (après 300ms)
+      setTimeout(async () => {
+        try {
+          console.log('📦 Chargement des articles supplémentaires en arrière-plan...');
+          const backgroundNews = await fetchWordPressNewsBackground({
+            excludeFirstPage: true
+          });
+          
+          // Combiner première page + arrière-plan
+          const combinedNews = [...firstPageNews, ...backgroundNews];
+          
+          // Supprimer les doublons et trier
+          const uniqueNews = combinedNews.filter((item, index, self) => 
+            index === self.findIndex(t => t.id === item.id)
+          );
+          uniqueNews.sort((a, b) => 
+            b.publishedAt.localeCompare(a.publishedAt)
+          );
+          
+          console.log(`🎉 Chargement complet: ${uniqueNews.length} articles au total`);
+          
+          // Mettre à jour avec tous les articles
+          setAllNewsItems(uniqueNews);
+          // Garder la pagination actuelle mais mettre à jour les totaux
+          const totalPagesCount = Math.ceil(uniqueNews.length / NEWS_PER_PAGE);
+          setTotalPages(totalPagesCount);
+          setTotalCount(uniqueNews.length);
+          
+        } catch (backgroundError) {
+          console.error("❌ Erreur chargement arrière-plan:", backgroundError);
+        }
+      }, 300);
+      
     } catch (e) {
       console.error("Failed to load news", e);
       setNewsItems([]);
       setAllNewsItems([]);
-    } finally {
       setLoading(false);
     }
   };

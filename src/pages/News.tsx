@@ -2,6 +2,8 @@ import {
   stripHtml,
   parseEditorJsContent,
   fetchWordPressNews,
+  fetchWordPressNewsFirstPage,
+  fetchWordPressNewsBackground,
   transformWordPressNews,
 } from "@/utils/newsUtils";
 import { WORDPRESS_CATEGORIES } from "@/config/wordpressCategories";
@@ -229,11 +231,11 @@ const News = () => {
     [selectedChampion, selectedHeaderCategory, selectedSubCategory]
   );
 
-  // Fonction pour récupérer les news WordPress avec cache
+  // Fonction pour récupérer les news WordPress avec cache optimisé
   const fetchWordPressNewsData = useCallback(async (categoryId?: number): Promise<NewsCardItem[]> => {
     const startTime = performance.now();
     try {
-      console.log(`Fetching WordPress news with categoryId: ${categoryId}`);
+      console.log(`🚀 Fetching WordPress news with categoryId: ${categoryId}`);
       
       // Vérifier le cache d'abord
       const cacheKey = categoryId ? `cat-${categoryId}` : 'all';
@@ -246,35 +248,70 @@ const News = () => {
         return wpNewsCache.get(cacheKey)!;
       }
       
-      console.log(`🔄 Cache MISS pour ${cacheKey} - Fetching from API`);
+      console.log(`🔄 Cache MISS pour ${cacheKey} - Chargement rapide de la première page`);
       setPerformanceStats(prev => ({ 
         ...prev, 
         cacheMisses: prev.cacheMisses + 1 
       }));
       
-      // Get WordPress categories based on current filter selection or URL parameter
-      const result = await fetchWordPressNews({
-        perPage: categoryId ? 100 : 100, // Plus d'articles par page
-        page: 1,
-        maxTotal: categoryId ? 300 : 500, // Beaucoup plus d'articles au total
+      // Étape 1: Charger rapidement la première page (affichage immédiat)
+      const firstPageResult = await fetchWordPressNewsFirstPage({
         categories: categoryId ? [categoryId] : undefined,
       });
       
-      // Mettre en cache le résultat
-      setWpNewsCache(prev => new Map(prev).set(cacheKey, result));
+      // Mettre en cache partiellement et afficher immédiatement
+      const partialCacheKey = `${cacheKey}_partial`;
+      setWpNewsCache(prev => new Map(prev).set(partialCacheKey, firstPageResult));
       
-      // Enregistrer les statistiques de performance
-      const loadTime = performance.now() - startTime;
+      // Enregistrer les statistiques de la première page
+      const firstPageLoadTime = performance.now() - startTime;
       setPerformanceStats(prev => ({ 
         ...prev, 
-        lastLoadTime: loadTime,
-        averageLoadTime: prev.cacheMisses === 1 ? loadTime : (prev.averageLoadTime + loadTime) / 2,
-        totalArticlesLoaded: result.length,
+        lastLoadTime: firstPageLoadTime,
+        totalArticlesLoaded: firstPageResult.length,
         lastCacheUpdate: Date.now()
       }));
       
-      console.log(`✅ WordPress news fetched: ${result.length} articles in ${loadTime.toFixed(2)}ms`);
-      return result;
+      console.log(`✅ Première page chargée: ${firstPageResult.length} articles en ${firstPageLoadTime.toFixed(2)}ms`);
+      
+      // Étape 2: Charger le reste en arrière-plan (sans bloquer l'affichage)
+      setTimeout(async () => {
+        try {
+          console.log(`📦 Chargement en arrière-plan pour ${cacheKey}...`);
+          const backgroundResult = await fetchWordPressNewsBackground({
+            categories: categoryId ? [categoryId] : undefined,
+            excludeFirstPage: true
+          });
+          
+          // Combiner première page + pages d'arrière-plan
+          const combinedResult = [...firstPageResult, ...backgroundResult];
+          
+          // Supprimer les doublons
+          const uniqueResult = combinedResult.filter((item, index, self) => 
+            index === self.findIndex(t => t.id === item.id)
+          );
+          
+          // Mettre en cache le résultat complet
+          setWpNewsCache(prev => new Map(prev).set(cacheKey, uniqueResult));
+          
+          const totalLoadTime = performance.now() - startTime;
+          setPerformanceStats(prev => ({ 
+            ...prev, 
+            averageLoadTime: prev.cacheMisses === 1 ? totalLoadTime : (prev.averageLoadTime + totalLoadTime) / 2,
+            totalArticlesLoaded: uniqueResult.length,
+            lastCacheUpdate: Date.now()
+          }));
+          
+          console.log(`🎉 Chargement complet terminé: ${uniqueResult.length} articles au total`);
+          
+          // Optionnel: Mettre à jour les données affichées si l'utilisateur est toujours sur la même page
+          // Cette partie sera gérée par les effets React si nécessaire
+        } catch (backgroundError) {
+          console.error("❌ Erreur chargement arrière-plan:", backgroundError);
+        }
+      }, 100); // Délai minimal pour ne pas bloquer l'UI
+      
+      return firstPageResult;
     } catch (error) {
       console.error("❌ WordPress news fetch failed:", error);
       const loadTime = performance.now() - startTime;
@@ -285,6 +322,7 @@ const News = () => {
       return [];
     }
   }, [wpNewsCache]);
+      
 
   // Background preloading system
   const preloadCategories = useCallback(async () => {
@@ -427,31 +465,75 @@ const News = () => {
     }
   }, [category, navigate]);
 
-  // useEffect principal pour charger seulement les news WordPress - optimisé
+  // useEffect principal pour charger seulement les news WordPress - optimisé pour affichage rapide
   useEffect(() => {
     console.log("News component mounted, loading WordPress news...");
     initialLoadComplete.current = true;
     
-    // Chargement rapide WordPress seulement
+    // Chargement en deux étapes pour affichage rapide
     const quickLoad = async () => {
       setLoadingNews(true);
       
       try {
-        console.log(`Loading WordPress news for category: ${selectedWPCategory || 'all'}`);
-        const wordpressNews = await fetchWordPressNewsData(selectedWPCategory);
-        setNews(wordpressNews);
-        setFilteredNews(wordpressNews);
-        setAllNews(wordpressNews);
-        paginateNews(wordpressNews, 1);
+        console.log(`🚀 Chargement rapide de la première page pour: ${selectedWPCategory || 'all'}`);
+        
+        // Étape 1: Charger rapidement la première page seulement (30 articles)
+        const firstPageResult = await fetchWordPressNewsFirstPage({
+          categories: selectedWPCategory ? [selectedWPCategory] : undefined,
+        });
+        
+        console.log(`✅ Première page chargée: ${firstPageResult.length} articles`);
+        
+        // Afficher immédiatement la première page
+        setNews(firstPageResult);
+        setFilteredNews(firstPageResult);
+        setAllNews(firstPageResult);
+        paginateNews(firstPageResult, 1);
         setLoadingNews(false);
+        
+        // Étape 2: Charger le reste en arrière-plan (après 500ms)
+        setTimeout(async () => {
+          try {
+            console.log(`📦 Chargement des pages supplémentaires en arrière-plan...`);
+            const backgroundResult = await fetchWordPressNewsBackground({
+              categories: selectedWPCategory ? [selectedWPCategory] : undefined,
+              excludeFirstPage: true
+            });
+            
+            // Combiner première page + pages d'arrière-plan
+            const combinedResult = [...firstPageResult, ...backgroundResult];
+            
+            // Supprimer les doublons
+            const uniqueResult = combinedResult.filter((item, index, self) => 
+              index === self.findIndex(t => t.id === item.id)
+            );
+            
+            console.log(`🎉 Chargement complet terminé: ${uniqueResult.length} articles au total`);
+            
+            // Mettre à jour les données avec tous les articles
+            setNews(uniqueResult);
+            setFilteredNews(uniqueResult);
+            setAllNews(uniqueResult);
+            
+            // Recalculer la pagination avec tous les articles
+            const totalPagesCount = Math.ceil(uniqueResult.length / pageSize);
+            setTotalPages(totalPagesCount);
+            setHasMore(1 < totalPagesCount);
+            
+          } catch (backgroundError) {
+            console.error('❌ Erreur chargement arrière-plan:', backgroundError);
+          }
+        }, 500); // Délai de 500ms pour laisser l'UI se stabiliser
+        
       } catch (error) {
-        console.error('WordPress news load failed:', error);
+        console.error('❌ Erreur chargement première page:', error);
+        // Fallback vers la méthode classique
         fetchAllNews(1, false);
       }
     };
     
     quickLoad();
-  }, [selectedWPCategory, fetchWordPressNewsData, paginateNews, fetchAllNews]);
+  }, [selectedWPCategory, paginateNews, pageSize, fetchAllNews]);
 
   // useEffect pour recharger quand les filtres WordPress changent - optimisé
   const prevFiltersRef = useRef({ selectedWPCategory });
