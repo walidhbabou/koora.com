@@ -1,7 +1,6 @@
 import React from 'react';
-import GoogleAdSenseTestMode, { AdFormat } from './GoogleAdSenseTestMode';
+import GoogleAdSense, { AdFormat } from './GoogleAdSense';
 import LocalSponsors from './LocalSponsors';
-import AdTestIndicator from './AdTestIndicator';
 
 interface AdWrapperProps {
   type: 'adsense' | 'sponsors' | 'mixed';
@@ -45,17 +44,12 @@ const AdWrapper: React.FC<AdWrapperProps> = ({
       case 'adsense':
         return (
           <div className="relative">
-            <GoogleAdSenseTestMode
+            <GoogleAdSense
               client={adClient}
               slot={adSlot}
               format={adFormat}
-              enableTestMode={testMode}
+              testMode={testMode}
               className="w-full"
-            />
-            <AdTestIndicator 
-              show={testMode} 
-              position="absolute"
-              testMode="safe"
             />
           </div>
         );
@@ -75,17 +69,12 @@ const AdWrapper: React.FC<AdWrapperProps> = ({
           <div className="space-y-6">
             {/* AdSense en premier */}
             <div className="relative">
-              <GoogleAdSenseTestMode
+              <GoogleAdSense
                 client={adClient}
                 slot={adSlot}
                 format={adFormat}
-                enableTestMode={testMode}
+                testMode={testMode}
                 className="w-full"
-              />
-              <AdTestIndicator 
-                show={testMode} 
-                position="absolute"
-                testMode="safe"
               />
             </div>
             

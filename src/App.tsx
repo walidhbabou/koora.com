@@ -15,10 +15,7 @@ import NewsDetails from "./pages/NewsDetails";
 import Standings from "./pages/Standings";
 import Videos from "./pages/Videos";
 import Transfers from "./pages/Transfers";
-import LanguageTest from "./pages/LanguageTest";
-import TranslationDemo from "./pages/TranslationDemo";
 import TeamDetails from "./pages/TeamDetails";
-import TestPage from "./pages/TestPage";
 import Search from "./pages/Search";
 import AdminDashboard from "./pages/AdminDashboard";
 import EditorDashboard from "./pages/EditorDashboard";
@@ -28,10 +25,7 @@ import LoginPage from "./pages/LoginPage";
 import RoleBasedRouter from "./components/RoleBasedRouter";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
-import AdTestPage from "./components/AdTestPage";
-import SimpleAdTest from "./components/SimpleAdTest";
 
-import DarkModeToggle from "./components/DarkModeToggle";
 import ResetPassword from "./pages/ResetPassword";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -129,12 +123,7 @@ const App = () => {
                 <Route path="/transfers" element={<Transfers />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/team/:teamId" element={<TeamDetails />} />
-                <Route path="/test" element={<TestPage />} />
-                <Route path="/ad-test" element={<AdTestPage />} />
-                <Route path="/simple-ad-test" element={<SimpleAdTest />} />
                 <Route path="/search" element={<Search />} />
-                <Route path="/language-test" element={<LanguageTest />} />
-                <Route path="/translation-demo" element={<TranslationDemo />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/dashboard" element={<RoleBasedRouter />} />
                 <Route

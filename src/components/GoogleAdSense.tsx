@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { loadAdSenseScript, initializeAdSense, pushAdSenseAd } from '@/utils/adsenseLoader';
-import FakeAd from './FakeAd';
+import { loadAdSenseScript, initializeAdSense, pushAdSenseAd } from '../utils/adsenseLoader';
 
 // Types pour les formats AdSense
 export type AdFormat = 
@@ -29,7 +28,8 @@ interface GoogleAdSenseProps {
 // Déclaration globale pour AdSense
 declare global {
   interface Window {
-    adsbygoogle: Record<string, unknown>[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adsbygoogle: any[];
   }
 }
 
@@ -93,13 +93,10 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
 
   const dimensions = getAdDimensions(format);
 
-  // Mode test ou configuration incomplète - affiche un placeholder
+  // Mode test ou configuration incomplète - ne rien afficher
   if (testMode === true || !client || !slot) {
-    console.log('Affichage placeholder:', { testMode, client: !!client, slot: !!slot });
-    
-    // Utiliser FakeAd pour un rendu plus réaliste
-    const adFormat = format as 'rectangle' | 'leaderboard' | 'mobile-banner' | 'in-article' | 'responsive';
-    return <FakeAd format={adFormat} className={className} />;
+    console.log('AdSense désactivé:', { testMode, client: !!client, slot: !!slot });
+    return null; // Ne pas afficher d'annonce en mode test
   }
 
   return (

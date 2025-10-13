@@ -360,13 +360,12 @@ const Index = () => {
       />
       <Header />
 
-      {/* Header Ad - Mode test avec vraies annonces */}
-      <HeaderAd testMode={true} />
+    
 
       <TeamsLogos />
 
-      {/* Mobile Ad - Mode test avec vraies annonces */}
-      <MobileAd testMode={true} />
+      {/* Mobile Ad */}
+      <MobileAd testMode={false} />
 
       <div className="container mx-auto px-4 py-4 sm:py-8">
         {/* Desktop layout */}
@@ -597,7 +596,7 @@ const Index = () => {
                       {/* Insérer une annonce après chaque 6 articles */}
                       {(index + 1) % 6 === 0 && index < newsItems.slice(5).length - 1 && (
                         <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4">
-                          <SidebarAd testMode={true} />
+                          <SidebarAd testMode={false} />
                         </div>
                       )}
                     </div>
@@ -624,11 +623,10 @@ const Index = () => {
             )}
           </div>
 
-          {/* Right Sidebar (Today Matches + Ads) */}
           <div className="lg:w-80 xl:w-80 space-y-6 order-2 lg:order-2 xl:order-2" style={{direction: 'ltr'}}>
             <Sidebar />
-            {/* Sidebar Ad - Mode test avec vraies annonces */}
-            <SidebarAd testMode={true} />
+            {/* Sidebar Ad */}
+            <SidebarAd testMode={false} />
           </div>
         </div>
 
@@ -795,7 +793,7 @@ const Index = () => {
                   {/* Insérer une annonce après chaque 4 articles sur mobile */}
                   {(idx + 1) % 4 === 0 && idx < newsItems.slice(5).length - 1 && (
                     <div className="my-4">
-                      <MobileAd testMode={true} />
+                      <MobileAd testMode={false} />
                     </div>
                   )}
                 </div>
@@ -838,15 +836,6 @@ const Index = () => {
       </div>
       
       <Footer />
-      
-      {/* Statistiques de performance (dev mode) */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="fixed bottom-4 left-4 bg-black/80 text-white text-xs p-2 rounded-lg z-50">
-          <div>📊 Articles: {allNewsItems.length} total, {newsItems.length} affichés</div>
-          <div>📄 Page: {page}/{totalPages}</div>
-          <div>⚡ Sources: WordPress uniquement</div>
-        </div>
-      )}
     </div>
   );
 };

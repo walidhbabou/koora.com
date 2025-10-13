@@ -506,7 +506,7 @@ const News = () => {
     }, 50); // Réduit encore plus pour une réactivité maximale
   }, [loadingNews, isPageTransition, page, totalPages, pageSize, allNews]);
 
-  // Système de scroll infini automatique - DÉSACTIVÉ
+  
   // useEffect(() => {
   //   if (!loadMoreRef.current) return;
 
@@ -747,8 +747,7 @@ const News = () => {
         />
         <Header />
 
-        {/* Header Ad - Hidden on mobile */}
-        <HeaderAd testMode={process.env.NODE_ENV === "development"} />
+
 
         <CategoryFilterHeader
           selectedHeaderCategory={null}
@@ -767,7 +766,7 @@ const News = () => {
        
 
         {/* Mobile Ad - Compact version */}
-        <MobileAd testMode={process.env.NODE_ENV === "development"} />
+        <MobileAd testMode={false} />
 
         <div className="container mx-auto px-1 sm:px-2 lg:px-4 py-1 sm:py-2 lg:py-4">
           
@@ -840,7 +839,7 @@ const News = () => {
                         {/* Insérer une annonce après chaque 6 articles */}
                         {(index + 1) % 6 === 0 && index < displayedNews.length - 1 && (
                           <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4">
-                            <InArticleAd testMode={true} />
+                            <InArticleAd testMode={false} />
                           </div>
                         )}
 
@@ -908,7 +907,7 @@ const News = () => {
               {/* Footer Ad after content */}
               {displayedNews.length >= 6 && (
                 <div className="mt-8">
-                  <InArticleAd testMode={true} />
+                  <InArticleAd testMode={false} />
                 </div>
               )}
             </div>
@@ -916,7 +915,7 @@ const News = () => {
             {/* Right Sidebar */}
             <div className="hidden xl:block w-64 space-y-4">
               {/* Sidebar Ad */}
-              <SidebarAd testMode={true} />
+              <SidebarAd testMode={false} />
               
               {/* Trending Topics */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
@@ -944,7 +943,7 @@ const News = () => {
 
               {/* Advertisement Space - Another ad */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-                <SidebarAd testMode={true} />
+                <SidebarAd testMode={false} />
               </div>
 
               {/* Local Promo Banner */}
