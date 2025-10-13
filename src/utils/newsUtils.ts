@@ -247,7 +247,7 @@ export const fetchWordPressNews = async (options: {
   try {
     // Construction de l'URL avec catégories si spécifiées
     const buildUrl = (pageNum: number, itemsPerPage: number) => {
-      let url = `https://koora.com/wp-json/wp/v2/posts?per_page=${itemsPerPage}&page=${pageNum}&_embed`;
+      let url = `https://beta.koora.com/wp-json/wp/v2/posts?per_page=${itemsPerPage}&page=${pageNum}&_embed`;
       
       if (categories) {
         const categoryParam = Array.isArray(categories) ? categories.join(',') : categories.toString();
@@ -337,7 +337,7 @@ export const transformWordPressNews = (wpNews: WordPressNewsItem[]): NewsCardIte
 export const fetchSimpleWordPressNews = async (): Promise<NewsCardItem[]> => {
   try {
     const response = await fetch(
-      "https://koora.com/wp-json/wp/v2/posts?_embed"
+      "https://beta.koora.com/wp-json/wp/v2/posts?_embed"
     );
     if (!response.ok) throw new Error("WordPress fetch failed");
 
