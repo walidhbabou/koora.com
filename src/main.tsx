@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './styles/adsense.css'
 import { SettingsProvider } from './contexts/SettingsContext'
 import { HelmetProvider } from 'react-helmet-async'
 

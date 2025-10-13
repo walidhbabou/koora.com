@@ -62,6 +62,27 @@ export const initializeAdSense = (): void => {
 export const pushAdSenseAd = (config?: Record<string, unknown>): void => {
   if (typeof window !== 'undefined' && window.adsbygoogle) {
     try {
+      // Vérifier que nous avons bien des éléments .adsbygoogle à traiter
+      const adElements = document.querySelectorAll('.adsbygoogle');
+      if (adElements.length === 0) {
+        console.warn('⚠️ No .adsbygoogle elements found');
+        return;
+      }
+
+      // Vérifier que les éléments ont une largeur avant de pousser
+      let hasValidElements = false;
+      adElements.forEach(element => {
+        const rect = element.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          hasValidElements = true;
+        }
+      });
+
+      if (!hasValidElements) {
+        console.warn('⚠️ No valid ad elements found (width/height = 0)');
+        return;
+      }
+
       window.adsbygoogle.push(config || {});
       console.log('📢 AdSense ad pushed to queue');
     } catch (error) {

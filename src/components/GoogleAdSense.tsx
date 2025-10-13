@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { loadAdSenseScript, initializeAdSense, pushAdSenseAd } from '../utils/adsenseLoader';
 
 // Types pour les formats AdSense
@@ -45,17 +45,17 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
 
-  // Mapping des formats vers les dimensions
+  // Mapping des formats vers les dimensions avec des valeurs minimales
   const getAdDimensions = (format: AdFormat) => {
     const dimensions = {
-      'rectangle': { width: 300, height: 250 },
-      'leaderboard': { width: 728, height: 90 },
-      'banner': { width: 320, height: 50 },
-      'large-rectangle': { width: 336, height: 280 },
-      'mobile-banner': { width: 320, height: 100 },
-      'responsive': { width: 'auto', height: 'auto' },
-      'in-article': { width: 'auto', height: 'auto' },
-      'multiplex': { width: 'auto', height: 'auto' }
+      'rectangle': { width: '300px', height: '250px', minWidth: '300px', minHeight: '250px' },
+      'leaderboard': { width: '728px', height: '90px', minWidth: '728px', minHeight: '90px' },
+      'banner': { width: '320px', height: '50px', minWidth: '320px', minHeight: '50px' },
+      'large-rectangle': { width: '336px', height: '280px', minWidth: '336px', minHeight: '280px' },
+      'mobile-banner': { width: '320px', height: '100px', minWidth: '320px', minHeight: '100px' },
+      'responsive': { width: '100%', height: 'auto', minWidth: '300px', minHeight: '250px' },
+      'in-article': { width: '100%', height: 'auto', minWidth: '300px', minHeight: '250px' },
+      'multiplex': { width: '100%', height: 'auto', minWidth: '300px', minHeight: '280px' }
     };
     return dimensions[format];
   };
@@ -64,6 +64,34 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
   const adsenseClient = import.meta.env.VITE_ADSENSE_CLIENT;
   const adsenseTestMode = import.meta.env.VITE_ADSENSE_TEST_MODE === 'true';
 
+  // Fonction pour charger et initialiser AdSense
+  const loadAndInitializeAd = useCallback(async () => {
+    try {
+      await loadAdSenseScript();
+      initializeAdSense();
+      
+      // Délai pour s'assurer que tout est prêt
+      setTimeout(() => {
+        pushAdSenseAd();
+      }, 200);
+    } catch (error) {
+      console.warn('Erreur lors du chargement de la publicité AdSense:', error);
+    }
+  }, []);
+
+  // Fonction pour vérifier et initialiser l'annonce
+  const checkAndInitialize = useCallback(() => {
+    if (adRef.current) {
+      const rect = adRef.current.getBoundingClientRect();
+      if (rect.width > 0) {
+        loadAndInitializeAd();
+      } else {
+        // Réessayer après un petit délai si pas de largeur
+        setTimeout(checkAndInitialize, 100);
+      }
+    }
+  }, [loadAndInitializeAd]);
+
   useEffect(() => {
     // Si pas de client ID dans l'env, ne pas charger
     if (!adsenseClient) {
@@ -71,14 +99,9 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
       return;
     }
 
-    // En mode test désactivé ET pas de test mode, on n'initialise pas AdSense
-    if (!adsenseTestMode && testMode) {
-      console.log('🚫 Mode test désactivé et composant en test mode');
-      return;
-    }
-    // En mode test, on n'initialise pas AdSense
-    if (testMode) {
-      console.log('Mode test activé - Affichage du placeholder');
+    // Ne pas charger en mode test
+    if (testMode || !adsenseTestMode) {
+      console.log('🚫 Mode test ou AdSense désactivé');
       return;
     }
 
@@ -88,23 +111,36 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
       return;
     }
 
-    // Charger le script AdSense et initialiser
-    const loadAndInitialize = async () => {
-      try {
-        await loadAdSenseScript();
-        initializeAdSense();
-        
-        // Petit délai pour s'assurer que tout est prêt
-        setTimeout(() => {
-          pushAdSenseAd();
-        }, 100);
-      } catch (error) {
-        console.warn('Erreur lors du chargement de la publicité AdSense:', error);
+    // Observer les changements de taille
+    let resizeObserver: ResizeObserver | null = null;
+    
+    const initObserver = () => {
+      if (adRef.current && 'ResizeObserver' in window) {
+        resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            if (entry.contentRect.width > 0) {
+              checkAndInitialize();
+              break;
+            }
+          }
+        });
+        resizeObserver.observe(adRef.current);
+      } else {
+        // Fallback si ResizeObserver n'est pas disponible
+        checkAndInitialize();
       }
     };
 
-    loadAndInitialize();
-  }, [client, slot, testMode, adsenseClient, adsenseTestMode]);
+    // Délai initial pour s'assurer que le DOM est prêt
+    const timer = setTimeout(initObserver, 100);
+
+    return () => {
+      clearTimeout(timer);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [client, slot, testMode, adsenseClient, adsenseTestMode, checkAndInitialize]);
 
   const dimensions = getAdDimensions(format);
 
@@ -126,7 +162,12 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     <div 
       ref={adRef}
       className={`adsense-container ${className}`}
-      style={style}
+      style={{
+        ...dimensions,
+        display: 'block',
+        overflow: 'hidden',
+        ...style
+      }}
     >
       <ins
         className="adsbygoogle"
@@ -134,7 +175,8 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
           display: 'block',
           width: dimensions.width,
           height: dimensions.height,
-          ...style
+          minWidth: dimensions.minWidth,
+          minHeight: dimensions.minHeight
         }}
         data-ad-client={client}
         data-ad-slot={slot}

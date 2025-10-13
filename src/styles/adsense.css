@@ -1,0 +1,151 @@
+/**
+ * Styles pour les publicités Google AdSense
+ * Corrections pour les erreurs "No slot size for availableWidth=0"
+ */
+
+.adsense-container {
+  /* Assurer des dimensions minimales pour éviter width=0 */
+  min-width: 300px;
+  min-height: 250px;
+  
+  /* Centrer les publicités */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  /* Éviter le débordement */
+  overflow: hidden;
+  
+  /* Marge pour séparer du contenu */
+  margin: 16px 0;
+  
+  /* Arrière-plan temporaire pour visualiser les espaces */
+  background-color: transparent;
+  
+  /* Transition douce */
+  transition: all 0.3s ease;
+}
+
+/* Conteneur responsive */
+.adsense-container.responsive {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Format rectangle standard */
+.adsense-container.rectangle {
+  width: 300px;
+  height: 250px;
+}
+
+/* Format leaderboard */
+.adsense-container.leaderboard {
+  width: 728px;
+  height: 90px;
+}
+
+/* Format banner mobile */
+.adsense-container.banner {
+  width: 320px;
+  height: 50px;
+}
+
+/* Format large rectangle */
+.adsense-container.large-rectangle {
+  width: 336px;
+  height: 280px;
+}
+
+/* Format banner mobile */
+.adsense-container.mobile-banner {
+  width: 320px;
+  height: 100px;
+}
+
+/* Style pour l'élément ins AdSense */
+.adsbygoogle {
+  /* Assurer que l'élément prend l'espace disponible */
+  display: block !important;
+  
+  /* Éviter les dimensions nulles */
+  min-width: 300px !important;
+  min-height: 250px !important;
+  
+  /* Éviter le débordement */
+  overflow: hidden;
+  
+  /* Arrière-plan pendant le chargement */
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  
+  /* Transition */
+  transition: background-color 0.3s ease;
+}
+
+/* Style quand la pub est chargée */
+.adsbygoogle[data-adsbygoogle-status="filled"] {
+  background-color: transparent;
+  border: none;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .adsense-container.leaderboard {
+    width: 320px;
+    height: 100px;
+  }
+  
+  .adsense-container.rectangle,
+  .adsense-container.large-rectangle {
+    width: 300px;
+    height: 250px;
+  }
+}
+
+@media (max-width: 320px) {
+  .adsense-container {
+    min-width: 280px;
+  }
+  
+  .adsbygoogle {
+    min-width: 280px !important;
+  }
+}
+
+/* Mode sombre */
+@media (prefers-color-scheme: dark) {
+  .adsbygoogle {
+    background-color: #1a1a1a;
+    border-color: #333;
+  }
+}
+
+/* Animations pour le chargement */
+.adsense-container.loading {
+  position: relative;
+}
+
+.adsense-container.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #e9ecef;
+  border-top: 2px solid #007bff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Masquer le spinner quand la pub est chargée */
+.adsense-container.loading .adsbygoogle[data-adsbygoogle-status="filled"]::before {
+  display: none;
+}
