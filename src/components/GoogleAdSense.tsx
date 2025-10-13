@@ -60,7 +60,22 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     return dimensions[format];
   };
 
+  // Vérifier si les publicités sont désactivées
+  const adsenseClient = import.meta.env.VITE_ADSENSE_CLIENT;
+  const adsenseTestMode = import.meta.env.VITE_ADSENSE_TEST_MODE === 'true';
+
   useEffect(() => {
+    // Si pas de client ID dans l'env, ne pas charger
+    if (!adsenseClient) {
+      console.log('🚫 Pas de Client ID AdSense configuré');
+      return;
+    }
+
+    // En mode test désactivé ET pas de test mode, on n'initialise pas AdSense
+    if (!adsenseTestMode && testMode) {
+      console.log('🚫 Mode test désactivé et composant en test mode');
+      return;
+    }
     // En mode test, on n'initialise pas AdSense
     if (testMode) {
       console.log('Mode test activé - Affichage du placeholder');
@@ -89,14 +104,22 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     };
 
     loadAndInitialize();
-  }, [client, slot, testMode]);
+  }, [client, slot, testMode, adsenseClient, adsenseTestMode]);
 
   const dimensions = getAdDimensions(format);
 
-  // Mode test ou configuration incomplète - ne rien afficher
-  if (testMode === true || !client || !slot) {
-    console.log('AdSense désactivé:', { testMode, client: !!client, slot: !!slot });
-    return null; // Ne pas afficher d'annonce en mode test
+  // Si pas de client ID dans l'env, ne pas afficher
+  if (!adsenseClient) {
+    console.log('🚫 Pas de Client ID AdSense configuré');
+    return null;
+  }
+
+  // Afficher les publicités si le mode test est activé OU si on a un vrai client/slot
+  const shouldShowAd = adsenseTestMode || (client && slot);
+  
+  if (!shouldShowAd) {
+    console.log('🚫 Publicités non autorisées:', { adsenseTestMode, client: !!client, slot: !!slot });
+    return null;
   }
 
   return (
