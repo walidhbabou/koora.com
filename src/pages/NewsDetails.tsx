@@ -842,7 +842,7 @@ const NewsDetails: React.FC = () => {
         throw new Error('Could not extract WordPress ID from slug');
       }
       
-      const url = `https://koora.com/wp-json/wp/v2/posts/${wpId}?_embed`;
+      const url = `https://beta.koora.com/wp-json/wp/v2/posts/${wpId}?_embed`;
       console.log('Fetching from URL:', url);
       
       const response = await fetch(url);
