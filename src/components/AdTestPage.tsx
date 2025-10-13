@@ -1,4 +1,4 @@
-import React from 'react';
+ import React from 'react';
 import { HeaderAd, SidebarAd, MobileAd, InArticleAd, FooterAd, SponsorsSection } from './AdWrapper';
 import GoogleAdSense from './GoogleAdSense';
 

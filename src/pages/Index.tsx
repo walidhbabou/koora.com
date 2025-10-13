@@ -360,13 +360,13 @@ const Index = () => {
       />
       <Header />
 
-      {/* Header Ad */}
-      <HeaderAd testMode={process.env.NODE_ENV === "development"} />
+      {/* Header Ad - Mode test avec vraies annonces */}
+      <HeaderAd testMode={true} />
 
       <TeamsLogos />
 
-      {/* Mobile Ad */}
-      <MobileAd testMode={process.env.NODE_ENV === "development"} />
+      {/* Mobile Ad - Mode test avec vraies annonces */}
+      <MobileAd testMode={true} />
 
       <div className="container mx-auto px-4 py-4 sm:py-8">
         {/* Desktop layout */}
@@ -597,7 +597,7 @@ const Index = () => {
                       {/* Insérer une annonce après chaque 6 articles */}
                       {(index + 1) % 6 === 0 && index < newsItems.slice(5).length - 1 && (
                         <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4">
-                          <SidebarAd testMode={process.env.NODE_ENV === "development"} />
+                          <SidebarAd testMode={true} />
                         </div>
                       )}
                     </div>
@@ -627,8 +627,8 @@ const Index = () => {
           {/* Right Sidebar (Today Matches + Ads) */}
           <div className="lg:w-80 xl:w-80 space-y-6 order-2 lg:order-2 xl:order-2" style={{direction: 'ltr'}}>
             <Sidebar />
-            {/* Sidebar Ad */}
-            <SidebarAd testMode={process.env.NODE_ENV === "development"} />
+            {/* Sidebar Ad - Mode test avec vraies annonces */}
+            <SidebarAd testMode={true} />
           </div>
         </div>
 
@@ -795,7 +795,7 @@ const Index = () => {
                   {/* Insérer une annonce après chaque 4 articles sur mobile */}
                   {(idx + 1) % 4 === 0 && idx < newsItems.slice(5).length - 1 && (
                     <div className="my-4">
-                      <MobileAd testMode={process.env.NODE_ENV === "development"} />
+                      <MobileAd testMode={true} />
                     </div>
                   )}
                 </div>
