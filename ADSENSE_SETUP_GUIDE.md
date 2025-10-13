@@ -1,4 +1,4 @@
-# Guide de Configuration Google AdSense pour Koora.com
+ Guide de Configuration Google AdSense pour Koora.com
 
 Ce guide vous accompagne dans la configuration complète de Google AdSense pour votre site koora.com, incluant la gestion des sponsors locaux.
 

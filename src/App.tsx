@@ -7,6 +7,7 @@ import { LanguageProvider } from "./contexts/LanguageContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { useEffect } from "react";
 import { Helmet } from "react-helmet";
+import GoogleAnalytics from "./components/GoogleAnalytics";
 import Index from "./pages/Index";
 import Matches from "./pages/Matches";
 import MatchDetailsPage from "./pages/MatchDetailsPage";
@@ -111,6 +112,7 @@ const App = () => {
             <Sonner />
             <BackToTopButton />
             <BrowserRouter>
+              <GoogleAnalytics />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/matches" element={<Matches />} />

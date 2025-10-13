@@ -1,6 +1,7 @@
 import { Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/useTranslation";
+import { trackArticleClick } from "@/utils/googleAnalytics";
 
 interface NewsItem {
   id: string;
@@ -18,6 +19,10 @@ interface NewsCardProps {
 
 const NewsCard = ({ news, size = 'medium' }: NewsCardProps) => {
   const { isRTL } = useTranslation();
+  
+  const handleArticleClick = () => {
+    trackArticleClick(news.id, news.title);
+  };
   const getCardSize = () => {
     switch (size) {
       case 'large':
@@ -41,7 +46,10 @@ const NewsCard = ({ news, size = 'medium' }: NewsCardProps) => {
   };
 
   return (
-    <Card className={`${getCardSize()} overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group bg-white dark:bg-[#0f1115] border border-slate-200/70 dark:border-slate-800/60 hover:border-sport-green/40`}>
+    <Card 
+      className={`${getCardSize()} overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group bg-white dark:bg-[#0f1115] border border-slate-200/70 dark:border-slate-800/60 hover:border-sport-green/40`}
+      onClick={handleArticleClick}
+    >
       <div className={`${getImageHeight()} overflow-hidden relative`}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         <img

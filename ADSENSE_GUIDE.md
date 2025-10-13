@@ -1,4 +1,4 @@
-# Guide de Configuration Google AdSense
+Guide de Configuration Google AdSense
 
 ## 📋 Vue d'ensemble
 
