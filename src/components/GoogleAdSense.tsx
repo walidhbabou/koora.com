@@ -45,6 +45,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = React.useState(false);
+  const [showFallback, setShowFallback] = React.useState(false);
   // Générer un ID unique pour chaque instance
   const adId = React.useMemo(() => `adsense-${slot}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, [slot]);
 
@@ -101,8 +102,18 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
           setIsInitialized(true);
         }
       }, 300);
+      
+      // Timeout pour afficher un fallback si AdSense ne se charge pas
+      setTimeout(() => {
+        const insElement = adRef.current?.querySelector('.adsbygoogle');
+        if (insElement && !(insElement as HTMLElement).dataset?.adsbygoogleStatus) {
+          console.log('⚠️ AdSense timeout - affichage du fallback');
+          setShowFallback(true);
+        }
+      }, 3000);
     } catch (error) {
       console.warn('Erreur lors du chargement de la publicité AdSense:', error);
+      setShowFallback(true);
     }
   }, [isInitialized, client]);
 
@@ -207,16 +218,46 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         ...style
       }}
     >
-      {/* Affichage de debug en mode test */}
-      {testMode && adsenseTestMode && (
-        <div className="bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-400 rounded p-4 text-center">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-            🧪 Mode Test AdSense
+      {/* Affichage de debug en mode test avec style publicitaire */}
+      {adsenseTestMode && (
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-2 border-blue-300 dark:border-blue-600 rounded-lg p-4 text-center shadow-sm">
+          <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mb-2">
+            📺 إعلان تجريبي
           </div>
-          <div className="text-xs text-gray-500">
-            Client: {client}<br/>
-            Slot: {slot}<br/>
-            Format: {format}
+          <div className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+            هذا مكان الإعلان • {format}
+          </div>
+          <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-200/50 dark:bg-blue-800/50 rounded px-2 py-1 inline-block">
+            Slot: {slot}
+          </div>
+          {/* Contenu publicitaire fictif */}
+          <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border border-blue-200 dark:border-blue-700">
+            <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              🏆 كورة - أفضل موقع رياضي
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+              تابع آخر الأخبار والنتائج الرياضية
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Fallback si AdSense ne se charge pas */}
+      {showFallback && !adsenseTestMode && (
+        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 text-center">
+          <div className="text-lg font-bold text-green-800 dark:text-green-200 mb-2">
+            🌟 إعلان محلي
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm">
+            <div className="text-base font-bold text-gray-800 dark:text-gray-200 mb-1">
+              كورة - موقعك الرياضي الأول
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              آخر الأخبار • النتائج المباشرة • التحليلات
+            </div>
+            <div className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded">
+              انضم إلى أكثر من 100,000 متابع
+            </div>
           </div>
         </div>
       )}
