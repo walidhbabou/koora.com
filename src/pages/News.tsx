@@ -28,6 +28,15 @@ import CategoryFilterHeader from "@/components/CategoryFilterHeader";
 import { HeaderAd, MobileAd, SidebarAd, InArticleAd } from "../components/AdWrapper";
 import LocalPromoBanner from "../components/LocalPromoBanner";
 import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Clock, Flag } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
@@ -574,13 +583,13 @@ const News = () => {
     
     // Utiliser les données déjà chargées en cache au lieu de recharger
     const nextPage = page + 1;
-    const startIndex = (nextPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    const newItems = allNews.slice(startIndex, endIndex);
     
-    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}`);
+    console.log(`Loading more from cache: page ${nextPage}`);
     
     setTimeout(() => {
+      const startIndex = (nextPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const newItems = allNews.slice(startIndex, endIndex);
       setDisplayedNews(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
       setHasMore(nextPage < totalPages);
@@ -983,6 +992,65 @@ const News = () => {
                   >
                     {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`}
                   </Button>
+                </div>
+              )}
+
+              {/* Pagination - même logique que Index.tsx */}
+              {totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination>
+                    <PaginationContent>
+                      {page > 1 && (
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(page - 1)}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                      
+                      {/* Page numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(pageNum)}
+                              isActive={page === pageNum}
+                              className="cursor-pointer"
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      
+                      {totalPages > 5 && page < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      
+                      {page < totalPages && (
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(page + 1)}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               )}
               

@@ -846,7 +846,7 @@ const Index = () => {
                   }}
                   disabled={loading || isPageTransition}
                 >
-                  {loading || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNewsItems.length - newsItems.length} متبقي)`}
+                  {loading || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد `}
                 </button>
               </div>
             )}
