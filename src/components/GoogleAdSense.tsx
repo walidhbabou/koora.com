@@ -44,6 +44,9 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
   testMode = false
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
+  const [isInitialized, setIsInitialized] = React.useState(false);
+  // Générer un ID unique pour chaque instance
+  const adId = React.useMemo(() => `adsense-${slot}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, [slot]);
 
   // Mapping des formats vers les dimensions avec des valeurs minimales
   const getAdDimensions = (format: AdFormat) => {
@@ -64,33 +67,57 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
   const adsenseClient = import.meta.env.VITE_ADSENSE_CLIENT;
   const adsenseTestMode = import.meta.env.VITE_ADSENSE_TEST_MODE === 'true';
 
-  // Fonction pour charger et initialiser AdSense
+  // Fonction pour charger et initialiser AdSense une seule fois
   const loadAndInitializeAd = useCallback(async () => {
+    if (isInitialized) {
+      console.log('🔄 AdSense déjà initialisé pour ce composant');
+      return;
+    }
+
+    // Vérifier que l'élément ins n'a pas déjà été traité
+    const insElement = adRef.current?.querySelector('.adsbygoogle');
+    if (insElement && (
+        (insElement as HTMLElement).dataset?.adsbygoogleStatus === 'done' || 
+        (insElement as HTMLElement).dataset?.adsbygoogleStatus === 'filled' ||
+        (insElement as HTMLElement).dataset?.adsbygoogleStatus === 'pending')) {
+      console.log('🔄 Élément AdSense déjà traité');
+      setIsInitialized(true);
+      return;
+    }
+
     try {
       await loadAdSenseScript();
       initializeAdSense();
       
+      // Marquer comme en cours de traitement
+      if (insElement) {
+        (insElement as HTMLElement).dataset.adsbygoogleStatus = 'requested';
+      }
+      
       // Délai pour s'assurer que tout est prêt
       setTimeout(() => {
-        pushAdSenseAd();
-      }, 200);
+        if (!isInitialized) {
+          pushAdSenseAd();
+          setIsInitialized(true);
+        }
+      }, 300);
     } catch (error) {
       console.warn('Erreur lors du chargement de la publicité AdSense:', error);
     }
-  }, []);
+  }, [isInitialized]);
 
   // Fonction pour vérifier et initialiser l'annonce
   const checkAndInitialize = useCallback(() => {
-    if (adRef.current) {
-      const rect = adRef.current.getBoundingClientRect();
-      if (rect.width > 0) {
-        loadAndInitializeAd();
-      } else {
-        // Réessayer après un petit délai si pas de largeur
-        setTimeout(checkAndInitialize, 100);
-      }
+    if (!adRef.current || isInitialized) return;
+
+    const rect = adRef.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      loadAndInitializeAd();
+    } else {
+      // Réessayer après un petit délai si pas de largeur
+      setTimeout(checkAndInitialize, 100);
     }
-  }, [loadAndInitializeAd]);
+  }, [loadAndInitializeAd, isInitialized]);
 
   useEffect(() => {
     // Si pas de client ID dans l'env, ne pas charger
@@ -161,6 +188,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
   return (
     <div 
       ref={adRef}
+      id={adId}
       className={`adsense-container ${className}`}
       style={{
         ...dimensions,
@@ -183,6 +211,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         data-ad-format={responsive ? 'auto' : format}
         data-full-width-responsive={responsive ? 'true' : 'false'}
         data-adtest={testMode ? 'on' : 'off'}
+        data-ad-instance-id={adId}
         {...(layoutKey && { 'data-ad-layout-key': layoutKey })}
         {...(format === 'in-article' && { 'data-ad-layout': 'in-article' })}
         {...(format === 'multiplex' && { 'data-ad-layout': 'multiplex' })}

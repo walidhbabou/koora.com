@@ -63,9 +63,9 @@ export const pushAdSenseAd = (config?: Record<string, unknown>): void => {
   if (typeof window !== 'undefined' && window.adsbygoogle) {
     try {
       // Vérifier que nous avons bien des éléments .adsbygoogle à traiter
-      const adElements = document.querySelectorAll('.adsbygoogle');
+      const adElements = document.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status])');
       if (adElements.length === 0) {
-        console.warn('⚠️ No .adsbygoogle elements found');
+        console.warn('⚠️ No new .adsbygoogle elements found (all already processed)');
         return;
       }
 
@@ -75,6 +75,8 @@ export const pushAdSenseAd = (config?: Record<string, unknown>): void => {
         const rect = element.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
           hasValidElements = true;
+          // Marquer comme en cours de traitement pour éviter les doublons
+          (element as HTMLElement).dataset.adsbygoogleStatus = 'pending';
         }
       });
 
@@ -84,7 +86,7 @@ export const pushAdSenseAd = (config?: Record<string, unknown>): void => {
       }
 
       window.adsbygoogle.push(config || {});
-      console.log('📢 AdSense ad pushed to queue');
+      console.log(`📢 AdSense ad pushed to queue (${adElements.length} elements)`);
     } catch (error) {
       console.error('❌ Error pushing AdSense ad:', error);
     }
@@ -174,4 +176,31 @@ export const cleanupAdSenseScripts = (): void => {
   }
   
   console.log('🧹 AdSense scripts cleaned up');
+};
+
+/**
+ * Nettoie les éléments AdSense qui ont échoué ou sont en erreur
+ */
+export const cleanupFailedAds = (): void => {
+  const failedAds = document.querySelectorAll('.adsbygoogle[data-adsbygoogle-status="error"], .adsbygoogle[data-adsbygoogle-status="pending"]');
+  failedAds.forEach(ad => {
+    (ad as HTMLElement).dataset.adsbygoogleStatus = '';
+    console.log('🧹 Cleaned failed ad element');
+  });
+};
+
+/**
+ * Réinitialise tous les éléments AdSense pour permettre un nouveau chargement
+ */
+export const resetAllAds = (): void => {
+  const allAds = document.querySelectorAll('.adsbygoogle');
+  allAds.forEach(ad => {
+    const element = ad as HTMLElement;
+    delete element.dataset.adsbygoogleStatus;
+    // Nettoyer le contenu interne si nécessaire
+    if (element.innerHTML.trim() === '') {
+      element.innerHTML = '';
+    }
+  });
+  console.log(`🔄 Reset ${allAds.length} ad elements`);
 };

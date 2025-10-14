@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useEffect } from "react";
 import { Helmet } from "react-helmet";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import AdSenseDebugger from "./components/AdSenseDebugger";
 import Index from "./pages/Index";
 import Matches from "./pages/Matches";
 import MatchDetailsPage from "./pages/MatchDetailsPage";
@@ -170,6 +171,7 @@ const App = () => {
           </TooltipProvider>
         </AuthProvider>
       </LanguageProvider>
+      <AdSenseDebugger />
     </QueryClientProvider>
   );
 };
