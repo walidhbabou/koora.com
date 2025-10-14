@@ -478,34 +478,18 @@ const News = () => {
         console.log(`🚀 Chargement rapide de la première page pour: ${selectedWPCategory || 'all'}`);
         
         // Étape 1: Charger rapidement la première page seulement (30 articles)
-        let firstPageResult: NewsCardItem[] = [];
-        try {
-          firstPageResult = await fetchWordPressNewsFirstPage({
-            categories: selectedWPCategory ? [selectedWPCategory] : undefined,
-          });
-        } catch (firstPageError) {
-          console.error("Failed to fetch WordPress first page:", firstPageError);
-          firstPageResult = [];
-        }
-        
-        // Trier par date (comme Index.tsx)
-        firstPageResult.sort((a, b) => 
-          b.publishedAt.localeCompare(a.publishedAt)
-        );
+        const firstPageResult = await fetchWordPressNewsFirstPage({
+          categories: selectedWPCategory ? [selectedWPCategory] : undefined,
+        });
         
         console.log(`✅ Première page chargée: ${firstPageResult.length} articles`);
         
-        // Afficher immédiatement la première page (simplifié)
+        // Afficher immédiatement la première page
+        setNews(firstPageResult);
+        setFilteredNews(firstPageResult);
         setAllNews(firstPageResult);
         paginateNews(firstPageResult, 1);
         setLoadingNews(false);
-        
-        // Activer immédiatement hasMore si on a au moins 30 articles (première page pleine)
-        // Cela permettra d'afficher le bouton "Load More" immédiatement
-        if (firstPageResult.length >= 30) {
-          setHasMore(true);
-          setTotalPages(Math.max(2, Math.ceil(firstPageResult.length / pageSize))); // Au minimum 2 pages estimées
-        }
         
         // Étape 2: Charger le reste en arrière-plan (après 500ms)
         setTimeout(async () => {
@@ -526,7 +510,9 @@ const News = () => {
             
             console.log(`🎉 Chargement complet terminé: ${uniqueResult.length} articles au total`);
             
-            // Mettre à jour avec tous les articles (simplifié)
+            // Mettre à jour les données avec tous les articles
+            setNews(uniqueResult);
+            setFilteredNews(uniqueResult);
             setAllNews(uniqueResult);
             
             // Recalculer la pagination avec tous les articles
@@ -537,7 +523,7 @@ const News = () => {
           } catch (backgroundError) {
             console.error('❌ Erreur chargement arrière-plan:', backgroundError);
           }
-        }, 300); // Délai de 300ms comme Index.tsx
+        }, 500); // Délai de 500ms pour laisser l'UI se stabiliser
         
       } catch (error) {
         console.error('❌ Erreur chargement première page:', error);
@@ -582,7 +568,7 @@ const News = () => {
   }, [selectedWPCategory, fetchWordPressNewsData]);
 
   const handleLoadMore = useCallback(async () => {
-    if (loadingNews || isPageTransition || !hasMore) return;
+    if (loadingNews || isPageTransition || page >= totalPages) return;
     
     setIsPageTransition(true);
     
@@ -592,51 +578,15 @@ const News = () => {
     const endIndex = startIndex + pageSize;
     const newItems = allNews.slice(startIndex, endIndex);
     
-    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}, total available: ${allNews.length}`);
-    
-    // Si on n'a pas assez d'articles dans le cache, charger plus en arrière-plan
-    if (newItems.length === 0 && allNews.length < 100) {
-      console.log("⚡ Pas assez d'articles en cache, chargement d'urgence...");
-      try {
-        const backgroundResult = await fetchWordPressNewsBackground({
-          categories: selectedWPCategory ? [selectedWPCategory] : undefined,
-          excludeFirstPage: true
-        });
-        
-        const combinedResult = [...allNews, ...backgroundResult];
-        const uniqueResult = combinedResult.filter((item, index, self) => 
-          index === self.findIndex(t => t.id === item.id)
-        );
-        
-        setAllNews(uniqueResult);
-        setTotalPages(Math.ceil(uniqueResult.length / pageSize));
-        
-        // Maintenant charger la page demandée
-        const updatedNewItems = uniqueResult.slice(startIndex, endIndex);
-        if (updatedNewItems.length > 0) {
-          setDisplayedNews(prevItems => [...prevItems, ...updatedNewItems]);
-          setPage(nextPage);
-          setHasMore(nextPage < Math.ceil(uniqueResult.length / pageSize));
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement d'urgence:", error);
-      }
-      setIsPageTransition(false);
-      return;
-    }
+    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}`);
     
     setTimeout(() => {
       setDisplayedNews(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
-      
-      // Recalculer hasMore basé sur les données réelles
-      const totalItemsAfterLoad = (nextPage * pageSize);
-      const newHasMore = totalItemsAfterLoad < allNews.length;
-      setHasMore(newHasMore);
-      
+      setHasMore(nextPage < totalPages);
       setIsPageTransition(false);
-    }, 50);
-  }, [loadingNews, isPageTransition, hasMore, page, pageSize, allNews, selectedWPCategory]);
+    }, 50); // Réduit encore plus pour une réactivité maximale
+  }, [loadingNews, isPageTransition, page, totalPages, pageSize, allNews]);
 
   
   // useEffect(() => {
@@ -1019,7 +969,7 @@ const News = () => {
               )}
 
               {/* Load More Button - Pagination manuelle uniquement */}
-              {hasMore && displayedNews.length > 0 && !loadingNews && (
+              {page < totalPages && (
                 <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
                   <Button
                     size="lg"
@@ -1033,16 +983,6 @@ const News = () => {
                   >
                     {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`}
                   </Button>
-                </div>
-              )}
-
-              {/* Information sur la pagination */}
-              {displayedNews.length > 0 && (
-                <div className="flex justify-center pt-2 text-sm text-gray-500">
-                  عرض {displayedNews.length} من {allNews.length} خبر
-                  {hasMore && (
-                    <span className="mr-2">- انقر "اظهر المزيد" لرؤية المزيد</span>
-                  )}
                 </div>
               )}
               
