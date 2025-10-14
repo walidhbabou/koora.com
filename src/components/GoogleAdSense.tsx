@@ -177,8 +177,8 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     return null;
   }
 
-  // Afficher les publicités si le mode test est activé OU si on a un vrai client/slot
-  const shouldShowAd = adsenseTestMode || (client && slot);
+  // Afficher les publicités si on a un client et slot valides
+  const shouldShowAd = client && slot && adsenseClient;
   
   console.log('🔍 AdSense Debug Info:', {
     adsenseClient,
@@ -187,11 +187,16 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     slot,
     shouldShowAd,
     testMode,
-    format
+    format,
+    isProduction: !adsenseTestMode
   });
   
   if (!shouldShowAd) {
-    console.log('🚫 Publicités non autorisées:', { adsenseTestMode, client: !!client, slot: !!slot });
+    console.log('🚫 Publicités non autorisées:', { 
+      hasClient: !!client, 
+      hasSlot: !!slot, 
+      hasAdsenseClient: !!adsenseClient 
+    });
     return null;
   }
 
@@ -207,7 +212,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         ...style
       }}
     >
-      {/* Affichage de debug en mode test avec style publicitaire */}
+      {/* Affichage de debug UNIQUEMENT en mode test */}
       {adsenseTestMode && (
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 border-2 border-blue-300 dark:border-blue-600 rounded-lg p-4 text-center shadow-sm">
           <div className="text-lg font-bold text-blue-800 dark:text-blue-200 mb-2">
@@ -231,6 +236,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         </div>
       )}
       
+      {/* Élément AdSense réel - affiché en production ET en test */}
       <ins
         className="adsbygoogle"
         style={{
@@ -244,7 +250,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         data-ad-slot={slot}
         data-ad-format={responsive ? 'auto' : format}
         data-full-width-responsive={responsive ? 'true' : 'false'}
-        data-adtest={testMode ? 'on' : 'off'}
+        data-adtest={adsenseTestMode ? 'on' : 'off'}
         data-ad-instance-id={adId}
         {...(layoutKey && { 'data-ad-layout-key': layoutKey })}
         {...(format === 'in-article' && { 'data-ad-layout': 'in-article' })}
