@@ -119,6 +119,16 @@ const News = () => {
     const paginatedNews = newsArray.slice(startIndex, endIndex);
     const totalPagesCount = Math.ceil(newsArray.length / pageSize);
     
+    console.log('📄 Pagination Info:', {
+      newsArrayLength: newsArray.length,
+      currentPage,
+      pageSize,
+      totalPagesCount,
+      startIndex,
+      endIndex,
+      paginatedNewsLength: paginatedNews.length
+    });
+    
     setDisplayedNews(paginatedNews);
     setTotalPages(totalPagesCount);
     setHasMore(currentPage < totalPagesCount);
@@ -996,7 +1006,8 @@ const News = () => {
               )}
 
               {/* Pagination - même logique que Index.tsx */}
-              {totalPages > 1 && (
+              {/* Debug: totalPages = {totalPages}, allNews.length = {allNews.length}, displayedNews.length = {displayedNews.length} */}
+              {(allNews.length > pageSize) && (
                 <div className="flex justify-center mt-8">
                   <Pagination>
                     <PaginationContent>
@@ -1010,14 +1021,15 @@ const News = () => {
                       )}
                       
                       {/* Page numbers */}
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      {Array.from({ length: Math.min(5, Math.ceil(allNews.length / pageSize)) }, (_, i) => {
+                        const maxPages = Math.ceil(allNews.length / pageSize);
                         let pageNum;
-                        if (totalPages <= 5) {
+                        if (maxPages <= 5) {
                           pageNum = i + 1;
                         } else if (page <= 3) {
                           pageNum = i + 1;
-                        } else if (page >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
+                        } else if (page >= maxPages - 2) {
+                          pageNum = maxPages - 4 + i;
                         } else {
                           pageNum = page - 2 + i;
                         }
@@ -1035,13 +1047,13 @@ const News = () => {
                         );
                       })}
                       
-                      {totalPages > 5 && page < totalPages - 2 && (
+                      {Math.ceil(allNews.length / pageSize) > 5 && page < Math.ceil(allNews.length / pageSize) - 2 && (
                         <PaginationItem>
                           <PaginationEllipsis />
                         </PaginationItem>
                       )}
                       
-                      {page < totalPages && (
+                      {page < Math.ceil(allNews.length / pageSize) && (
                         <PaginationItem>
                           <PaginationNext 
                             onClick={() => handlePageChange(page + 1)}
