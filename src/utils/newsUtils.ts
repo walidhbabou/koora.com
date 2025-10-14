@@ -240,10 +240,6 @@ export const getWordPressCategoryBySlug = (slug: string) => {
 // ==============================================
 
 import { globalCache, debounceCache } from './globalCache';
-  
-// The problematic block is removed because it is not part of any function and references 'categories' which is undefined.
-// If this was meant to be a function, you should wrap it in a function and pass 'categories' as a parameter.
-// For now, this block is removed to resolve the error.
 
 // Fonction pour récupérer les news WordPress avec pagination améliorée
 export const fetchWordPressNews = async (options: {
@@ -383,7 +379,7 @@ export const fetchWordPressNewsFirstPage = debounceCache(async (params: {
   console.log(`🔄 Cache MISS pour première page: ${cacheKey}`);
   
   try {
-    const baseUrl = "https://koradisport.com/wp-json/wp/v2/posts";
+    const baseUrl = "https://beta.koora.com/wp-json/wp/v2/posts";
     const params_obj = new URLSearchParams({
       per_page: per_page.toString(),
       page: "1",
@@ -474,7 +470,7 @@ const fetchWordPressPageOptimized = async (
     return cached;
   }
   
-  const baseUrl = "https://koradisport.com/wp-json/wp/v2/posts";
+  const baseUrl = "https://beta.koora.com/wp-json/wp/v2/posts";
   const params = new URLSearchParams({
     per_page: per_page.toString(),
     page: page.toString(),

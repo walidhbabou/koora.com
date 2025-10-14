@@ -24,7 +24,7 @@ export const fetchWordPressNewsFirstPageOptimized = debounceCache(async (params:
   console.log(`🔄 Cache MISS pour première page: ${cacheKey}`);
   
   try {
-    const baseUrl = "https://koradisport.com/wp-json/wp/v2/posts";
+    const baseUrl = "https://beta.koora.com/wp-json/wp/v2/posts";
     const params_obj = new URLSearchParams({
       per_page: per_page.toString(),
       page: "1",
@@ -115,7 +115,7 @@ const fetchWordPressPageOptimized = async (
     return cached;
   }
   
-  const baseUrl = "https://koradisport.com/wp-json/wp/v2/posts";
+  const baseUrl = "https://beta.koora.com/wp-json/wp/v2/posts";
   const params = new URLSearchParams({
     per_page: per_page.toString(),
     page: page.toString(),
