@@ -319,20 +319,311 @@ export const mockFootballData = {
           name: 'Kylian Mbappé',
           photo: 'https://media-4.api-sports.io/football/players/276.png'
         },
-        teams: {
-          in: {
-            id: 541,
-            name: 'Real Madrid',
-            logo: 'https://media-4.api-sports.io/football/teams/541.png'
-          },
-          out: {
-            id: 85,
-            name: 'Paris Saint Germain',
-            logo: 'https://media-4.api-sports.io/football/teams/85.png'
+        update: '2024-07-01T10:00:00Z',
+        transfers: [
+          {
+            date: '2024-07-01',
+            type: 'Free',
+            teams: {
+              in: {
+                id: 541,
+                name: 'Real Madrid',
+                logo: 'https://media-4.api-sports.io/football/teams/541.png'
+              },
+              out: {
+                id: 85,
+                name: 'Paris Saint Germain',
+                logo: 'https://media-4.api-sports.io/football/teams/85.png'
+              }
+            }
           }
+        ]
+      },
+      {
+        player: {
+          id: 742,
+          name: 'Jude Bellingham',
+          photo: 'https://media-4.api-sports.io/football/players/742.png'
         },
-        type: 'Free',
-        date: '2024-07-01'
+        update: '2023-06-15T14:30:00Z',
+        transfers: [
+          {
+            date: '2023-06-15',
+            type: '€103M',
+            teams: {
+              in: {
+                id: 541,
+                name: 'Real Madrid',
+                logo: 'https://media-4.api-sports.io/football/teams/541.png'
+              },
+              out: {
+                id: 165,
+                name: 'Borussia Dortmund',
+                logo: 'https://media-4.api-sports.io/football/teams/165.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 1100,
+          name: 'Victor Osimhen',
+          photo: 'https://media-4.api-sports.io/football/players/1100.png'
+        },
+        update: '2025-01-10T09:15:00Z',
+        transfers: [
+          {
+            date: '2025-01-10',
+            type: 'Loan',
+            teams: {
+              in: {
+                id: 85,
+                name: 'Paris Saint Germain',
+                logo: 'https://media-4.api-sports.io/football/teams/85.png'
+              },
+              out: {
+                id: 113,
+                name: 'Napoli',
+                logo: 'https://media-4.api-sports.io/football/teams/113.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 154,
+          name: 'Harry Kane',
+          photo: 'https://media-4.api-sports.io/football/players/154.png'
+        },
+        update: '2023-08-12T16:45:00Z',
+        transfers: [
+          {
+            date: '2023-08-12',
+            type: '€100M',
+            teams: {
+              in: {
+                id: 157,
+                name: 'Bayern Munich',
+                logo: 'https://media-4.api-sports.io/football/teams/157.png'
+              },
+              out: {
+                id: 47,
+                name: 'Tottenham',
+                logo: 'https://media-4.api-sports.io/football/teams/47.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 890,
+          name: 'Pedri',
+          photo: 'https://media-4.api-sports.io/football/players/890.png'
+        },
+        update: '2025-01-08T11:20:00Z',
+        transfers: [
+          {
+            date: '2025-01-08',
+            type: '€80M',
+            teams: {
+              in: {
+                id: 50,
+                name: 'Manchester City',
+                logo: 'https://media-4.api-sports.io/football/teams/50.png'
+              },
+              out: {
+                id: 529,
+                name: 'Barcelona',
+                logo: 'https://media-4.api-sports.io/football/teams/529.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 1205,
+          name: 'Achraf Hakimi',
+          photo: 'https://media-4.api-sports.io/football/players/1205.png'
+        },
+        update: '2024-12-20T13:30:00Z',
+        transfers: [
+          {
+            date: '2024-12-20',
+            type: '€65M',
+            teams: {
+              in: {
+                id: 541,
+                name: 'Real Madrid',
+                logo: 'https://media-4.api-sports.io/football/teams/541.png'
+              },
+              out: {
+                id: 85,
+                name: 'Paris Saint Germain',
+                logo: 'https://media-4.api-sports.io/football/teams/85.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 315,
+          name: 'Gianluigi Donnarumma',
+          photo: 'https://media-4.api-sports.io/football/players/315.png'
+        },
+        update: '2025-01-05T08:45:00Z',
+        transfers: [
+          {
+            date: '2025-01-05',
+            type: 'Loan',
+            teams: {
+              in: {
+                id: 113,
+                name: 'Napoli',
+                logo: 'https://media-4.api-sports.io/football/teams/113.png'
+              },
+              out: {
+                id: 85,
+                name: 'Paris Saint Germain',
+                logo: 'https://media-4.api-sports.io/football/teams/85.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 2710,
+          name: 'Brahim Díaz',
+          photo: 'https://media-4.api-sports.io/football/players/2710.png'
+        },
+        update: '2024-11-15T15:10:00Z',
+        transfers: [
+          {
+            date: '2024-11-15',
+            type: '€25M',
+            teams: {
+              in: {
+                id: 529,
+                name: 'Barcelona',
+                logo: 'https://media-4.api-sports.io/football/teams/529.png'
+              },
+              out: {
+                id: 541,
+                name: 'Real Madrid',
+                logo: 'https://media-4.api-sports.io/football/teams/541.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 1890,
+          name: 'Sofyan Amrabat',
+          photo: 'https://media-4.api-sports.io/football/players/1890.png'
+        },
+        update: '2025-01-12T12:00:00Z',
+        transfers: [
+          {
+            date: '2025-01-12',
+            type: 'Free',
+            teams: {
+              in: {
+                id: 33,
+                name: 'Manchester United',
+                logo: 'https://media-4.api-sports.io/football/teams/33.png'
+              },
+              out: {
+                id: 502,
+                name: 'Fiorentina',
+                logo: 'https://media-4.api-sports.io/football/teams/502.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 1456,
+          name: 'Youcef Belaïli',
+          photo: 'https://media-4.api-sports.io/football/players/1456.png'
+        },
+        update: '2025-01-14T10:30:00Z',
+        transfers: [
+          {
+            date: '2025-01-14',
+            type: '€2M',
+            teams: {
+              in: {
+                id: 964,
+                name: 'Raja Casablanca',
+                logo: 'https://media-4.api-sports.io/football/teams/964.png'
+              },
+              out: {
+                id: 1563,
+                name: 'ES Tunis',
+                logo: 'https://media-4.api-sports.io/football/teams/1563.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 2890,
+          name: 'Neymar Jr',
+          photo: 'https://media-4.api-sports.io/football/players/2890.png'
+        },
+        update: '2024-08-30T17:25:00Z',
+        transfers: [
+          {
+            date: '2024-08-30',
+            type: 'Loan',
+            teams: {
+              in: {
+                id: 529,
+                name: 'Barcelona',
+                logo: 'https://media-4.api-sports.io/football/teams/529.png'
+              },
+              out: {
+                id: 2939,
+                name: 'Al Hilal',
+                logo: 'https://media-4.api-sports.io/football/teams/2939.png'
+              }
+            }
+          }
+        ]
+      },
+      {
+        player: {
+          id: 890,
+          name: 'Mohamed Salah',
+          photo: 'https://media-4.api-sports.io/football/players/890.png'
+        },
+        update: '2025-01-03T14:15:00Z',
+        transfers: [
+          {
+            date: '2025-01-03',
+            type: '€200M',
+            teams: {
+              in: {
+                id: 2939,
+                name: 'Al Hilal',
+                logo: 'https://media-4.api-sports.io/football/teams/2939.png'
+              },
+              out: {
+                id: 40,
+                name: 'Liverpool',
+                logo: 'https://media-4.api-sports.io/football/teams/40.png'
+              }
+            }
+          }
+        ]
       }
     ]
   },

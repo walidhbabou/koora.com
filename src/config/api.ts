@@ -195,11 +195,17 @@ export class FootballAPI {
     } catch (error) {
       console.error('❌ API Request failed:', error);
       
-      // Gestion spéciale pour les erreurs CORS
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.warn('🚫 CORS Error detected. This might be due to API restrictions.');
-        // Retourner des données vides au lieu de lancer une erreur
-        return { response: [], results: 0 };
+      // Gestion spéciale pour les erreurs CORS ou pour les transferts
+      if (error instanceof TypeError && error.message.includes('Failed to fetch') || endpoint.includes('transfers')) {
+        console.warn('🚫 CORS Error detected or transfers endpoint. Using mock data.');
+        // Utiliser les données mock en cas d'erreur API
+        try {
+          const mockData = await this.getMockData(endpoint);
+          console.log('📦 Using mock data for:', endpoint);
+          return mockData;
+        } catch (mockError) {
+          console.error('❌ Mock data failed:', mockError);
+        }
       }
       
       // Gestion des erreurs de réseau
@@ -289,19 +295,15 @@ export class FootballAPI {
   
   // Page transferts - Transferts récents
   async getRecentTransfers(teamId?: number, season?: number) {
-    // Éviter les appels API problématiques en mode développement
-    if (API_CONFIG.DISABLE_PROBLEMATIC_APIS) {
-      console.warn('🚫 API calls disabled for problematic endpoints. Returning empty data.');
-      return { response: [], results: 0 };
+    // Utiliser des données mock pour les transferts pour le moment
+    try {
+      const { mockFootballData } = await import('../services/mockFootballAPI');
+      console.log('📦 Using mock transfers data');
+      return mockFootballData.transfers;
+    } catch (mockError) {
+      console.error('❌ Mock data failed:', mockError);
+      return { response: [] };
     }
-    
-    const params: Record<string, unknown> = {};
-    if (teamId) params.team = teamId;
-    if (season) params.season = season;
-    
-    const data = await this.makeRequest('/transfers', params);
-    // Retourne uniquement la liste des transferts
-    return Array.isArray(data?.response) ? { response: data.response } : { response: [] };
   }
 
   // Nouveaux transferts par date
@@ -435,11 +437,15 @@ export class FootballAPI {
 
   // Transferts récents globaux (toutes équipes)
   async getAllRecentTransfers(season?: number) {
-    const params: Record<string, unknown> = {};
-    if (season) params.season = season;
-    
-    const data = await this.makeRequest('/transfers', params);
-    return Array.isArray(data?.response) ? { response: data.response } : { response: [] };
+    // Utiliser des données mock pour les transferts
+    try {
+      const { mockFootballData } = await import('../services/mockFootballAPI');
+      console.log('📦 Using mock transfers data for getAllRecentTransfers');
+      return mockFootballData.transfers;
+    } catch (mockError) {
+      console.error('❌ Mock data failed:', mockError);
+      return { response: [] };
+    }
   }
   
   // Obtenir les ligues disponibles

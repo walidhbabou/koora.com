@@ -994,7 +994,7 @@ const News = () => {
                     }}
                     disabled={loadingNews || isPageTransition}
                   >
-                    {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`}
+                    {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد `}
                   </Button>
                 </div>
               )}
