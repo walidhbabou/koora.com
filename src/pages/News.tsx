@@ -529,12 +529,8 @@ const News = () => {
             // Recalculer la pagination avec tous les articles
             const totalPagesCount = Math.ceil(uniqueResult.length / pageSize);
             setTotalPages(totalPagesCount);
-            console.log(`📄 Pagination mise à jour: ${totalPagesCount} pages pour ${uniqueResult.length} articles`);
-            
-            // Recalculer la pagination avec tous les articles
-            const totalPagesCount = Math.ceil(uniqueResult.length / pageSize);
-            setTotalPages(totalPagesCount);
             setHasMore(1 < totalPagesCount);
+            console.log(`📄 Pagination mise à jour: ${totalPagesCount} pages pour ${uniqueResult.length} articles`);
             
           } catch (backgroundError) {
             console.error('❌ Erreur chargement arrière-plan:', backgroundError);
