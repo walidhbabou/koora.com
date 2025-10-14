@@ -235,46 +235,11 @@ export const getWordPressCategoryBySlug = (slug: string) => {
   ) || null;
 };
 
-// Fonction pour charger rapidement la première page (affichage immédiat)
-export const fetchWordPressNewsFirstPage = async (options: {
-  categories?: number | number[];
-} = {}): Promise<NewsCardItem[]> => {
-  const { categories } = options;
-  
-  try {
-    // Construction de l'URL pour la première page seulement
-    let url = `https://beta.koora.com/wp-json/wp/v2/posts?per_page=30&page=1&_embed`;
-    
-    if (categories) {
-      const categoryParam = Array.isArray(categories) ? categories.join(',') : categories.toString();
-      url += `&categories=${categoryParam}`;
-    }
-    
-    console.log(`🚀 Fetching first page WordPress news...`);
-    
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.warn(`WordPress first page fetch failed:`, response.status);
-      return [];
-    }
-    
-    const data: WordPressNewsItem[] = await response.json();
-    const result = Array.isArray(data) ? data : [];
-    
-    console.log(`✅ First page loaded: ${result.length} articles`);
-    return transformWordPressNews(result);
-  } catch (error) {
-    console.error('Failed to fetch WordPress first page:', error);
-    return [];
-  }
-};
+// ==============================================
+// FONCTIONS OPTIMISÉES AVEC CACHE GLOBAL
+// ==============================================
 
-// Fonction pour charger les pages supplémentaires en arrière-plan
-export const fetchWordPressNewsBackground = async (options: {
-  categories?: number | number[];
-  excludeFirstPage?: boolean;
-} = {}): Promise<NewsCardItem[]> => {
-  const { categories, excludeFirstPage = true } = options;
+import { globalCache, debounceCache } from './globalCache';
   
   try {
     // Construction de l'URL avec catégories si spécifiées
@@ -460,4 +425,146 @@ export const fetchSimpleWordPressNews = async (): Promise<NewsCardItem[]> => {
     console.error("WordPress news fetch failed:", error);
     return [];
   }
+};
+
+// ==============================================
+// FONCTIONS OPTIMISÉES AVEC CACHE GLOBAL
+// ==============================================
+
+import { globalCache, debounceCache } from './globalCache';
+
+// Fonction optimisée pour première page avec cache global
+export const fetchWordPressNewsFirstPage = debounceCache(async (params: {
+  categories?: number[];
+  per_page?: number;
+}): Promise<NewsCardItem[]> => {
+  const { categories, per_page = 30 } = params;
+  const cacheKey = `wordpress_first_page_${categories?.join(',') || 'all'}_${per_page}`;
+  
+  // Vérifier le cache global
+  const cached = globalCache.get<NewsCardItem[]>(cacheKey);
+  if (cached) {
+    console.log(`🎯 Cache HIT pour première page: ${cacheKey}`);
+    return cached;
+  }
+  
+  console.log(`🔄 Cache MISS pour première page: ${cacheKey}`);
+  
+  try {
+    const baseUrl = "https://koradisport.com/wp-json/wp/v2/posts";
+    const params_obj = new URLSearchParams({
+      per_page: per_page.toString(),
+      page: "1",
+      _embed: "true",
+      orderby: "date",
+      order: "desc",
+    });
+
+    if (categories && categories.length > 0) {
+      params_obj.append("categories", categories.join(","));
+    }
+
+    const response = await fetch(`${baseUrl}?${params_obj}`);
+    if (!response.ok) {
+      throw new Error(`WordPress API error: ${response.status}`);
+    }
+
+    const posts = await response.json();
+    const newsItems = transformWordPressNews(posts);
+    
+    // Mettre en cache avec TTL de 2 minutes pour première page
+    globalCache.set(cacheKey, newsItems, 2 * 60 * 1000);
+    
+    return newsItems;
+  } catch (error) {
+    console.error("Error fetching WordPress first page:", error);
+    return [];
+  }
+}, 1000); // Debounce de 1 seconde
+
+// Fonction optimisée pour arrière-plan avec cache global
+export const fetchWordPressNewsBackground = debounceCache(async (params: {
+  categories?: number[];
+  excludeFirstPage?: boolean;
+  per_page?: number;
+}): Promise<NewsCardItem[]> => {
+  const { categories, excludeFirstPage = true, per_page = 30 } = params;
+  const cacheKey = `wordpress_background_${categories?.join(',') || 'all'}_${per_page}`;
+  
+  // Vérifier le cache global
+  const cached = globalCache.get<NewsCardItem[]>(cacheKey);
+  if (cached) {
+    console.log(`🎯 Cache HIT pour arrière-plan: ${cacheKey}`);
+    return cached;
+  }
+  
+  console.log(`🔄 Cache MISS pour arrière-plan: ${cacheKey}`);
+  
+  try {
+    const allNews: NewsCardItem[] = [];
+    const startPage = excludeFirstPage ? 2 : 1;
+    const maxPages = 3; // Limiter à 3 pages pour éviter trop de requêtes
+    
+    // Paralléliser les requêtes mais limiter le nombre
+    const promises = [];
+    for (let page = startPage; page <= startPage + maxPages - 1; page++) {
+      promises.push(fetchWordPressPageOptimized(page, categories, per_page));
+    }
+    
+    const results = await Promise.allSettled(promises);
+    results.forEach(result => {
+      if (result.status === 'fulfilled') {
+        allNews.push(...result.value);
+      }
+    });
+    
+    // Mettre en cache avec TTL de 10 minutes pour arrière-plan
+    globalCache.set(cacheKey, allNews, 10 * 60 * 1000);
+    
+    return allNews;
+  } catch (error) {
+    console.error("Error fetching WordPress background:", error);
+    return [];
+  }
+}, 2000); // Debounce de 2 secondes pour arrière-plan
+
+// Fonction helper optimisée pour une page spécifique
+const fetchWordPressPageOptimized = async (
+  page: number, 
+  categories?: number[], 
+  per_page: number = 30
+): Promise<NewsCardItem[]> => {
+  const cacheKey = `wordpress_page_${page}_${categories?.join(',') || 'all'}_${per_page}`;
+  
+  // Vérifier le cache pour cette page spécifique
+  const cached = globalCache.get<NewsCardItem[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  
+  const baseUrl = "https://koradisport.com/wp-json/wp/v2/posts";
+  const params = new URLSearchParams({
+    per_page: per_page.toString(),
+    page: page.toString(),
+    _embed: "true",
+    orderby: "date", 
+    order: "desc",
+  });
+
+  if (categories && categories.length > 0) {
+    params.append("categories", categories.join(","));
+  }
+
+  const response = await fetch(`${baseUrl}?${params}`);
+  if (!response.ok) {
+    throw new Error(`WordPress API error: ${response.status}`);
+  }
+
+  const posts = await response.json();
+  const newsItems = transformWordPressNews(posts);
+  
+  // Mettre en cache cette page avec TTL de 5 minutes
+  globalCache.set(cacheKey, newsItems, 5 * 60 * 1000);
+  
+  return newsItems;
 };
