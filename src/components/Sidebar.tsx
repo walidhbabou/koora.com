@@ -1,3 +1,4 @@
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -5,6 +6,7 @@ import { footballAPI, MAIN_LEAGUES } from "@/config/api";
 import { transliterateTeamName } from "@/utils/transliterate";
 import { useSettings } from "@/contexts/SettingsContext";
 import { Fixture as APIFixture } from "@/config/api";
+import { LEAGUES, getLeagueName } from "@/config/leagues";
 
 interface GroupedMatches {
   [league: string]: {
@@ -47,12 +49,14 @@ function translateName(name: string): string {
   return dictionary[name] || name;
 }
 
+
 const Sidebar = () => {
   const { hourFormat } = useSettings();
   const [groupedMatches, setGroupedMatches] = useState<GroupedMatches>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedLeagueId, setSelectedLeagueId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchMatches = async () => {
@@ -163,9 +167,23 @@ const Sidebar = () => {
       return <div className="text-center text-muted-foreground dark:text-muted-foreground">لا توجد مباريات اليوم</div>;
     }
 
+    // Filtrage par ligue sélectionnée
+    let entries = Object.entries(groupedMatches);
+    if (selectedLeagueId) {
+      entries = entries.filter(([leagueName, data]) => {
+        // Chercher la ligue par nom (arabe ou fr)
+        const leagueObj = LEAGUES.find(l => l.name === leagueName || l.nameAr === leagueName);
+        return leagueObj && leagueObj.id === selectedLeagueId;
+      });
+    }
+
+    if (entries.length === 0) {
+      return <div className="text-center text-muted-foreground dark:text-muted-foreground">لا توجد مباريات لهذه البطولة اليوم</div>;
+    }
+
     return (
       <div className="space-y-6">
-        {Object.entries(groupedMatches).map(([league, data]) => (
+        {entries.map(([league, data]) => (
           <div key={league}>
             {/* Nom de la ligue */}
             <div className="flex items-center gap-2 mb-2 border-b pb-1 dark:border-gray-700">
@@ -232,8 +250,26 @@ const Sidebar = () => {
         </div>
       </Card>
 
-      {/* Matches regroupés */}
-      <Card className="p-4 dark:bg-gray-800">
+      {/* Sélecteur de ligue */}
+      <Card className="p-4 dark:bg-gray-800 mb-2">
+        <div className="flex flex-wrap gap-2 mb-3">
+          <button
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${selectedLeagueId === null ? 'bg-green-600 text-white border-green-600' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
+            onClick={() => setSelectedLeagueId(null)}
+          >
+            الكل
+          </button>
+          {LEAGUES.filter(l => l.logo).slice(0, 10).map(league => (
+            <button
+              key={league.id}
+              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${selectedLeagueId === league.id ? 'bg-green-600 text-white border-green-600' : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20'}`}
+              onClick={() => setSelectedLeagueId(league.id)}
+            >
+              <img src={league.logo} alt={league.name} className="w-4 h-4 mr-1 inline-block" />
+              {league.nameAr}
+            </button>
+          ))}
+        </div>
         <h3 className="font-semibold text-foreground mb-4 dark:text-gray-200">مباريات اليوم</h3>
         {renderContent()}
       </Card>
