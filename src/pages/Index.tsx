@@ -256,6 +256,12 @@ const Index = () => {
       if (!append) {
         setAllNewsItems(firstPageNews);
         paginateNews(firstPageNews, nextPage);
+        
+        // Activer immédiatement la pagination si on a une première page pleine (30 articles)
+        // Cela permettra d'afficher le bouton "Load More" immédiatement
+        if (firstPageNews.length >= 30) {
+          setTotalPages(Math.max(2, Math.ceil(firstPageNews.length / NEWS_PER_PAGE))); // Au minimum 2 pages estimées
+        }
       }
       
       setLoading(false);
@@ -315,6 +321,30 @@ const Index = () => {
     const endIndex = startIndex + NEWS_PER_PAGE;
     const newItems = allNewsItems.slice(startIndex, endIndex);
     
+    // Si on n'a pas assez d'articles dans le cache, charger plus en arrière-plan
+    if (newItems.length === 0 && allNewsItems.length < 100) {
+      console.log("⚡ Pas assez d'articles en cache, chargement d'urgence...");
+      // Déclencher un chargement rapide supplémentaire
+      fetchWordPressNewsBackground({ excludeFirstPage: true }).then(backgroundNews => {
+        const combinedNews = [...allNewsItems, ...backgroundNews];
+        const uniqueNews = combinedNews.filter((item, index, self) => 
+          index === self.findIndex(t => t.id === item.id)
+        );
+        setAllNewsItems(uniqueNews);
+        setTotalPages(Math.ceil(uniqueNews.length / NEWS_PER_PAGE));
+        
+        // Maintenant charger la page demandée
+        const updatedNewItems = uniqueNews.slice(startIndex, endIndex);
+        if (updatedNewItems.length > 0) {
+          setNewsItems(prevItems => [...prevItems, ...updatedNewItems]);
+          setPage(nextPage);
+        }
+        setIsPageTransition(false);
+      }).catch(() => {
+        setIsPageTransition(false);
+      });
+      return;
+    }
     
     setTimeout(() => {
       setNewsItems(prevItems => [...prevItems, ...newItems]);

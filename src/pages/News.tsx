@@ -500,6 +500,13 @@ const News = () => {
         paginateNews(firstPageResult, 1);
         setLoadingNews(false);
         
+        // Activer immédiatement hasMore si on a au moins 30 articles (première page pleine)
+        // Cela permettra d'afficher le bouton "Load More" immédiatement
+        if (firstPageResult.length >= 30) {
+          setHasMore(true);
+          setTotalPages(Math.max(2, Math.ceil(firstPageResult.length / pageSize))); // Au minimum 2 pages estimées
+        }
+        
         // Étape 2: Charger le reste en arrière-plan (après 500ms)
         setTimeout(async () => {
           try {
@@ -587,6 +594,37 @@ const News = () => {
     
     console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}, total available: ${allNews.length}`);
     
+    // Si on n'a pas assez d'articles dans le cache, charger plus en arrière-plan
+    if (newItems.length === 0 && allNews.length < 100) {
+      console.log("⚡ Pas assez d'articles en cache, chargement d'urgence...");
+      try {
+        const backgroundResult = await fetchWordPressNewsBackground({
+          categories: selectedWPCategory ? [selectedWPCategory] : undefined,
+          excludeFirstPage: true
+        });
+        
+        const combinedResult = [...allNews, ...backgroundResult];
+        const uniqueResult = combinedResult.filter((item, index, self) => 
+          index === self.findIndex(t => t.id === item.id)
+        );
+        
+        setAllNews(uniqueResult);
+        setTotalPages(Math.ceil(uniqueResult.length / pageSize));
+        
+        // Maintenant charger la page demandée
+        const updatedNewItems = uniqueResult.slice(startIndex, endIndex);
+        if (updatedNewItems.length > 0) {
+          setDisplayedNews(prevItems => [...prevItems, ...updatedNewItems]);
+          setPage(nextPage);
+          setHasMore(nextPage < Math.ceil(uniqueResult.length / pageSize));
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement d'urgence:", error);
+      }
+      setIsPageTransition(false);
+      return;
+    }
+    
     setTimeout(() => {
       setDisplayedNews(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
@@ -598,7 +636,7 @@ const News = () => {
       
       setIsPageTransition(false);
     }, 50);
-  }, [loadingNews, isPageTransition, hasMore, page, pageSize, allNews]);
+  }, [loadingNews, isPageTransition, hasMore, page, pageSize, allNews, selectedWPCategory]);
 
   
   // useEffect(() => {
