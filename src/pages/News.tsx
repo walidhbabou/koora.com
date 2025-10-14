@@ -478,15 +478,24 @@ const News = () => {
         console.log(`🚀 Chargement rapide de la première page pour: ${selectedWPCategory || 'all'}`);
         
         // Étape 1: Charger rapidement la première page seulement (30 articles)
-        const firstPageResult = await fetchWordPressNewsFirstPage({
-          categories: selectedWPCategory ? [selectedWPCategory] : undefined,
-        });
+        let firstPageResult: NewsCardItem[] = [];
+        try {
+          firstPageResult = await fetchWordPressNewsFirstPage({
+            categories: selectedWPCategory ? [selectedWPCategory] : undefined,
+          });
+        } catch (firstPageError) {
+          console.error("Failed to fetch WordPress first page:", firstPageError);
+          firstPageResult = [];
+        }
+        
+        // Trier par date (comme Index.tsx)
+        firstPageResult.sort((a, b) => 
+          b.publishedAt.localeCompare(a.publishedAt)
+        );
         
         console.log(`✅ Première page chargée: ${firstPageResult.length} articles`);
         
-        // Afficher immédiatement la première page
-        setNews(firstPageResult);
-        setFilteredNews(firstPageResult);
+        // Afficher immédiatement la première page (simplifié)
         setAllNews(firstPageResult);
         paginateNews(firstPageResult, 1);
         setLoadingNews(false);
@@ -510,9 +519,7 @@ const News = () => {
             
             console.log(`🎉 Chargement complet terminé: ${uniqueResult.length} articles au total`);
             
-            // Mettre à jour les données avec tous les articles
-            setNews(uniqueResult);
-            setFilteredNews(uniqueResult);
+            // Mettre à jour avec tous les articles (simplifié)
             setAllNews(uniqueResult);
             
             // Recalculer la pagination avec tous les articles
@@ -523,7 +530,7 @@ const News = () => {
           } catch (backgroundError) {
             console.error('❌ Erreur chargement arrière-plan:', backgroundError);
           }
-        }, 500); // Délai de 500ms pour laisser l'UI se stabiliser
+        }, 300); // Délai de 300ms comme Index.tsx
         
       } catch (error) {
         console.error('❌ Erreur chargement première page:', error);
