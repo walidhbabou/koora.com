@@ -654,6 +654,200 @@ const Index = () => {
                 </button>
               </div>
             )}
+
+            {/* Matches Section */}
+            <div className="mt-8 lg:mt-12">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-sport-dark dark:text-white flex items-center gap-3">
+                  <div className="w-1 h-8 bg-sport-primary rounded-full"></div>
+                  مباريات اليوم - {formattedDate}
+                </h2>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  مباشر
+                </div>
+              </div>
+
+              {/* Date and League Filter */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="px-3 py-2 border rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setMainLeaguesOnly(!mainLeaguesOnly)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      mainLeaguesOnly
+                        ? "bg-sport-primary text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    {mainLeaguesOnly ? "الدوريات الرئيسية" : "جميع الدوريات"}
+                  </button>
+                  <button
+                    onClick={() => setShowLeagueFilter(!showLeagueFilter)}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+                  >
+                    ⚙️ فلتر
+                  </button>
+                </div>
+              </div>
+
+              {/* League Filter */}
+              {showLeagueFilter && (
+                <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h3 className="font-medium mb-3">اختر الدوريات:</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {SPECIFIC_LEAGUES.map((league) => (
+                      <label key={league.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeagues.includes(league.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLeagues([...selectedLeagues, league.id]);
+                            } else {
+                              setSelectedLeagues(selectedLeagues.filter(id => id !== league.id));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span>{league.nameAr}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Matches Display */}
+              {loadingMatches ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="p-6 animate-pulse">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-8 h-8 bg-gray-200 rounded"></div>
+                        <div className="w-32 h-4 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="space-y-3">
+                        {[...Array(2)].map((_, j) => (
+                          <div key={j} className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-6 h-6 bg-gray-200 rounded"></div>
+                              <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                            </div>
+                            <div className="w-12 h-4 bg-gray-200 rounded"></div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                              <div className="w-6 h-6 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : groupedByLeague.length > 0 ? (
+                <div className="space-y-6">
+                  {groupedByLeague.map(({ league, fixtures }) => (
+                    <Card key={league.id} className="p-6">
+                      <div className="flex items-center gap-4 mb-4">
+                        <img
+                          src={league.logo}
+                          alt={league.name}
+                          className="w-8 h-8 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/placeholder.svg";
+                          }}
+                        />
+                        <h3 className="font-bold text-lg text-sport-dark dark:text-white">
+                          {SPECIFIC_LEAGUES.find(l => l.id === league.id)?.nameAr || league.name}
+                        </h3>
+                        <span className="text-sm text-gray-500">
+                          ({fixtures.length} مباراة)
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {fixtures.map((match) => (
+                          <div
+                            key={match.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          >
+                            {/* Home Team */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <img
+                                src={match.teams.home.logo}
+                                alt={match.teams.home.name}
+                                className="w-6 h-6 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                }}
+                              />
+                              <span className="text-sm font-medium truncate">
+                                {match.teams.home.name}
+                              </span>
+                            </div>
+
+                            {/* Score or Time */}
+                            <div className="flex flex-col items-center mx-4 min-w-[80px]">
+                              {match.goals.home !== null && match.goals.away !== null ? (
+                                <>
+                                  <div className="text-lg font-bold text-sport-primary">
+                                    {match.goals.home} - {match.goals.away}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {statusLabel(match)}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-sm font-medium">
+                                    {formatKickoffAr(match.date)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {statusLabel(match)}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Away Team */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
+                              <span className="text-sm font-medium truncate">
+                                {match.teams.away.name}
+                              </span>
+                              <img
+                                src={match.teams.away.logo}
+                                alt={match.teams.away.name}
+                                className="w-6 h-6 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-8 text-center text-gray-500 dark:text-gray-400">
+                  <div className="text-4xl mb-4">⚽</div>
+                  <div className="text-lg font-medium">
+                    لا توجد مباريات في هذا التاريخ
+                  </div>
+                  <div className="text-sm mt-2">
+                    جرب تاريخ آخر أو قم بتوسيع فلتر الدوريات
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
 
           <div className="lg:w-80 xl:w-80 space-y-6 order-2 lg:order-2 xl:order-2" style={{direction: 'ltr'}}>
@@ -854,6 +1048,198 @@ const Index = () => {
                 </button>
               </div>
             )}
+
+            {/* Matches Section Mobile */}
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-sport-dark dark:text-white flex items-center gap-2">
+                  <div className="w-1 h-6 bg-sport-primary rounded-full"></div>
+                  مباريات اليوم
+                </h2>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  مباشر
+                </div>
+              </div>
+
+              {/* Mobile Date and Filter */}
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  />
+                  <button
+                    onClick={() => setShowLeagueFilter(!showLeagueFilter)}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
+                  >
+                    ⚙️
+                  </button>
+                </div>
+                <button
+                  onClick={() => setMainLeaguesOnly(!mainLeaguesOnly)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    mainLeaguesOnly
+                      ? "bg-sport-primary text-white"
+                      : "bg-gray-200 text-gray-700"
+                  }`}
+                >
+                  {mainLeaguesOnly ? "الدوريات الرئيسية" : "جميع الدوريات"}
+                </button>
+              </div>
+
+              {/* Mobile League Filter */}
+              {showLeagueFilter && (
+                <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h3 className="font-medium mb-2 text-sm">اختر الدوريات:</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    {SPECIFIC_LEAGUES.map((league) => (
+                      <label key={league.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeagues.includes(league.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLeagues([...selectedLeagues, league.id]);
+                            } else {
+                              setSelectedLeagues(selectedLeagues.filter(id => id !== league.id));
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span>{league.nameAr}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Mobile Matches Display */}
+              {loadingMatches ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="p-4 animate-pulse">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-6 h-6 bg-gray-200 rounded"></div>
+                        <div className="w-24 h-3 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="space-y-2">
+                        {[...Array(2)].map((_, j) => (
+                          <div key={j} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                              <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                            </div>
+                            <div className="w-8 h-3 bg-gray-200 rounded"></div>
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 h-3 bg-gray-200 rounded"></div>
+                              <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : groupedByLeague.length > 0 ? (
+                <div className="space-y-4">
+                  {groupedByLeague.map(({ league, fixtures }) => (
+                    <Card key={league.id} className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <img
+                          src={league.logo}
+                          alt={league.name}
+                          className="w-6 h-6 object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/placeholder.svg";
+                          }}
+                        />
+                        <h3 className="font-bold text-base text-sport-dark dark:text-white">
+                          {SPECIFIC_LEAGUES.find(l => l.id === league.id)?.nameAr || league.name}
+                        </h3>
+                        <span className="text-xs text-gray-500">
+                          ({fixtures.length})
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {fixtures.map((match) => (
+                          <div
+                            key={match.id}
+                            className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                          >
+                            {/* Home Team */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <img
+                                src={match.teams.home.logo}
+                                alt={match.teams.home.name}
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                }}
+                              />
+                              <span className="text-xs font-medium truncate">
+                                {match.teams.home.name}
+                              </span>
+                            </div>
+
+                            {/* Score or Time */}
+                            <div className="flex flex-col items-center mx-2 min-w-[60px]">
+                              {match.goals.home !== null && match.goals.away !== null ? (
+                                <>
+                                  <div className="text-sm font-bold text-sport-primary">
+                                    {match.goals.home}-{match.goals.away}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {statusLabel(match)}
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-xs font-medium">
+                                    {formatKickoffAr(match.date)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {statusLabel(match)}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Away Team */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                              <span className="text-xs font-medium truncate">
+                                {match.teams.away.name}
+                              </span>
+                              <img
+                                src={match.teams.away.logo}
+                                alt={match.teams.away.name}
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/placeholder.svg";
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card className="p-6 text-center text-gray-500 dark:text-gray-400">
+                  <div className="text-3xl mb-3">⚽</div>
+                  <div className="text-base font-medium">
+                    لا توجد مباريات في هذا التاريخ
+                  </div>
+                  <div className="text-sm mt-1">
+                    جرب تاريخ آخر أو قم بتوسيع فلتر الدوريات
+                  </div>
+                </Card>
+              )}
+            </div>
             
             {!loading && newsItems.length === 0 && (
               <Card className="mt-4 p-8 text-center text-muted-foreground">
