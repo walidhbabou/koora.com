@@ -30,7 +30,6 @@ import TeamsLogos from "@/components/TeamsLogos";
 import Footer from "@/components/Footer";
 import CategoryFilterHeader from "@/components/CategoryFilterHeader";
 import { HeaderAd, MobileAd, SidebarAd, InArticleAd } from "../components/AdWrapper";
-import LocalPromoBanner from "../components/LocalPromoBanner";
 import { Button } from "@/components/ui/button";
 import {
   Pagination,
@@ -944,12 +943,7 @@ const News = () => {
                           </div>
                         )}
 
-                        {/* Insérer une bannière locale après chaque 9 articles */}
-                        {(index + 1) % 9 === 0 && index < displayedNews.length - 1 && (
-                          <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4 flex justify-center">
-                            <LocalPromoBanner size="large" />
-                          </div>
-                        )}
+                        {/* Bannière supprimée */}
                       </React.Fragment>
                     ))}
                   </div>
@@ -1106,9 +1100,6 @@ const News = () => {
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
                 <SidebarAd testMode={false} />
               </div>
-
-              {/* Local Promo Banner */}
-              <LocalPromoBanner size="medium" />
             </div>
           </div>
         </div>
