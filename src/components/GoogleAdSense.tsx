@@ -86,7 +86,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     }
 
     try {
-      await loadAdSenseScript();
+      await loadAdSenseScript(client);
       initializeAdSense();
       
       // Marquer comme en cours de traitement
@@ -104,7 +104,7 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
     } catch (error) {
       console.warn('Erreur lors du chargement de la publicité AdSense:', error);
     }
-  }, [isInitialized]);
+  }, [isInitialized, client]);
 
   // Fonction pour vérifier et initialiser l'annonce
   const checkAndInitialize = useCallback(() => {
@@ -126,9 +126,9 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
       return;
     }
 
-    // Ne pas charger en mode test
-    if (testMode || !adsenseTestMode) {
-      console.log('🚫 Mode test ou AdSense désactivé');
+    // Ne pas charger si AdSense est complètement désactivé
+    if (!adsenseTestMode && testMode) {
+      console.log('🚫 Mode test désactivé');
       return;
     }
 
@@ -180,6 +180,16 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
   // Afficher les publicités si le mode test est activé OU si on a un vrai client/slot
   const shouldShowAd = adsenseTestMode || (client && slot);
   
+  console.log('🔍 AdSense Debug Info:', {
+    adsenseClient,
+    adsenseTestMode,
+    client,
+    slot,
+    shouldShowAd,
+    testMode,
+    format
+  });
+  
   if (!shouldShowAd) {
     console.log('🚫 Publicités non autorisées:', { adsenseTestMode, client: !!client, slot: !!slot });
     return null;
@@ -197,6 +207,20 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
         ...style
       }}
     >
+      {/* Affichage de debug en mode test */}
+      {testMode && adsenseTestMode && (
+        <div className="bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-400 rounded p-4 text-center">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+            🧪 Mode Test AdSense
+          </div>
+          <div className="text-xs text-gray-500">
+            Client: {client}<br/>
+            Slot: {slot}<br/>
+            Format: {format}
+          </div>
+        </div>
+      )}
+      
       <ins
         className="adsbygoogle"
         style={{

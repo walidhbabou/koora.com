@@ -63,7 +63,7 @@ export const pushAdSenseAd = (config?: Record<string, unknown>): void => {
   if (typeof window !== 'undefined' && window.adsbygoogle) {
     try {
       // Vérifier que nous avons bien des éléments .adsbygoogle à traiter
-      const adElements = document.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status])');
+      const adElements = document.querySelectorAll('.adsbygoogle:not([data-adsbygoogle-status="done"]):not([data-adsbygoogle-status="filled"])');
       if (adElements.length === 0) {
         console.warn('⚠️ No new .adsbygoogle elements found (all already processed)');
         return;
