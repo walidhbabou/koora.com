@@ -45,7 +45,6 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
   const [isInitialized, setIsInitialized] = React.useState(false);
-  const [showFallback, setShowFallback] = React.useState(false);
   // Générer un ID unique pour chaque instance
   const adId = React.useMemo(() => `adsense-${slot}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, [slot]);
 
@@ -102,18 +101,8 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
           setIsInitialized(true);
         }
       }, 300);
-      
-      // Timeout pour afficher un fallback si AdSense ne se charge pas
-      setTimeout(() => {
-        const insElement = adRef.current?.querySelector('.adsbygoogle');
-        if (insElement && !(insElement as HTMLElement).dataset?.adsbygoogleStatus) {
-          console.log('⚠️ AdSense timeout - affichage du fallback');
-          setShowFallback(true);
-        }
-      }, 3000);
     } catch (error) {
       console.warn('Erreur lors du chargement de la publicité AdSense:', error);
-      setShowFallback(true);
     }
   }, [isInitialized, client]);
 
@@ -237,26 +226,6 @@ const GoogleAdSense: React.FC<GoogleAdSenseProps> = ({
             </div>
             <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               تابع آخر الأخبار والنتائج الرياضية
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Fallback si AdSense ne se charge pas */}
-      {showFallback && !adsenseTestMode && (
-        <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 text-center">
-          <div className="text-lg font-bold text-green-800 dark:text-green-200 mb-2">
-            🌟 إعلان محلي
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm">
-            <div className="text-base font-bold text-gray-800 dark:text-gray-200 mb-1">
-              كورة - موقعك الرياضي الأول
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-              آخر الأخبار • النتائج المباشرة • التحليلات
-            </div>
-            <div className="text-xs text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-800/30 px-2 py-1 rounded">
-              انضم إلى أكثر من 100,000 متابع
             </div>
           </div>
         </div>

@@ -913,89 +913,99 @@ const News = () => {
                 </div>
               )}
 
-              {/* Afficher le contenu existant même pendant le chargement de nouvelles données */}
-              {displayedNews.length > 0 && (
-                <>
-                  {/* News Grid - Responsive - Tous les articles disponibles */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-4">
-                    {displayedNews.map((newsItem, index) => (
-                      <React.Fragment key={newsItem.id}>
-                        <div className="relative">
-                          <Link to={`/news/${newsItem.source === 'wordpress' ? generateWordPressSlug(newsItem.title, Number(newsItem.id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItem.title, newsItem.id)}`}>
-                            <NewsCard news={newsItem} size="medium" />
-                            {newsItem.source === "wordpress" && (
-                              <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
-                                {currentLanguage === "ar" ? "كورة" : "Koora"}
-                              </div>
-                            )}
-                          </Link>
-                        </div>
-                        
-                        {/* Insérer une annonce après chaque 6 articles */}
-                        {(index + 1) % 6 === 0 && index < displayedNews.length - 1 && (
-                          <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4">
-                            <InArticleAd testMode={false} />
-                          </div>
-                        )}
+             {displayedNews.length < allNews.length && allNews.length > pageSize && (
+  <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
+    <Button
+      size="lg"
+      variant="outline"
+      className="bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50 px-6 py-3"
+      onClick={(e) => {
+        e.preventDefault();
+        handleLoadMore();
+      }}
+      disabled={loadingNews || isPageTransition}
+    >
+      {loadingNews || isPageTransition
+        ? currentLanguage === "ar" ? "جاري التحميل..." : "Chargement..."
+        : currentLanguage === "ar"
+          ? `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`
+          : `Afficher plus (${allNews.length - displayedNews.length} restants)`
+      }
+    </Button>
+  </div>
+)}
 
-                        {/* Insérer une bannière locale après chaque 9 articles */}
-                        {(index + 1) % 9 === 0 && index < displayedNews.length - 1 && (
-                          <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4 flex justify-center">
-                            <LocalPromoBanner size="large" />
-                          </div>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                  
-                  {/* Indicateur de chargement de contenu supplémentaire */}
-                  {loadingNews && (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sport-dark"></div>
-                      <span className="ml-2 text-gray-600">جاري تحميل المزيد...</span>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* No news state */}
-              {!loadingNews && displayedNews.length === 0 && allNews.length === 0 && (
-                <div className="flex justify-center py-8 sm:py-12">
-                  <NewsCard
-                    news={{
-                      id: "empty",
-                      title:
-                        currentLanguage === "ar"
-                          ? "لا توجد أخبار متاحة حالياً"
-                          : "Aucune actualité disponible",
-                      summary:
-                        currentLanguage === "ar"
-                          ? "انتظر تحديثات جديدة قريباً."
-                          : "De nouvelles actualités arriveront bientôt.",
-                      imageUrl: "/placeholder.svg",
-                      publishedAt: "",
-                      category: currentLanguage === "ar" ? "أخبار" : "News",
-                    }}
-                    size="medium"
-                  />
+              {/* Grid des articles avec pagination */}
+              {!loadingNews && displayedNews.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1 sm:gap-2 lg:gap-3">
+                  {displayedNews.map((item, index) => (
+                    <NewsCard
+                      key={`${item.id}-${index}`}
+                      news={item}
+                      size="medium"
+                      onReport={() => setReportOpenId(item.id)}
+                      isReporting={reportingId === item.id}
+                    />
+                  ))}
                 </div>
               )}
 
-              {/* Load More Button - Pagination manuelle uniquement */}
-              {displayedNews.length < allNews.length && allNews.length > pageSize && (
-                <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="bg-sport-dark text-white hover:bg-sport-dark/80 transition-colors disabled:opacity-50 px-6 py-3"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleLoadMore();
-                    }}
-                    disabled={loadingNews || isPageTransition}
-                  >
-                    {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`}
-                  </Button>
+              {/* Pagination - Afficher seulement si plus d'une page */}
+              {!loadingNews && allNews.length > pageSize && totalPages > 1 && (
+                <div className="flex justify-center mt-8">
+                  <Pagination>
+                    <PaginationContent>
+                      {page > 1 && (
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(page - 1)}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                      
+                      {/* Page numbers */}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (page <= 3) {
+                          pageNum = i + 1;
+                        } else if (page >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = page - 2 + i;
+                        }
+                        
+                        return (
+                          <PaginationItem key={pageNum}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(pageNum)}
+                              isActive={page === pageNum}
+                              className="cursor-pointer"
+                            >
+                              {pageNum}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      
+                      {totalPages > 5 && page < totalPages - 2 && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      
+                      {page < totalPages && (
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(page + 1)}
+                            className="cursor-pointer"
+                          />
+                        </PaginationItem>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
                 </div>
               )}
 
