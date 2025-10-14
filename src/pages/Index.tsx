@@ -61,11 +61,11 @@ import {
 } from "@/components/AdWrapper";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/lib/supabase";
-import { 
-  fetchWordPressNews, 
-  fetchWordPressNewsFirstPage, 
-  fetchWordPressNewsBackground 
-} from "@/utils/newsUtils";
+import {
+  fetchWordPressNewsFirstPageOptimized,
+  fetchWordPressNewsBackgroundOptimized
+} from "@/utils/optimizedNewsUtils";
+import { globalCache } from "@/utils/globalCache";
 import { footballAPI } from "@/config/api";
 import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 import { Filter } from "lucide-react";
@@ -236,14 +236,15 @@ const Index = () => {
   const fetchNews = async (nextPage: number = 1, append: boolean = false) => {
     setLoading(true);
     try {
-      // Chargement rapide en deux étapes
+      console.log('🚀 Index.tsx - Chargement optimisé des actualités avec cache');
       
-      // Étape 1: Charger rapidement la première page (30 articles)
+      // Étape 1: Charger rapidement la première page avec cache (30 articles)
       let firstPageNews: NewsCardItem[] = [];
       try {
-        firstPageNews = await fetchWordPressNewsFirstPage({});
+        firstPageNews = await fetchWordPressNewsFirstPageOptimized({});
+        console.log(`✅ Première page chargée: ${firstPageNews.length} articles`);
       } catch (firstPageError) {
-        console.error("Failed to fetch WordPress first page:", firstPageError);
+        console.error("❌ Échec première page:", firstPageError);
         firstPageNews = [];
       }
 
@@ -259,11 +260,13 @@ const Index = () => {
       }
       
       setLoading(false);
+      console.log('⚡ Affichage immédiat de la première page terminé');
       
-      // Étape 2: Charger le reste en arrière-plan (après 300ms)
+      // Étape 2: Charger le reste en arrière-plan avec cache (après 300ms)
       setTimeout(async () => {
         try {
-          const backgroundNews = await fetchWordPressNewsBackground({
+          console.log('🔄 Démarrage chargement arrière-plan avec cache...');
+          const backgroundNews = await fetchWordPressNewsBackgroundOptimized({
             excludeFirstPage: true
           });
           
@@ -278,6 +281,7 @@ const Index = () => {
             b.publishedAt.localeCompare(a.publishedAt)
           );
           
+          console.log(`🎯 Total final optimisé: ${uniqueNews.length} articles uniques`);
           
           // Mettre à jour avec tous les articles
           setAllNewsItems(uniqueNews);
@@ -287,12 +291,12 @@ const Index = () => {
           setTotalCount(uniqueNews.length);
           
         } catch (backgroundError) {
-          console.error("❌ Erreur chargement arrière-plan:", backgroundError);
+          console.error("❌ Erreur chargement arrière-plan avec cache:", backgroundError);
         }
       }, 300);
       
     } catch (e) {
-      console.error("Failed to load news", e);
+      console.error("❌ Échec chargement actualités:", e);
       setNewsItems([]);
       setAllNewsItems([]);
       setLoading(false);

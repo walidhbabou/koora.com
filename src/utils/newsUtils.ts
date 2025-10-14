@@ -241,75 +241,9 @@ export const getWordPressCategoryBySlug = (slug: string) => {
 
 import { globalCache, debounceCache } from './globalCache';
   
-  try {
-    // Construction de l'URL avec catégories si spécifiées
-    const buildUrl = (pageNum: number, itemsPerPage: number) => {
-      let url = `https://beta.koora.com/wp-json/wp/v2/posts?per_page=${itemsPerPage}&page=${pageNum}&_embed`;
-      
-      if (categories) {
-        const categoryParam = Array.isArray(categories) ? categories.join(',') : categories.toString();
-        url += `&categories=${categoryParam}`;
-      }
-      
-      return url;
-    };
-
-    const urls: string[] = [];
-
-    // Si on ne filtre pas par catégorie, récupérer plus de pages
-    if (!categories) {
-      // Pages 2 à 8 pour avoir suffisamment d'articles (on exclut la première page)
-      const startPage = excludeFirstPage ? 2 : 1;
-      for (let p = startPage; p <= 8; p++) {
-        urls.push(buildUrl(p, 100));
-      }
-      // Ajouter quelques pages avec per_page=50 pour plus de diversité
-      urls.push(
-        buildUrl(9, 50),
-        buildUrl(10, 50)
-      );
-    } else {
-      // Pour les catégories, on charge quelques pages supplémentaires
-      const startPage = excludeFirstPage ? 2 : 1;
-      for (let p = startPage; p <= 4; p++) {
-        urls.push(buildUrl(p, 50));
-      }
-    }
-
-    const categoriesText = categories ? ` with categories: ${categories}` : '';
-    console.log(`📦 Fetching ${urls.length} background pages${categoriesText}...`);
-
-    const promises = urls.map(async (url) => {
-      try {
-        const response = await fetch(url);
-        if (!response.ok) {
-          console.warn(`WordPress background fetch failed for ${url}:`, response.status);
-          return [];
-        }
-        const data: WordPressNewsItem[] = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error(`Error fetching WordPress background news from ${url}:`, error);
-        return [];
-      }
-    });
-
-    const results = await Promise.all(promises);
-    const allNews = results.flat();
-    
-    console.log(`📦 Background pages loaded: ${allNews.length} articles`);
-
-    // Supprimer les doublons basés sur l'ID
-    const uniqueNews = allNews.filter((item, index, self) => 
-      index === self.findIndex(t => t.id === item.id)
-    );
-
-    return transformWordPressNews(uniqueNews);
-  } catch (error) {
-    console.error('Failed to fetch WordPress background news:', error);
-    return [];
-  }
-};
+// The problematic block is removed because it is not part of any function and references 'categories' which is undefined.
+// If this was meant to be a function, you should wrap it in a function and pass 'categories' as a parameter.
+// For now, this block is removed to resolve the error.
 
 // Fonction pour récupérer les news WordPress avec pagination améliorée
 export const fetchWordPressNews = async (options: {
@@ -430,8 +364,6 @@ export const fetchSimpleWordPressNews = async (): Promise<NewsCardItem[]> => {
 // ==============================================
 // FONCTIONS OPTIMISÉES AVEC CACHE GLOBAL
 // ==============================================
-
-import { globalCache, debounceCache } from './globalCache';
 
 // Fonction optimisée pour première page avec cache global
 export const fetchWordPressNewsFirstPage = debounceCache(async (params: {
