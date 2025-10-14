@@ -66,38 +66,15 @@ const News = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Utiliser le hook optimisé avec cache global
-  const { 
-    firstPageNews, 
-    allNews: optimizedAllNews, 
-    loading: optimizedLoading, 
-    error: optimizedError,
-    cacheStats 
-  } = useOptimizedNews(selectedWPCategory ? [selectedWPCategory] : undefined, {
-    autoPreload: true
-  });
-
-  // États locaux pour la pagination
+  // États locaux pour la pagination et les données
+  const [allNews, setAllNews] = useState<NewsCardItem[]>([]);
   const [displayedNews, setDisplayedNews] = useState<NewsCardItem[]>([]);
+  const [loadingNews, setLoadingNews] = useState<boolean>(true);
   const [page, setPage] = useState(1);
   const pageSize = 30;
   const [totalPages, setTotalPages] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [isPageTransition, setIsPageTransition] = useState<boolean>(false);
-
-  // Synchroniser avec les données optimisées
-  useEffect(() => {
-    if (optimizedAllNews.length > 0) {
-      paginateNews(optimizedAllNews, page);
-    }
-  }, [optimizedAllNews, page, paginateNews]);
-
-  // Afficher les statistiques du cache en développement
-  useEffect(() => {
-    if (import.meta.env.DEV) {
-      console.log('📊 Cache Stats:', cacheStats);
-    }
-  }, [cacheStats]);
   const [selectedWPCategory, setSelectedWPCategory] = useState<number | null>(null);
   const { currentLanguage } = useTranslation();
   const { toast } = useToast();
@@ -504,20 +481,20 @@ const News = () => {
     }
   }, [category, navigate]);
 
-  // useEffect principal pour charger seulement les news WordPress - optimisé pour affichage rapide
+  // useEffect principal pour charger seulement les news WordPress - simplifié
   useEffect(() => {
     console.log("News component mounted, loading WordPress news...");
     initialLoadComplete.current = true;
     
-    // Chargement en deux étapes pour affichage rapide
+    // Chargement optimisé avec les fonctions optimisées
     const quickLoad = async () => {
       setLoadingNews(true);
       
       try {
-        console.log(`🚀 Chargement rapide de la première page pour: ${selectedWPCategory || 'all'}`);
+        console.log(`🚀 Chargement optimisé des actualités pour: ${selectedWPCategory || 'all'}`);
         
         // Étape 1: Charger rapidement la première page seulement (30 articles)
-        const firstPageResult = await fetchWordPressNewsFirstPage({
+        const firstPageResult = await fetchWordPressNewsFirstPageOptimized({
           categories: selectedWPCategory ? [selectedWPCategory] : undefined,
         });
         
@@ -534,7 +511,7 @@ const News = () => {
         setTimeout(async () => {
           try {
             console.log(`📦 Chargement des pages supplémentaires en arrière-plan...`);
-            const backgroundResult = await fetchWordPressNewsBackground({
+            const backgroundResult = await fetchWordPressNewsBackgroundOptimized({
               categories: selectedWPCategory ? [selectedWPCategory] : undefined,
               excludeFirstPage: true
             });
@@ -567,13 +544,14 @@ const News = () => {
         
       } catch (error) {
         console.error('❌ Erreur chargement première page:', error);
-        // Fallback vers la méthode classique
-        fetchAllNews(1, false);
+        setLoadingNews(false);
+        setAllNews([]);
+        setDisplayedNews([]);
       }
     };
     
     quickLoad();
-  }, [selectedWPCategory, paginateNews, pageSize, fetchAllNews]);
+  }, [selectedWPCategory, paginateNews, pageSize]);
 
   // useEffect pour recharger quand les filtres WordPress changent - optimisé
   const prevFiltersRef = useRef({ selectedWPCategory });
@@ -608,26 +586,26 @@ const News = () => {
   }, [selectedWPCategory, fetchWordPressNewsData]);
 
   const handleLoadMore = useCallback(async () => {
-    const maxPages = Math.ceil(optimizedAllNews.length / pageSize);
-    if (optimizedLoading || isPageTransition || page >= maxPages || displayedNews.length >= optimizedAllNews.length) return;
+    const maxPages = Math.ceil(allNews.length / pageSize);
+    if (loadingNews || isPageTransition || page >= maxPages || displayedNews.length >= allNews.length) return;
     
     setIsPageTransition(true);
     
     // Utiliser les données déjà chargées en cache au lieu de recharger
     const nextPage = page + 1;
     
-    console.log(`Loading more from cache: page ${nextPage} (${displayedNews.length}/${optimizedAllNews.length} articles)`);
+    console.log(`Loading more from cache: page ${nextPage} (${displayedNews.length}/${allNews.length} articles)`);
     
     setTimeout(() => {
       const startIndex = (nextPage - 1) * pageSize;
       const endIndex = startIndex + pageSize;
-      const newItems = optimizedAllNews.slice(startIndex, endIndex);
+      const newItems = allNews.slice(startIndex, endIndex);
       setDisplayedNews(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
       setHasMore(nextPage < maxPages);
       setIsPageTransition(false);
     }, 50); // Réduit encore plus pour une réactivité maximale
-  }, [optimizedLoading, isPageTransition, page, pageSize, optimizedAllNews, displayedNews.length]);
+  }, [loadingNews, isPageTransition, page, pageSize, allNews, displayedNews.length]);
 
   
   // useEffect(() => {
@@ -725,8 +703,8 @@ const News = () => {
   };
 
   const handlePageChange = (newPage: number) => {
-    if (optimizedLoading || newPage < 1 || newPage > totalPages) return;
-    paginateNews(optimizedAllNews, newPage);
+    if (loadingNews || newPage < 1 || newPage > totalPages) return;
+    paginateNews(allNews, newPage);
     setPage(newPage);
     // Scroll vers le haut quand on change de page
     window.scrollTo({ top: 0, behavior: 'smooth' });
