@@ -568,7 +568,7 @@ const News = () => {
   }, [selectedWPCategory, fetchWordPressNewsData]);
 
   const handleLoadMore = useCallback(async () => {
-    if (loadingNews || isPageTransition || page >= totalPages) return;
+    if (loadingNews || isPageTransition || !hasMore) return;
     
     setIsPageTransition(true);
     
@@ -578,15 +578,20 @@ const News = () => {
     const endIndex = startIndex + pageSize;
     const newItems = allNews.slice(startIndex, endIndex);
     
-    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}`);
+    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}, total available: ${allNews.length}`);
     
     setTimeout(() => {
       setDisplayedNews(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
-      setHasMore(nextPage < totalPages);
+      
+      // Recalculer hasMore basé sur les données réelles
+      const totalItemsAfterLoad = (nextPage * pageSize);
+      const newHasMore = totalItemsAfterLoad < allNews.length;
+      setHasMore(newHasMore);
+      
       setIsPageTransition(false);
-    }, 50); // Réduit encore plus pour une réactivité maximale
-  }, [loadingNews, isPageTransition, page, totalPages, pageSize, allNews]);
+    }, 50);
+  }, [loadingNews, isPageTransition, hasMore, page, pageSize, allNews]);
 
   
   // useEffect(() => {
@@ -969,7 +974,7 @@ const News = () => {
               )}
 
               {/* Load More Button - Pagination manuelle uniquement */}
-              {page < totalPages && (
+              {hasMore && displayedNews.length > 0 && !loadingNews && (
                 <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
                   <Button
                     size="lg"
@@ -983,6 +988,16 @@ const News = () => {
                   >
                     {loadingNews || isPageTransition ? 'جاري التحميل...' : `اظهر المزيد (${allNews.length - displayedNews.length} متبقي)`}
                   </Button>
+                </div>
+              )}
+
+              {/* Information sur la pagination */}
+              {displayedNews.length > 0 && (
+                <div className="flex justify-center pt-2 text-sm text-gray-500">
+                  عرض {displayedNews.length} من {allNews.length} خبر
+                  {hasMore && (
+                    <span className="mr-2">- انقر "اظهر المزيد" لرؤية المزيد</span>
+                  )}
                 </div>
               )}
               

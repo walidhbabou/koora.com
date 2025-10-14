@@ -237,13 +237,11 @@ const Index = () => {
     setLoading(true);
     try {
       // Chargement rapide en deux étapes
-      console.log('🚀 Chargement rapide des news pour la page d\'accueil...');
       
       // Étape 1: Charger rapidement la première page (30 articles)
       let firstPageNews: NewsCardItem[] = [];
       try {
         firstPageNews = await fetchWordPressNewsFirstPage({});
-        console.log(`✅ Première page chargée: ${firstPageNews.length} articles`);
       } catch (firstPageError) {
         console.error("Failed to fetch WordPress first page:", firstPageError);
         firstPageNews = [];
@@ -265,7 +263,6 @@ const Index = () => {
       // Étape 2: Charger le reste en arrière-plan (après 300ms)
       setTimeout(async () => {
         try {
-          console.log('📦 Chargement des articles supplémentaires en arrière-plan...');
           const backgroundNews = await fetchWordPressNewsBackground({
             excludeFirstPage: true
           });
@@ -281,7 +278,6 @@ const Index = () => {
             b.publishedAt.localeCompare(a.publishedAt)
           );
           
-          console.log(`🎉 Chargement complet: ${uniqueNews.length} articles au total`);
           
           // Mettre à jour avec tous les articles
           setAllNewsItems(uniqueNews);
@@ -319,7 +315,6 @@ const Index = () => {
     const endIndex = startIndex + NEWS_PER_PAGE;
     const newItems = allNewsItems.slice(startIndex, endIndex);
     
-    console.log(`Loading more from cache: page ${nextPage}, items ${startIndex}-${endIndex}`);
     
     setTimeout(() => {
       setNewsItems(prevItems => [...prevItems, ...newItems]);
