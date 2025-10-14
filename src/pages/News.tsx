@@ -119,15 +119,7 @@ const News = () => {
     const paginatedNews = newsArray.slice(startIndex, endIndex);
     const totalPagesCount = Math.ceil(newsArray.length / pageSize);
     
-    console.log('📄 Pagination Info:', {
-      newsArrayLength: newsArray.length,
-      currentPage,
-      pageSize,
-      totalPagesCount,
-      startIndex,
-      endIndex,
-      paginatedNewsLength: paginatedNews.length
-    });
+    console.log(`📄 Page ${currentPage}: Affichage de ${paginatedNews.length} articles sur ${newsArray.length} total (${totalPagesCount} pages)`);
     
     setDisplayedNews(paginatedNews);
     setTotalPages(totalPagesCount);
@@ -537,6 +529,11 @@ const News = () => {
             // Recalculer la pagination avec tous les articles
             const totalPagesCount = Math.ceil(uniqueResult.length / pageSize);
             setTotalPages(totalPagesCount);
+            console.log(`📄 Pagination mise à jour: ${totalPagesCount} pages pour ${uniqueResult.length} articles`);
+            
+            // Recalculer la pagination avec tous les articles
+            const totalPagesCount = Math.ceil(uniqueResult.length / pageSize);
+            setTotalPages(totalPagesCount);
             setHasMore(1 < totalPagesCount);
             
           } catch (backgroundError) {
@@ -587,14 +584,15 @@ const News = () => {
   }, [selectedWPCategory, fetchWordPressNewsData]);
 
   const handleLoadMore = useCallback(async () => {
-    if (loadingNews || isPageTransition || page >= totalPages) return;
+    const maxPages = Math.ceil(allNews.length / pageSize);
+    if (loadingNews || isPageTransition || page >= maxPages || displayedNews.length >= allNews.length) return;
     
     setIsPageTransition(true);
     
     // Utiliser les données déjà chargées en cache au lieu de recharger
     const nextPage = page + 1;
     
-    console.log(`Loading more from cache: page ${nextPage}`);
+    console.log(`Loading more from cache: page ${nextPage} (${displayedNews.length}/${allNews.length} articles)`);
     
     setTimeout(() => {
       const startIndex = (nextPage - 1) * pageSize;
@@ -602,10 +600,10 @@ const News = () => {
       const newItems = allNews.slice(startIndex, endIndex);
       setDisplayedNews(prevItems => [...prevItems, ...newItems]);
       setPage(nextPage);
-      setHasMore(nextPage < totalPages);
+      setHasMore(nextPage < maxPages);
       setIsPageTransition(false);
     }, 50); // Réduit encore plus pour une réactivité maximale
-  }, [loadingNews, isPageTransition, page, totalPages, pageSize, allNews]);
+  }, [loadingNews, isPageTransition, page, pageSize, allNews, displayedNews.length]);
 
   
   // useEffect(() => {
@@ -988,7 +986,7 @@ const News = () => {
               )}
 
               {/* Load More Button - Pagination manuelle uniquement */}
-              {page < totalPages && (
+              {displayedNews.length < allNews.length && allNews.length > pageSize && (
                 <div className="flex justify-center pt-4 sm:pt-6 lg:pt-8">
                   <Button
                     size="lg"
@@ -1006,7 +1004,6 @@ const News = () => {
               )}
 
               {/* Pagination - même logique que Index.tsx */}
-              {/* Debug: totalPages = {totalPages}, allNews.length = {allNews.length}, displayedNews.length = {displayedNews.length} */}
               {(allNews.length > pageSize) && (
                 <div className="flex justify-center mt-8">
                   <Pagination>
