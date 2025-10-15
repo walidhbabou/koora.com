@@ -626,12 +626,7 @@ const Index = () => {
                         </div>
                       </Link>
                       
-                      {/* Insérer une annonce après chaque 6 articles */}
-                      {(index + 1) % 6 === 0 && index < newsItems.slice(5).length - 1 && (
-                        <div className="col-span-1 sm:col-span-2 lg:col-span-3 my-4">
-                          <SidebarAd testMode={false} />
-                        </div>
-                      )}
+                
                     </div>
                   ))}
                 </div>
@@ -658,8 +653,7 @@ const Index = () => {
 
           <div className="lg:w-80 xl:w-80 space-y-6 order-2 lg:order-2 xl:order-2" style={{direction: 'ltr'}}>
             <Sidebar />
-            {/* Sidebar Ad */}
-            <SidebarAd testMode={false} />
+           
           </div>
         </div>
 
