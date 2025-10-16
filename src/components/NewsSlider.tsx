@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Clock, ChevronLeft, ChevronRight, Play, Pause } from "lucide-react";
+import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 
 interface NewsSliderItem {
   id: string;
@@ -8,6 +9,7 @@ interface NewsSliderItem {
   imageUrl: string;
   publishedAt: string;
   summary?: string;
+  source?: 'wordpress' | 'supabase';
 }
 
 interface NewsSliderProps {
@@ -108,7 +110,7 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
           {news.map((item, index) => (
             <div key={item.id} className="w-full flex-shrink-0 relative">
               <Link
-                to={`/news/${item.id}`}
+                to={`/news/${item.source === 'wordpress' ? generateWordPressSlug(item.title, Number(item.id.toString().replace('wp_', ''))) : generateUniqueSlug(item.title, item.id)}`}
                 className="block group relative overflow-hidden"
                 onMouseEnter={() => setIsPlaying(false)}
                 onMouseLeave={() => setIsPlaying(autoplay)}
