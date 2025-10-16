@@ -1,16 +1,14 @@
 import React, { useEffect, useState, useCallback } from "react";
-import ReactDOM from "react-dom";
-import { createRoot, Root } from "react-dom/client";
 import SEO from "@/components/SEO";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Card } from "@/components/ui/card";
+// Card is not used directly here
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Clock, ArrowRight, Flag, ExternalLink, AlertTriangle } from "lucide-react";
+import { Clock, Flag, AlertTriangle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
@@ -22,8 +20,8 @@ import { extractIdFromSlug, isWordPressSlug, generateUniqueSlug, generateWordPre
 // Custom Instagram Embed for React 18
 const InstagramEmbed: React.FC<{ url: string }> = ({ url }) => {
   // Extract post shortcode from URL
-  const match = url.match(/instagram\.com\/(?:p|tv|reel)\/([\w-]+)/);
-  const shortcode = match ? match[1] : null;
+  const shortcodeExec = /instagram\.com\/(?:p|tv|reel)\/([\w-]+)/.exec(url);
+  const shortcode = shortcodeExec ? shortcodeExec[1] : null;
   if (!shortcode) {
     return (
       <div className="generic-embed error">
@@ -39,13 +37,10 @@ const InstagramEmbed: React.FC<{ url: string }> = ({ url }) => {
         src={`https://www.instagram.com/p/${shortcode}/embed`}
         width="400"
         height="480"
-        frameBorder="0"
-        scrolling="no"
-        allowTransparency={true}
         allow="encrypted-media"
-        style={{ borderRadius: 8, maxWidth: '100%' }}
+        style={{ borderRadius: 8, maxWidth: '100%', border: 0 }}
         title="Instagram Post"
-      ></iframe>
+      />
       <div className="embed-caption">
         <a href={url} target="_blank" rel="noopener noreferrer" className="embed-link">مشاهدة على إنستغرام</a>
       </div>
@@ -74,7 +69,8 @@ interface EditorJsBlock {
   type: string;
   data: {
     text?: string;
-    items?: string[];
+    // items may be strings or objects depending on the Editor.js output
+    items?: Array<string | { content?: string }>;
     level?: number;
     service?: string;
     source?: string;
@@ -129,24 +125,25 @@ interface RelatedNewsItem {
   title: string;
   image_url?: string | null;
   created_at: string;
+  source?: 'wordpress' | 'supabase';
 }
 
 function extractTweetId(url: string): string | null {
   // Gère les URLs de type x.com ou twitter.com
-  const match = url.match(/(?:twitter\.com|x\.com)\/[^/]+\/status\/(\d+)/);
-  return match ? match[1] : null;
+  const exec = /(?:twitter\.com|x\.com)\/[^/]+\/status\/(\d+)/.exec(url);
+  return exec ? exec[1] : null;
 }
 
 // Fonction pour extraire le nom d'utilisateur depuis l'URL
 const extractTwitterUsername = (url: string): string | null => {
-  const match = url.match(/(?:twitter\.com|x\.com)\/(\w+)\/status\/\d+/);
-  return match ? match[1] : null;
+  const exec = /(?:twitter\.com|x\.com)\/(\w+)\/status\/\d+/.exec(url);
+  return exec ? exec[1] : null;
 };
 
 // Fonction pour extraire l'ID YouTube
 const extractYouTubeId = (url: string): string | null => {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
-  return match ? match[1] : null;
+  const exec = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/.exec(url);
+  return exec ? exec[1] : null;
 };
 
 // Fonction pour nettoyer et valider le JSON avant parsing
@@ -281,7 +278,7 @@ const parseOtherBlocksToHtml = (block: EditorJsBlock): string => {
     case 'code': {
       const code = block.data.code || '';
       // Detect Twitter embed HTML
-      const twitterMatch = code.match(/<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/);
+      const twitterMatch = /<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/.exec(code);
       if (twitterMatch && twitterMatch[1]) {
         // Mark for React rendering
         return `__REACT_TWITTER_EMBED__${twitterMatch[1]}__`;
@@ -312,9 +309,10 @@ const parseOtherBlocksToHtml = (block: EditorJsBlock): string => {
       </div>`;
     }
     case 'list': {
-      const listItems = block.data.items?.map(item => 
-        `<li class="news-list-item">${DOMPurify.sanitize(item)}</li>`
-      ).join('') || '';
+      const listItems = block.data.items?.map(item => {
+        const text = typeof item === 'string' ? item : (item?.content || '');
+        return `<li class="news-list-item">${DOMPurify.sanitize(text)}</li>`;
+      }).join('') || '';
       return `<ul class="news-list">${listItems}</ul>`;
     }
     default:
@@ -828,12 +826,12 @@ const NewsDetails: React.FC = () => {
         wpId = newsSlug.replace('wp_', '');
       } else if (newsSlug.includes('wp_')) {
         // Format: titre-article-wp_12345
-        const match = newsSlug.match(/wp_(\d+)$/);
-        wpId = match ? match[1] : '';
+  const m = /wp_(\d+)$/.exec(newsSlug);
+  wpId = m ? m[1] : '';
       } else {
         // Fallback : essayer d'extraire un ID numérique à la fin
-        const match = newsSlug.match(/-(\d+)$/);
-        wpId = match ? match[1] : '';
+  const m2 = /-(\d+)$/.exec(newsSlug);
+  wpId = m2 ? m2[1] : '';
       }
       
       console.log('Extracted WordPress ID:', wpId);
@@ -859,24 +857,24 @@ const NewsDetails: React.FC = () => {
       let imageUrl = wpNews._embedded?.['wp:featuredmedia']?.[0]?.source_url || null;
       // Si pas d'image, chercher la première image dans le contenu HTML
       if (!imageUrl && wpNews.content?.rendered) {
-        const imgMatch = wpNews.content.rendered.match(/<img[^>]+src=["']([^"'>]+)["']/i);
-        if (imgMatch && imgMatch[1]) {
-          imageUrl = imgMatch[1];
+        const imgMatchExec = /<img[^>]+src=["']([^"'>]+)["']/i.exec(wpNews.content.rendered);
+        if (imgMatchExec && imgMatchExec[1]) {
+          imageUrl = imgMatchExec[1];
         }
       }
       // Si toujours pas d'image, chercher un lien Twitter/X et utiliser l'image d'aperçu
       if (!imageUrl && wpNews.content?.rendered) {
-        const twitterMatch = wpNews.content.rendered.match(/https?:\/\/(?:twitter|x)\.com\/[^"]+/i);
-        if (twitterMatch && twitterMatch[0]) {
+  const twitterMatchExec = /https?:\/\/(?:twitter|x)\.com\/[^"\s]+/i.exec(wpNews.content.rendered);
+        if (twitterMatchExec && twitterMatchExec[0]) {
           // Utiliser l'API oEmbed Twitter pour récupérer l'image d'aperçu
           try {
-            const oembedRes = await fetch(`https://publish.twitter.com/oembed?url=${encodeURIComponent(twitterMatch[0])}`);
+            const oembedRes = await fetch(`https://publish.twitter.com/oembed?url=${encodeURIComponent(twitterMatchExec[0])}`);
             if (oembedRes.ok) {
               const oembedData = await oembedRes.json();
               // Chercher une image dans le HTML retourné
-              const thumbMatch = oembedData.html.match(/<img[^>]+src=["']([^"'>]+)["']/i);
-              if (thumbMatch && thumbMatch[1]) {
-                imageUrl = thumbMatch[1];
+              const thumbMatchExec = /<img[^>]+src=["']([^"'>]+)["']/i.exec(oembedData.html);
+              if (thumbMatchExec && thumbMatchExec[1]) {
+                imageUrl = thumbMatchExec[1];
               }
             }
           } catch (e) { /* ignorer */ }
@@ -903,7 +901,7 @@ const NewsDetails: React.FC = () => {
           const terms = wpNews._embedded['wp:term'];
           for (const termGroup of terms) {
             if (Array.isArray(termGroup)) {
-              termGroup.forEach((t: any) => {
+              termGroup.forEach((t: { taxonomy?: string; id?: number }) => {
                 if (t.taxonomy === 'category' && t.id) categoryIds.push(t.id);
               });
             }
@@ -911,8 +909,11 @@ const NewsDetails: React.FC = () => {
         }
 
         // Si pas d'_embedded categories, demander l'endpoint categories pour ce post
-        if (categoryIds.length === 0 && Array.isArray((wpNews as any).categories)) {
-          ((wpNews as any).categories as number[]).forEach((c) => categoryIds.push(c));
+        if (categoryIds.length === 0) {
+          const wpCats = ((wpNews as unknown) as { categories?: number[] }).categories;
+          if (Array.isArray(wpCats)) {
+            wpCats.forEach((c) => categoryIds.push(c));
+          }
         }
 
         // Si on a au moins une catégorie, charger les posts de la première catégorie
@@ -928,7 +929,8 @@ const NewsDetails: React.FC = () => {
               .slice(0, 5)
               .map((p) => {
                 const img = p._embedded?.['wp:featuredmedia']?.[0]?.source_url || (() => {
-                  const m = (p.content && (p as any).content?.rendered) ? (p as any).content.rendered.match(/<img[^>]+src=["']([^"']+)["']/i) : null;
+                  const rendered = (p as unknown as WordPressNewsItem).content?.rendered;
+                  const m = rendered ? /<img[^>]+src=["']([^"']+)["']/i.exec(rendered) : null;
                   return m ? m[1] : null;
                 })();
                 return {
@@ -938,6 +940,8 @@ const NewsDetails: React.FC = () => {
                   created_at: p.date
                 } as RelatedNewsItem;
               });
+            // mark source as wordpress
+            mapped.forEach(m => (m.source = 'wordpress'));
             if (mapped.length > 0) {
               setRelatedNews(mapped);
             } else {
@@ -948,7 +952,9 @@ const NewsDetails: React.FC = () => {
                 .eq('status', 'published')
                 .limit(5)
                 .order('created_at', { ascending: false });
-              setRelatedNews(generalRelated || []);
+              // ensure supabase items have source
+              const supMapped = (generalRelated || []).map((r: unknown) => ({ ...(r as RelatedNewsItem), source: 'supabase' } as RelatedNewsItem));
+              setRelatedNews(supMapped);
             }
           } else {
             // fallback to recent supabase
@@ -958,7 +964,8 @@ const NewsDetails: React.FC = () => {
               .eq('status', 'published')
               .limit(5)
               .order('created_at', { ascending: false });
-            setRelatedNews(generalRelated || []);
+            const supMapped2 = (generalRelated || []).map((r: unknown) => ({ ...(r as RelatedNewsItem), source: 'supabase' } as RelatedNewsItem));
+            setRelatedNews(supMapped2);
           }
         } else {
           // Pas de catégorie trouvée, fallback
@@ -1081,6 +1088,9 @@ const NewsDetails: React.FC = () => {
     }
   }, [slug, loadWordPressNews, loadSupabaseNews]);
 
+  const location = useLocation();
+  const previewMode = new URLSearchParams(location.search).get('preview') === '1';
+
   const handleReport = async () => {
     if (!user || !reportDesc.trim()) return;
     
@@ -1130,6 +1140,35 @@ const NewsDetails: React.FC = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // If preview mode is requested, show only title + main image (no content)
+  if (!loading && news && previewMode) {
+    return (
+      <>
+        <SEO title={news.title} description={news.title} image={news.image_url || undefined} />
+        <style dangerouslySetInnerHTML={{ __html: newsContentStyles }} />
+        <Header />
+        <main className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+          <div className="max-w-4xl mx-auto px-4">
+            <article className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden mb-8">
+              {news.image_url && (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
+                  <img src={news.image_url} alt={news.title} className="news-full-image" />
+                </div>
+              )}
+              <div className="p-6 text-center">
+                <h1 className="news-big-title">{news.title}</h1>
+                <div className="mt-4">
+                  <Link to={location.pathname} className="text-blue-600 hover:underline">عرض المقال الكامل</Link>
+                </div>
+              </div>
+            </article>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   if (loading) {
     return (
@@ -1240,6 +1279,7 @@ const NewsDetails: React.FC = () => {
                     )}
                   </div>
                   
+                  {!previewMode && (
                   <div className={isWordPressNews ? "wordpress-content" : "news-content"}>
                     {isWordPressNews ? (
                       // Contenu WordPress - rendu avec détection des liens Twitter/X
@@ -1286,14 +1326,14 @@ const NewsDetails: React.FC = () => {
                           if (block.type === 'code') {
                             const code = block.data.code || '';
                             // 1. Detect marker
-                            const reactTwitterMarker = code.match(/^__REACT_TWITTER_EMBED__(https:\/\/twitter.com\/[^_]+)__$/);
-                            if (reactTwitterMarker) {
-                              return <XEmbed key={index} url={reactTwitterMarker[1]} />;
+                            const reactTwitterMarkerExec = /^__REACT_TWITTER_EMBED__(https:\/\/twitter.com\/[^_]+)__$/.exec(code);
+                            if (reactTwitterMarkerExec) {
+                              return <XEmbed key={index} url={reactTwitterMarkerExec[1]} />;
                             }
                             // 2. Detect Twitter embed HTML directly
-                            const twitterHtmlMatch = code.match(/<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/);
-                            if (twitterHtmlMatch && twitterHtmlMatch[1]) {
-                              return <XEmbed key={index} url={twitterHtmlMatch[1]} />;
+                            const twitterHtmlMatchExec = /<blockquote class="twitter-tweet"[\s\S]*?<a href="(https:\/\/twitter.com\/[^"\s]+)"[^>]*>[^<]*<\/a><\/blockquote>/.exec(code);
+                            if (twitterHtmlMatchExec && twitterHtmlMatchExec[1]) {
+                              return <XEmbed key={index} url={twitterHtmlMatchExec[1]} />;
                             }
                             // 3. Otherwise, render as code
                             return <pre key={index} className="news-code"><code>{code}</code></pre>;
@@ -1376,8 +1416,11 @@ const NewsDetails: React.FC = () => {
                       })
                     )}
                   </div>
+                  )}
                 </div>
               </article>
+
+              {/* preview mode handled earlier */}
 
               {/* Comments Section - Only for Supabase news */}
               {!isWordPressNews && slug && extractIdFromSlug(slug) && (
@@ -1397,9 +1440,9 @@ const NewsDetails: React.FC = () => {
                   
                   <div className="space-y-3">
                     {relatedNews.map((item, idx) => (
-                      <Link
-                        key={item.id}
-                        to={`/news/${generateUniqueSlug(item.title, item.id)}`}
+                                  <Link
+                                    key={item.id}
+                                    to={`/news/${item.source === 'wordpress' ? generateWordPressSlug(item.title, Number(item.id)) : generateUniqueSlug(item.title, item.id)}?preview=1`}
                         className="block"
                         aria-label={item.title}
                       >

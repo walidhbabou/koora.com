@@ -110,7 +110,7 @@ const NewsSlider: React.FC<NewsSliderProps> = ({
           {news.map((item, index) => (
             <div key={item.id} className="w-full flex-shrink-0 relative">
               <Link
-                to={`/news/${item.source === 'wordpress' ? generateWordPressSlug(item.title, Number(item.id.toString().replace('wp_', ''))) : generateUniqueSlug(item.title, item.id)}`}
+                to={`/news/${item.source === 'wordpress' ? generateWordPressSlug(item.title, Number(item.id.toString().replace('wp_', ''))) : generateUniqueSlug(item.title, item.id)}?preview=1`}
                 className="block group relative overflow-hidden"
                 onMouseEnter={() => setIsPlaying(false)}
                 onMouseLeave={() => setIsPlaying(autoplay)}
