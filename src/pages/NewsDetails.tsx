@@ -255,18 +255,20 @@ const parseEditorJsBlocks = (content: string): EditorJsBlock[] => {
 };
 
 // Clean WordPress HTML artifacts (e.g. leftover oEmbed attributes like ref_src or rel/target fragments)
+// Important: preserve anchor tags (so Twitter/X links remain detectable). Only strip problematic attributes.
 const cleanWordPressHtml = (html: string): string => {
   if (!html || typeof html !== 'string') return html;
   let s = html;
-  // Remove full anchor tags that include ref_src or nofollow noopener attributes
-  s = s.replace(/<a [^>]*ref_src[^>]*>.*?<\/a>/gi, '');
-  s = s.replace(/<a [^>]*rel="nofollow noopener"[^>]*>.*?<\/a>/gi, '');
-  // Remove stray attribute fragments that may be left after sanitization
-  s = s.replace(/ref_src=[^>\s]*["']?[^>]*>/gi, '');
-  s = s.replace(/rel="nofollow noopener"[^>]*>/gi, '');
-  s = s.replace(/target="_blank">/gi, '');
-  // Remove orphaned href endings
-  s = s.replace(/href="[^"]*"?>/gi, '');
+  // Remove ref_src attributes inside tags (but keep the tag)
+  s = s.replace(/\sref_src=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  // Remove rel="nofollow noopener" attribute (keep the anchor)
+  s = s.replace(/\srel=(?:"nofollow noopener"|'nofollow noopener')/gi, '');
+  // Remove target attribute values that can produce leftover fragments
+  s = s.replace(/\starget=(?:"_blank"|'_blank')/gi, '');
+  // Remove empty attributes that might remain like dangling > fragments
+  s = s.replace(/\s+>/g, '>');
+  // Trim any accidental orphaned attribute fragments (defensive)
+  s = s.replace(/ref_src=[^\s>]+/gi, '');
   return s;
 }
 
