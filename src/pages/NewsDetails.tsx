@@ -894,15 +894,92 @@ const NewsDetails: React.FC = () => {
       setNews(transformedNews);
       setIsWordPressNews(true);
       
-      // Pour WordPress, pas de related news spécifiques
-      // Récupérer des news générales récentes
-      const { data: generalRelated } = await supabase
-        .from('news')
-        .select('id, title, image_url, created_at')
-        .eq('status', 'published')
-        .limit(5)
-        .order('created_at', { ascending: false });
-      setRelatedNews(generalRelated || []);
+      // Pour WordPress: récupérer les catégories du post puis charger les posts WP
+      try {
+        // Récupérer les catégories via le endpoint _embedded si présent
+        const categoryIds: number[] = [];
+        if (wpNews._embedded && wpNews._embedded['wp:term']) {
+          // wp:term est un tableau d'arrays: [[cats], [tags]]
+          const terms = wpNews._embedded['wp:term'];
+          for (const termGroup of terms) {
+            if (Array.isArray(termGroup)) {
+              termGroup.forEach((t: any) => {
+                if (t.taxonomy === 'category' && t.id) categoryIds.push(t.id);
+              });
+            }
+          }
+        }
+
+        // Si pas d'_embedded categories, demander l'endpoint categories pour ce post
+        if (categoryIds.length === 0 && Array.isArray((wpNews as any).categories)) {
+          ((wpNews as any).categories as number[]).forEach((c) => categoryIds.push(c));
+        }
+
+        // Si on a au moins une catégorie, charger les posts de la première catégorie
+        if (categoryIds.length > 0) {
+          const catId = categoryIds[0];
+          const relatedUrl = `https://beta.koora.com/wp-json/wp/v2/posts?categories=${catId}&per_page=6&_embed`;
+          const relRes = await fetch(relatedUrl);
+          if (relRes.ok) {
+            const relPosts: WordPressNewsItem[] = await relRes.json();
+            // Filtrer le post courant et mapper au format RelatedNewsItem
+            const mapped = relPosts
+              .filter(p => p.id !== wpNews.id)
+              .slice(0, 5)
+              .map((p) => {
+                const img = p._embedded?.['wp:featuredmedia']?.[0]?.source_url || (() => {
+                  const m = (p.content && (p as any).content?.rendered) ? (p as any).content.rendered.match(/<img[^>]+src=["']([^"']+)["']/i) : null;
+                  return m ? m[1] : null;
+                })();
+                return {
+                  id: p.id,
+                  title: stripHtml(p.title.rendered),
+                  image_url: img,
+                  created_at: p.date
+                } as RelatedNewsItem;
+              });
+            if (mapped.length > 0) {
+              setRelatedNews(mapped);
+            } else {
+              // fallback: recent supabase
+              const { data: generalRelated } = await supabase
+                .from('news')
+                .select('id, title, image_url, created_at')
+                .eq('status', 'published')
+                .limit(5)
+                .order('created_at', { ascending: false });
+              setRelatedNews(generalRelated || []);
+            }
+          } else {
+            // fallback to recent supabase
+            const { data: generalRelated } = await supabase
+              .from('news')
+              .select('id, title, image_url, created_at')
+              .eq('status', 'published')
+              .limit(5)
+              .order('created_at', { ascending: false });
+            setRelatedNews(generalRelated || []);
+          }
+        } else {
+          // Pas de catégorie trouvée, fallback
+          const { data: generalRelated } = await supabase
+            .from('news')
+            .select('id, title, image_url, created_at')
+            .eq('status', 'published')
+            .limit(5)
+            .order('created_at', { ascending: false });
+          setRelatedNews(generalRelated || []);
+        }
+      } catch (relatedErr) {
+        console.error('Error fetching related WP posts:', relatedErr);
+        const { data: generalRelated } = await supabase
+          .from('news')
+          .select('id, title, image_url, created_at')
+          .eq('status', 'published')
+          .limit(5)
+          .order('created_at', { ascending: false });
+        setRelatedNews(generalRelated || []);
+      }
       
     } catch (error) {
       console.error('Error loading WordPress news:', error);
@@ -1318,24 +1395,22 @@ const NewsDetails: React.FC = () => {
                     أخبار ذات صلة
                   </h2>
                   
-                  <div className="space-y-4">
-                    {relatedNews.map((item) => (
-                      <Card key={item.id} className="hover:shadow-md transition-shadow dark:bg-gray-800">
-                        <Link to={`/news/${generateUniqueSlug(item.title, item.id)}`} className="block">
-                          {item.image_url && (
-                            <img
-                              src={item.image_url}
-                              alt={item.title}
-                              className="w-full h-32 object-cover rounded-t-lg"
-                            />
-                          )}
-                          <div className="p-4">
-                            <h3 className="font-semibold text-sm mb-2 line-clamp-2 text-right text-gray-900 dark:text-gray-100" dir="rtl">
+                  <div className="space-y-3">
+                    {relatedNews.map((item, idx) => (
+                      <Link
+                        key={item.id}
+                        to={`/news/${generateUniqueSlug(item.title, item.id)}`}
+                        className="block"
+                        aria-label={item.title}
+                      >
+                        <div className="flex items-center justify-between gap-3 p-2 bg-white dark:bg-gray-800 rounded-md hover:shadow-md transition-shadow">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-sm mb-1 line-clamp-2 text-right text-gray-900 dark:text-gray-100" dir="rtl">
                               {item.title}
                             </h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 justify-start">
                               <Clock className="h-3 w-3" />
-                              <time dateTime={item.created_at}>
+                              <time dateTime={item.created_at} className="text-right" dir="rtl">
                                 {(() => {
                                   const date = new Date(item.created_at);
                                   const months = [
@@ -1350,8 +1425,24 @@ const NewsDetails: React.FC = () => {
                               </time>
                             </div>
                           </div>
-                        </Link>
-                      </Card>
+
+                          {/* Thumbnail on the right */}
+                          <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden bg-gray-100 dark:bg-gray-700">
+                            {item.image_url ? (
+                              <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">صورة</div>
+                            )}
+                          </div>
+
+                          {/* Blue numbered badge on the far right */}
+                          <div className="flex-shrink-0 ml-2">
+                            <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
+                              {idx + 1}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
                     ))}
                   </div>
                 </section>
