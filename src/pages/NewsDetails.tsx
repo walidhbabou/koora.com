@@ -254,6 +254,22 @@ const parseEditorJsBlocks = (content: string): EditorJsBlock[] => {
   }
 };
 
+// Clean WordPress HTML artifacts (e.g. leftover oEmbed attributes like ref_src or rel/target fragments)
+const cleanWordPressHtml = (html: string): string => {
+  if (!html || typeof html !== 'string') return html;
+  let s = html;
+  // Remove full anchor tags that include ref_src or nofollow noopener attributes
+  s = s.replace(/<a [^>]*ref_src[^>]*>.*?<\/a>/gi, '');
+  s = s.replace(/<a [^>]*rel="nofollow noopener"[^>]*>.*?<\/a>/gi, '');
+  // Remove stray attribute fragments that may be left after sanitization
+  s = s.replace(/ref_src=[^>\s]*["']?[^>]*>/gi, '');
+  s = s.replace(/rel="nofollow noopener"[^>]*>/gi, '');
+  s = s.replace(/target="_blank">/gi, '');
+  // Remove orphaned href endings
+  s = s.replace(/href="[^"]*"?>/gi, '');
+  return s;
+}
+
 // Utilitaire pour nettoyer le HTML
 const stripHtml = (html: string) =>
   html
@@ -883,7 +899,7 @@ const NewsDetails: React.FC = () => {
       const transformedNews: NewsRow = {
         id: wpNews.id,
         title: stripHtml(wpNews.title.rendered),
-        content: wpNews.content.rendered, // Garder le HTML pour WordPress
+        content: cleanWordPressHtml(wpNews.content.rendered || ''), // Garder le HTML pour WordPress, nettoyé
         created_at: wpNews.date,
         image_url: imageUrl,
         source: 'wordpress'
@@ -1242,8 +1258,8 @@ const NewsDetails: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <Clock className="h-4 w-4" />
-                        <time dateTime={news.created_at}>
+                        <Clock className="h-4 w-4"  />
+                        <time dateTime={news.created_at} dir="rtl">
                           {(() => {
                             const date = new Date(news.created_at);
                             const months = [
@@ -1295,9 +1311,8 @@ const NewsDetails: React.FC = () => {
                             // Ajouter le HTML avant le lien
                             if (match.index > lastIndex) {
                               let before = raw.slice(lastIndex, match.index);
-                              // Nettoyer les liens ref_src et attributs techniques
-                              before = before.replace(/<a [^>]*ref_src[^>]*>.*?<\/a>/gi, '');
-                              before = before.replace(/<a [^>]*rel="nofollow noopener"[^>]*target="_blank"[^>]*>.*?<\/a>/gi, '');
+                              // Use central sanitizer to remove WordPress embed artifacts
+                              before = cleanWordPressHtml(before);
                               parts.push(<span key={lastIndex} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(before) }} />);
                             }
                             // Ajouter l'embed
@@ -1311,8 +1326,7 @@ const NewsDetails: React.FC = () => {
                           // Ajouter le reste du HTML
                           if (lastIndex < raw.length) {
                             let after = raw.slice(lastIndex);
-                            after = after.replace(/<a [^>]*ref_src[^>]*>.*?<\/a>/gi, '');
-                            after = after.replace(/<a [^>]*rel="nofollow noopener"[^>]*target="_blank"[^>]*>.*?<\/a>/gi, '');
+                            after = cleanWordPressHtml(after);
                             parts.push(<span key={lastIndex} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(after) }} />);
                           }
                           return parts;
@@ -1452,7 +1466,7 @@ const NewsDetails: React.FC = () => {
                               {item.title}
                             </h3>
                             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 justify-start">
-                              <Clock className="h-3 w-3" />
+                              <Clock className="h-3 w-3" dir="rtl" />
                               <time dateTime={item.created_at} className="text-right" dir="rtl">
                                 {(() => {
                                   const date = new Date(item.created_at);
