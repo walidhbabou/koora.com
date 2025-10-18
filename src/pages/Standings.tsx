@@ -16,7 +16,7 @@ import { maybeTransliterateName } from "@/utils/transliterate";
 import { useTopScorers, useTopAssists, useFixtures } from "@/hooks/useFootballAPI";
 import { useState } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
-import { LEAGUES, getLeagueName, getLeagueCountry } from "@/config/leagues";
+import { LEAGUES, getLeagueName, getLeagueCountry, getLeagueById } from "@/config/leagues";
 import { LEAGUE_GROUPS, LEAGUE_IDS } from "@/config/leagueIds";
 import { getTeamTranslation } from "@/utils/teamNameMap";
 import { useSingleTeamTranslation } from "@/hooks/useTeamTranslation";
@@ -26,7 +26,7 @@ const Standings = () => {
 
   // Fonction pour déterminer si une ligue utilise des groupes
   const isGroupBasedLeague = (leagueId: number): boolean => {
-    const groupBasedLeagues = [
+    const groupBasedLeagues: number[] = [
       LEAGUE_IDS.CHAMPIONS_LEAGUE,
       LEAGUE_IDS.EUROPA_LEAGUE,
       LEAGUE_IDS.CONFERENCE_LEAGUE,
@@ -198,21 +198,29 @@ const Standings = () => {
   // Obtenir les données de classement pour la ligue sélectionnée
   const getSelectedLeagueData = () => {
     if (!selectedLeague) return null;
-    
-    const leagueData = leagues.find(l => l.leagueId === selectedLeague);
-    if (leagueData && leagueData.standings.length > 0) {
-      return leagueData;
+
+    // useAllLeagueStandings returns normalized LeagueStanding objects
+    const candidate = (leagues || []).find((l: any) => {
+      // primary shape has leagueId
+      if (typeof l.leagueId === 'number' && l.leagueId === selectedLeague) return true;
+      // sometimes the shape might include an `id` directly
+      if (typeof l.id === 'number' && l.id === selectedLeague) return true;
+      return false;
+    }) as any;
+
+    if (candidate && Array.isArray(candidate.standings) && candidate.standings.length > 0) {
+      return candidate as any; // already in the normalized shape expected by the UI
     }
-    
-    // Fallback vers les données mock
+
+    // Fallback vers les données mock (use seasonYear for consistency)
     if (selectedLeague === MAIN_LEAGUES.PREMIER_LEAGUE) {
       return {
         leagueId: MAIN_LEAGUES.PREMIER_LEAGUE,
         leagueName: 'Premier League',
         leagueLogo: 'https://media.api-sports.io/football/leagues/39.png',
         country: 'England',
-        flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-        season: 2025,
+        flag: '🏴',
+        season: seasonYear,
         standings: mockPremierLeague.standings,
         loading: false,
         error: null
@@ -224,13 +232,13 @@ const Standings = () => {
         leagueLogo: 'https://media.api-sports.io/football/leagues/140.png',
         country: 'Spain',
         flag: '🇪🇸',
-        season: 2025,
+        season: seasonYear,
         standings: mockLaLiga.standings,
         loading: false,
         error: null
       };
     }
-    
+
     return null;
   };
 

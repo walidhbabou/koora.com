@@ -67,7 +67,7 @@ import {
 } from "@/utils/optimizedNewsUtils";
 import { globalCache } from "@/utils/globalCache";
 import { footballAPI } from "@/config/api";
-import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
+import { generateUniqueSlug, generateWordPressSlug, generateSlug } from "@/utils/slugUtils";
 import { Filter } from "lucide-react";
 import { useMatchesByDateAndLeague, useLeagues } from "@/hooks/useFootballAPI";
 import { Fixture } from "@/config/api";
@@ -510,7 +510,7 @@ const Index = () => {
                       {/* First Row - Single Card */}
                       {currentCarouselItems[0] && (
                         <Link
-                          to={`/news/${generateWordPressSlug(currentCarouselItems[0].title, Number(currentCarouselItems[0].id.toString().replace('wp_', '')))}`}
+                          to={`/news/${`${generateSlug(currentCarouselItems[0].title)}-wp_${currentCarouselItems[0].id.toString().replace('wp_', '')}`}`}
                           className="block h-full"
                         >
                           <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -543,7 +543,7 @@ const Index = () => {
                         {currentCarouselItems.slice(1, 3).map((news) => (
                           <Link
                             key={news.id}
-                            to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`}
+                            to={`/news/${`${generateSlug(news.title)}-wp_${news.id.toString().replace('wp_', '')}`}`}
                             className="block h-full"
                           >
                             <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -571,7 +571,7 @@ const Index = () => {
                     <div className="lg:col-span-2">
                       {currentCarouselItems[3] && (
                         <Link
-                          to={`/news/${generateWordPressSlug(currentCarouselItems[3].title, Number(currentCarouselItems[3].id.toString().replace('wp_', '')))}`}
+                          to={`/news/${`${generateSlug(currentCarouselItems[3].title)}-wp_${currentCarouselItems[3].id.toString().replace('wp_', '')}`}`}
                           className="block h-full"
                         >
                           <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">

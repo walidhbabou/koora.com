@@ -14,7 +14,7 @@ import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
-import { extractIdFromSlug, isWordPressSlug, generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
+import { extractIdFromSlug, isWordPressSlug, generateUniqueSlug, generateWordPressSlug, generateSlug } from "@/utils/slugUtils";
 
 // Instagram Embed using react-instagram-embed
 // Custom Instagram Embed for React 18
@@ -832,6 +832,7 @@ const NewsDetails: React.FC = () => {
   const [reportDesc, setReportDesc] = useState('');
   const [parsedBlocks, setParsedBlocks] = useState<EditorJsBlock[]>([]);
   const [isWordPressNews, setIsWordPressNews] = useState(false);
+  const titleRef = React.useRef<HTMLHeadingElement | null>(null);
 
   const loadWordPressNews = useCallback(async (newsSlug: string) => {
     try {
@@ -1095,7 +1096,27 @@ const NewsDetails: React.FC = () => {
         if (newsId) {
           await loadSupabaseNews(newsId);
         } else {
-          throw new Error('ID invalide dans le slug');
+          // Fallback: attempt to resolve title-only slug by fetching recent published news
+          try {
+            type Candidate = { id: number; title: string };
+            const { data: candidates } = await supabase
+              .from('news')
+              .select('id, title')
+              .eq('status', 'published')
+              .order('created_at', { ascending: false })
+              .limit(500);
+
+            const list: Candidate[] = (candidates as Candidate[]) || [];
+            const found = list.find((c) => generateSlug(c.title || '') === slug);
+            if (found) {
+              await loadSupabaseNews(String(found.id));
+            } else {
+              throw new Error('ID invalide dans le slug');
+            }
+          } catch (lookupError) {
+            console.error('Error resolving slug to id:', lookupError);
+            throw new Error('ID invalide dans le slug');
+          }
         }
       }
     } catch (e: unknown) {
@@ -1159,6 +1180,33 @@ const NewsDetails: React.FC = () => {
     load();
   }, [load]);
 
+  // Scroll to top and focus title when a news is loaded or when preview mode is active
+  useEffect(() => {
+    if (!news) return;
+    if (typeof window !== 'undefined') {
+      try {
+        // Smooth scroll for preview mode, instant for full view
+        if (previewMode) {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          window.scrollTo(0, 0);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    // Focus the title for accessibility so the user lands at the top
+    try {
+      if (titleRef.current) {
+        // tabIndex -1 is set on the heading so it can receive programmatic focus
+        titleRef.current.focus();
+      }
+    } catch (err) {
+      // ignore
+    }
+  }, [news, previewMode]);
+
   // If preview mode is requested, show only title + main image (no content)
   if (!loading && news && previewMode) {
     return (
@@ -1174,8 +1222,8 @@ const NewsDetails: React.FC = () => {
                   <img src={news.image_url} alt={news.title} className="news-full-image" />
                 </div>
               )}
-              <div className="p-6 text-center">
-                <h1 className="news-big-title">{news.title}</h1>
+                <div className="p-6 text-center">
+                <h1 ref={titleRef} tabIndex={-1} className="news-big-title">{news.title}</h1>
                 <div className="mt-4">
                   <Link to={location.pathname} className="text-blue-600 hover:underline">عرض المقال الكامل</Link>
                 </div>
@@ -1255,7 +1303,7 @@ const NewsDetails: React.FC = () => {
                 )}
                 
                 <div className="p-6">
-                  <h1 className="news-big-title">{news.title}</h1>
+                  <h1 ref={titleRef} tabIndex={-1} className="news-big-title">{news.title}</h1>
                   
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
@@ -1458,7 +1506,7 @@ const NewsDetails: React.FC = () => {
                     {relatedNews.map((item, idx) => (
                                   <Link
                                     key={item.id}
-                                    to={`/news/${item.source === 'wordpress' ? generateWordPressSlug(item.title, Number(item.id)) : generateUniqueSlug(item.title, item.id)}?preview=1`}
+                                    to={`/news/${item.source === 'wordpress' ? `${generateSlug(item.title)}-wp_${item.id}` : `${generateSlug(item.title)}`}`}
                         className="block"
                         aria-label={item.title}
                       >
