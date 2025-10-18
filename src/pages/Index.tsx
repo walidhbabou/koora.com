@@ -42,7 +42,7 @@ const SPECIFIC_LEAGUES = [
     country: "MA المغرب",
   },
 ];
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 
 const NEWS_PER_PAGE = 30; // Augmenté à 30 actualités par page comme News.tsx
 import SEO from "@/components/SEO";
@@ -53,11 +53,24 @@ import Sidebar from "@/components/Sidebar";
 import NewsCard from "@/components/NewsCard";
 import NewsSlider from "@/components/NewsSlider";
 import Footer from "@/components/Footer";
-import { MobileAd } from "@/components/AdWrapper";
+import {
+  HeaderAd,
+  SidebarAd,
+  MobileAd,
+  SponsorsSection,
+} from "@/components/AdWrapper";
 import { Card } from "@/components/ui/card";
-import { fetchWordPressNewsFirstPageOptimized, fetchWordPressNewsBackgroundOptimized } from "@/utils/optimizedNewsUtils";
-import { generateSlug } from "@/utils/slugUtils";
+import { supabase } from "@/lib/supabase";
+import {
+  fetchWordPressNewsFirstPageOptimized,
+  fetchWordPressNewsBackgroundOptimized
+} from "@/utils/optimizedNewsUtils";
+import { globalCache } from "@/utils/globalCache";
+import { footballAPI } from "@/config/api";
+import { generateUniqueSlug, generateWordPressSlug, generateSlug } from "@/utils/slugUtils";
+import { Filter } from "lucide-react";
 import { useMatchesByDateAndLeague, useLeagues } from "@/hooks/useFootballAPI";
+import { Fixture } from "@/config/api";
 
 // Type for matches data structure
 type MatchData = {
@@ -409,7 +422,6 @@ const Index = () => {
                   news={newsItems.slice(0, 5).map((item) => ({
                     ...item,
                     summary: item.summary,
-                    source: (item.source as 'wordpress' | 'supabase') || 'supabase',
                   }))}
                   autoplay={true}
                   autoplayDelay={3000}
@@ -498,7 +510,7 @@ const Index = () => {
                       {/* First Row - Single Card */}
                       {currentCarouselItems[0] && (
                         <Link
-                          to={`/news/${generateSlug(currentCarouselItems[0].title)}`}
+                          to={`/news/${`${generateSlug(currentCarouselItems[0].title)}-wp_${currentCarouselItems[0].id.toString().replace('wp_', '')}`}`}
                           className="block h-full"
                         >
                           <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -531,7 +543,7 @@ const Index = () => {
                         {currentCarouselItems.slice(1, 3).map((news) => (
                           <Link
                             key={news.id}
-                            to={`/news/${generateSlug(news.title)}`}
+                            to={`/news/${`${generateSlug(news.title)}-wp_${news.id.toString().replace('wp_', '')}`}`}
                             className="block h-full"
                           >
                             <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -559,7 +571,7 @@ const Index = () => {
                     <div className="lg:col-span-2">
                       {currentCarouselItems[3] && (
                         <Link
-                          to={`/news/${generateSlug(currentCarouselItems[3].title)}`}
+                          to={`/news/${`${generateSlug(currentCarouselItems[3].title)}-wp_${currentCarouselItems[3].id.toString().replace('wp_', '')}`}`}
                           className="block h-full"
                         >
                           <Card className="relative overflow-hidden h-full group cursor-pointer !rounded-none">
@@ -605,7 +617,7 @@ const Index = () => {
                   {newsItems.slice(5).map((news, index) => (
                     <div key={news.id} className="relative">
                       <Link
-                        to={`/news/${generateSlug(news.title)}`}
+                        to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`}
                         className="block"
                       >
                         <NewsCard news={news} size="medium" />
@@ -613,6 +625,8 @@ const Index = () => {
                           كورة
                         </div>
                       </Link>
+                      
+                
                     </div>
                   ))}
                 </div>
@@ -662,7 +676,6 @@ const Index = () => {
                 news={newsItems.slice(0, 5).map((item) => ({
                   ...item,
                   summary: item.summary,
-                  source: (item.source as 'wordpress' | 'supabase') || 'supabase',
                 }))}
                 autoplay={true}
                 autoplayDelay={4000}
@@ -700,7 +713,7 @@ const Index = () => {
                 {/* Main Featured Article */}
                 {newsItems.length > 2 && (
                   <>
-                    <Link to={`/news/${generateSlug(newsItems[2].title)}`} className="block ">
+                    <Link to={`/news/${newsItems[2].source === 'wordpress' ? generateWordPressSlug(newsItems[2].title, Number(newsItems[2].id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItems[2].title, newsItems[2].id)}`} className="block ">
                       <Card className="relative overflow-hidden h-48 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[2].imageUrl || "/placeholder.svg"}
@@ -725,7 +738,7 @@ const Index = () => {
                         </div>
                       </Card>
                     </Link>
-                    <Link to={`/news/${generateSlug(newsItems[1].title)}`} className="block">
+                    <Link to={`/news/${newsItems[1].source === 'wordpress' ? generateWordPressSlug(newsItems[1].title, Number(newsItems[1].id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItems[1].title, newsItems[1].id)}`} className="block">
                       <Card className="relative overflow-hidden h-36 group cursor-pointer !rounded-none">
                         <img
                           src={newsItems[1].imageUrl || "/placeholder.svg"}
@@ -758,7 +771,7 @@ const Index = () => {
                   {newsItems.slice(2, 4).map((news, index) => (
                     <Link
                       key={news.id}
-                      to={`/news/${generateSlug(news.title)}`}
+                      to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`}
                       className="block"
                     >
                       <Card className="relative overflow-hidden h-36 group cursor-pointer !rounded-none">
@@ -795,7 +808,7 @@ const Index = () => {
               newsItems.slice(5).map((news, idx) => (
                 <div key={news.id} className="relative">
                   <Link 
-                    to={`/news/${generateSlug(news.title)}`} 
+                    to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`} 
                     className="block"
                   >
                     <NewsCard news={news} size="medium" />

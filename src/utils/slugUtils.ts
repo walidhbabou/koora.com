@@ -37,7 +37,15 @@ export function generateUniqueSlug(title: string, id: number | string): string {
  * Extrait l'ID d'un slug qui contient l'ID à la fin
  */
 export function extractIdFromSlug(slug: string): string | null {
-  // Only extract a trailing numeric id (Supabase pattern: "titre-article-123")
+  // Chercher un pattern WordPress comme "titre-article-wp_123"
+  if (slug.includes('wp_')) {
+    const wpMatch = /wp_(\d+)$/.exec(slug);
+    if (wpMatch) {
+      return `wp_${wpMatch[1]}`;
+    }
+  }
+  
+  // Chercher un pattern Supabase comme "titre-article-123"
   const regex = /-(\d+)$/;
   const match = regex.exec(slug);
   return match ? match[1] : null;
@@ -47,15 +55,18 @@ export function extractIdFromSlug(slug: string): string | null {
  * Vérifie si un slug est pour une news WordPress
  */
 export function isWordPressSlug(slug: string): boolean {
-  // We no longer encode WP ids into the public slug. Use server-side detection if needed.
-  return false;
+  return slug.startsWith('wp_') || slug.includes('wp_');
 }
 
 /**
  * Génère un slug pour les articles WordPress
  */
 export function generateWordPressSlug(title: string, wpId: number): string {
-  // Public WordPress URLs should not include internal WP IDs.
-  // Return a plain title-only slug so URLs are consistent across sources.
-  return generateSlug(title);
+  const baseSlug = generateSlug(title);
+  
+  if (!baseSlug || baseSlug.length < 3) {
+    return `wp_${wpId}`;
+  }
+  
+  return `${baseSlug}-wp_${wpId}`;
 }
