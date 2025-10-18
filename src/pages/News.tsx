@@ -925,7 +925,7 @@ const News = () => {
                     {displayedNews.map((newsItem, index) => (
                       <React.Fragment key={newsItem.id}>
                         <div className="relative">
-                          <Link to={`/news/${newsItem.source === 'wordpress' ? generateWordPressSlug(newsItem.title, Number(newsItem.id.toString().replace('wp_', ''))) : generateUniqueSlug(newsItem.title, newsItem.id)}`}>
+                          <Link to={`/news/${newsItem.source === 'wordpress' ? generateSlug(newsItem.title) : generateUniqueSlug(newsItem.title, newsItem.id)}`}>
                             <NewsCard news={newsItem} size="medium" />
                             {newsItem.source === "wordpress" && (
                               <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
