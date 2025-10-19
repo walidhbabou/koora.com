@@ -239,6 +239,22 @@ const Standings = () => {
       };
     }
 
+    // If we have league metadata in our local `LEAGUES` config, return a minimal object
+    const meta = getLeagueById(selectedLeague);
+    if (meta) {
+      return {
+        leagueId: meta.id,
+        leagueName: getLeagueName(meta, currentLanguage),
+        leagueLogo: meta.logo,
+        country: getLeagueCountry(meta, currentLanguage),
+        flag: meta.flag || '🏆',
+        season: seasonYear,
+        standings: [], // no standings available yet
+        loading: false,
+        error: null
+      } as any;
+    }
+
     return null;
   };
 
