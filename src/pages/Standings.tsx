@@ -108,6 +108,9 @@ const Standings = () => {
   // Données mock en cas d'erreur API
   const mockPremierLeague = useMockStandings(MAIN_LEAGUES.PREMIER_LEAGUE);
   const mockLaLiga = useMockStandings(MAIN_LEAGUES.LA_LIGA);
+  // Add mocks for Eredivisie and Primeira Liga so they display when API doesn't provide standings
+  const mockEredivisie = useMockStandings(LEAGUE_IDS.EREDIVISIE);
+  const mockPrimeira = useMockStandings(LEAGUE_IDS.PRIMEIRA_LIGA);
 
   // Données des ligues pour l'affichage en liste - Afficher toutes les ligues
   const leaguesList = LEAGUES.map(league => ({
@@ -234,6 +237,30 @@ const Standings = () => {
         flag: '🇪🇸',
         season: seasonYear,
         standings: mockLaLiga.standings,
+        loading: false,
+        error: null
+      };
+    } else if (selectedLeague === LEAGUE_IDS.EREDIVISIE) {
+      return {
+        leagueId: LEAGUE_IDS.EREDIVISIE,
+        leagueName: getLeagueName(getLeagueById(LEAGUE_IDS.EREDIVISIE)!, currentLanguage) || 'Eredivisie',
+        leagueLogo: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.logo || '',
+        country: getLeagueCountry(getLeagueById(LEAGUE_IDS.EREDIVISIE)!, currentLanguage) || 'Netherlands',
+        flag: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.flag || '🇳🇱',
+        season: seasonYear,
+        standings: mockEredivisie.standings,
+        loading: false,
+        error: null
+      };
+    } else if (selectedLeague === LEAGUE_IDS.PRIMEIRA_LIGA) {
+      return {
+        leagueId: LEAGUE_IDS.PRIMEIRA_LIGA,
+        leagueName: getLeagueName(getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)!, currentLanguage) || 'Primeira Liga',
+        leagueLogo: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.logo || '',
+        country: getLeagueCountry(getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)!, currentLanguage) || 'Portugal',
+        flag: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.flag || '🇵🇹',
+        season: seasonYear,
+        standings: mockPrimeira.standings,
         loading: false,
         error: null
       };
