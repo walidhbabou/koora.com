@@ -14,10 +14,11 @@ import { useGroupStandings } from "@/hooks/useGroupStandings";
 import { useTranslation } from "@/hooks/useTranslation";
 import { maybeTransliterateName } from "@/utils/transliterate";
 import { useTopScorers, useTopAssists, useFixtures } from "@/hooks/useFootballAPI";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MAIN_LEAGUES } from "@/config/api";
 import { LEAGUES, getLeagueName, getLeagueCountry, getLeagueById } from "@/config/leagues";
 import { LEAGUE_GROUPS, LEAGUE_IDS } from "@/config/leagueIds";
+import { footballAPI } from "@/config/api";
 import { getTeamTranslation } from "@/utils/teamNameMap";
 import { useSingleTeamTranslation } from "@/hooks/useTeamTranslation";
 
@@ -111,6 +112,68 @@ const Standings = () => {
   // Add mocks for Eredivisie and Primeira Liga so they display when API doesn't provide standings
   const mockEredivisie = useMockStandings(LEAGUE_IDS.EREDIVISIE);
   const mockPrimeira = useMockStandings(LEAGUE_IDS.PRIMEIRA_LIGA);
+
+  // Fetched standings when API provides them for a selected league
+  const [fetchedStandings, setFetchedStandings] = useState<any | null>(null);
+  const [fetchingStandings, setFetchingStandings] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    setFetchedStandings(null);
+
+    const load = async () => {
+      if (!selectedLeague) return;
+      setFetchingStandings(true);
+
+      try {
+        const res: any = await footballAPI.getLeagueStandings(selectedLeague, seasonYear);
+
+        // normalize possible response shapes
+        let leagueName = getLeagueById(selectedLeague)?.name || '';
+        let leagueLogo = getLeagueById(selectedLeague)?.logo || '';
+        let normalized: any[] = [];
+
+        if (res && res.response) {
+          const resp = Array.isArray(res.response) ? res.response : [res.response];
+          // pick first item that contains standings
+          const item = resp.find((r: any) => Array.isArray(r.standings) && r.standings.length) || resp[0];
+          if (item) {
+            leagueName = item.league?.name || item.leagueName || leagueName;
+            leagueLogo = item.league?.logo || item.leagueLogo || leagueLogo;
+            // item.standings may be array of groups or single table
+            if (Array.isArray(item.standings)) {
+              normalized = item.standings.flatMap((s: any) => (Array.isArray(s.table) ? s.table : s));
+            } else if (Array.isArray(item.table)) {
+              normalized = item.table;
+            } else if (Array.isArray(item.response)) {
+              normalized = item.response;
+            }
+          }
+        }
+
+        if (mounted) {
+          setFetchedStandings({
+            leagueId: selectedLeague,
+            leagueName,
+            leagueLogo,
+            season: seasonYear,
+            standings: normalized,
+            loading: false,
+            error: null
+          });
+        }
+      } catch (err) {
+        if (mounted) setFetchedStandings(null);
+      } finally {
+        if (mounted) setFetchingStandings(false);
+      }
+    };
+
+    // Always attempt to fetch latest standings for the selected league
+    if (selectedLeague) load();
+
+    return () => { mounted = false; };
+  }, [selectedLeague, seasonYear, leagues]);
 
   // Données des ligues pour l'affichage en liste - Afficher toutes les ligues
   const leaguesList = LEAGUES.map(league => ({
@@ -237,6 +300,11 @@ const Standings = () => {
           error: null
         } as any;
       }
+    }
+
+    // If we fetched standings (via footballAPI) prefer those
+    if (fetchedStandings && fetchedStandings.leagueId === selectedLeague && Array.isArray(fetchedStandings.standings) && fetchedStandings.standings.length > 0) {
+      return fetchedStandings as any;
     }
 
     // Fallback vers les données mock (use seasonYear for consistency)
