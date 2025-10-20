@@ -473,7 +473,8 @@ const Standings = () => {
             <div className="max-w-5xl mx-auto">
               {activeTab === 'teams' && (() => {
                 const leagueData = getSelectedLeagueData();
-                if (!leagueData) {
+                // If no league data or no standings array (empty), show the fallback message
+                if (!leagueData || !Array.isArray(leagueData.standings) || leagueData.standings.length === 0) {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
