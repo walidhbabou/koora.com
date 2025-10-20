@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/hooks/useTranslation";
-import { extractIdFromSlug, isWordPressSlug, generateSlug, generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
+import { extractIdFromSlug, isWordPressSlug, generateSlug } from "@/utils/slugUtils";
 
 // Instagram Embed using react-instagram-embed
 // Custom Instagram Embed for React 18
@@ -919,7 +919,8 @@ const NewsDetails: React.FC = () => {
       // Hide the id from the visible URL while keeping it available internally
       try {
         if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
-          const displaySlug = generateWordPressSlug(transformedNews.title || '', transformedNews.id as number);
+          // Use a title-only slug for the visible URL so the numeric id is hidden from users
+          const displaySlug = generateSlug(transformedNews.title || '');
           const newPath = `/news/${displaySlug}`;
           const newUrl = newPath + (window.location.search || '');
           window.history.replaceState(window.history.state, document.title, newUrl);
@@ -1051,7 +1052,8 @@ const NewsDetails: React.FC = () => {
       // Hide numeric id from the visible URL for Supabase news too
       try {
         if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
-          const displaySlug = generateUniqueSlug(newsWithSource.title || '', newsWithSource.id as number || String(newsWithSource.id));
+          // Use a title-only slug for the visible URL so the numeric id is hidden from users
+          const displaySlug = generateSlug(newsWithSource.title || '');
           const newPath = `/news/${displaySlug}`;
           const newUrl = newPath + (window.location.search || '');
           window.history.replaceState(window.history.state, document.title, newUrl);
@@ -1244,6 +1246,22 @@ const NewsDetails: React.FC = () => {
       // ignore
     }
   }, [news, previewMode]);
+
+  // Ensure the visible URL hides the numeric id by replacing it with a title-only slug
+  useEffect(() => {
+    if (!news) return;
+    try {
+      if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
+        const displaySlug = generateSlug(news.title || '');
+        const newPath = `/news/${displaySlug}`;
+        const newUrl = newPath + (window.location.search || '');
+        console.debug('[NewsDetails] replaceState: hiding id, newUrl=', newUrl);
+        window.history.replaceState(window.history.state, document.title, newUrl);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [news]);
 
   // If preview mode is requested, show only title + main image (no content)
   if (!loading && news && previewMode) {
