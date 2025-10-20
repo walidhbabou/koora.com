@@ -14,7 +14,8 @@ import CommentsSection from "@/components/CommentsSection";
 import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
-import { extractIdFromSlug, isWordPressSlug, generateUniqueSlug, generateWordPressSlug, generateSlug } from "@/utils/slugUtils";
+import { useTranslation } from "@/hooks/useTranslation";
+import { extractIdFromSlug, isWordPressSlug, generateSlug } from "@/utils/slugUtils";
 
 // Instagram Embed using react-instagram-embed
 // Custom Instagram Embed for React 18
@@ -828,6 +829,7 @@ const NewsDetails: React.FC = () => {
   const { toast } = useToast();
   const [reporting, setReporting] = useState(false);
   const { user, isAuthenticated } = useAuth();
+  const { isRTL } = useTranslation();
   const [reportOpen, setReportOpen] = useState(false);
   const [reportDesc, setReportDesc] = useState('');
   const [parsedBlocks, setParsedBlocks] = useState<EditorJsBlock[]>([]);
@@ -1305,11 +1307,11 @@ const NewsDetails: React.FC = () => {
                 <div className="p-6">
                   <h1 ref={titleRef} tabIndex={-1} className="news-big-title">{news.title}</h1>
                   
-                  <div className="flex items-center justify-between mb-4">
+                  <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <Clock className="h-4 w-4"  />
-                        <time dateTime={news.created_at} dir="rtl">
+                      <div className={`flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
+                        <Clock className="h-4 w-4" />
+                        <time dateTime={news.created_at} className={isRTL ? 'text-right' : ''}>
                           {(() => {
                             const date = new Date(news.created_at);
                             const months = [
@@ -1516,8 +1518,8 @@ const NewsDetails: React.FC = () => {
                               {item.title}
                             </h3>
                             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 justify-start">
-                              <Clock className="h-3 w-3" dir="rtl" />
-                              <time dateTime={item.created_at} className="text-right" dir="rtl">
+                              <Clock className="h-3 w-3" />
+                              <time dateTime={item.created_at} className="text-right">
                                 {(() => {
                                   const date = new Date(item.created_at);
                                   const months = [
