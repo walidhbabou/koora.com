@@ -1,5 +1,3 @@
-// @ts-nocheck
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -7,33 +5,21 @@ import TeamsLogos from "@/components/TeamsLogos";
 import LeagueStandingTable from "@/components/LeagueStandingTable";
 import GroupStandingsTable from "@/components/GroupStandingsTable";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trophy, Search, Award, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { Trophy, Search, Star, Medal, Award, Crown, RefreshCw, Filter, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useAllLeagueStandings, useMockStandings } from "@/hooks/useStandings";
 import { useGroupStandings } from "@/hooks/useGroupStandings";
 import { useTranslation } from "@/hooks/useTranslation";
 import { maybeTransliterateName } from "@/utils/transliterate";
 import { useTopScorers, useTopAssists, useFixtures } from "@/hooks/useFootballAPI";
-import { useState, useEffect } from "react";
-import { MAIN_LEAGUES, footballAPI } from "@/config/api";
+import { useState } from "react";
+import { MAIN_LEAGUES } from "@/config/api";
 import { LEAGUES, getLeagueName, getLeagueCountry, getLeagueById } from "@/config/leagues";
-import { LEAGUE_IDS } from "@/config/leagueIds";
+import { LEAGUE_GROUPS, LEAGUE_IDS } from "@/config/leagueIds";
 import { getTeamTranslation } from "@/utils/teamNameMap";
 import { useSingleTeamTranslation } from "@/hooks/useTeamTranslation";
-
-// Small presentational component moved outside to avoid being re-created on every render
-const TeamNameWithTranslation = ({ team }: { team: any }) => {
-  const { currentLanguage } = useTranslation();
-  const teamName = typeof team === 'string' ? team : team?.name || '';
-  const { translatedName, isInitialized } = useSingleTeamTranslation(teamName);
-
-  if (currentLanguage === 'ar') {
-    return <span>{isInitialized ? translatedName : teamName}</span>;
-  }
-
-  return <span>{teamName}</span>;
-};
 
 const Standings = () => {
   const { currentLanguage, t, isRTL, direction } = useTranslation();
@@ -65,7 +51,18 @@ const Standings = () => {
     return currentLanguage === 'ar' ? getTeamTranslation(team.name) : team.name;
   };
 
-  // NOTE: we use some weak typings here intentionally to tolerate multiple API shapes
+  // Composant pour afficher un nom d'équipe avec traduction automatique
+  const TeamNameWithTranslation = ({ team }: { team: any }) => {
+    const teamName = typeof team === 'string' ? team : team?.name || '';
+    const { translatedName, isInitialized } = useSingleTeamTranslation(teamName);
+    
+    // Toujours afficher en arabe si la langue est arabe
+    if (currentLanguage === 'ar') {
+      return <span>{isInitialized ? translatedName : teamName}</span>;
+    }
+    
+    return <span>{teamName}</span>;
+  };
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeague, setSelectedLeague] = useState<number | null>(null);
   const [showLeagueDetail, setShowLeagueDetail] = useState(false);
@@ -74,9 +71,6 @@ const Standings = () => {
   
   // Récupérer les classements de toutes les ligues
   const { leagues, isLoading, hasError, refetchAll } = useAllLeagueStandings();
-
-  // Use a safe any-typed alias for leagues to avoid TS type issues from the hook
-  const safeLeagues: any[] = (leagues as any) || [];
   
   // Determine current football season start year (e.g., 2025 for 2025/26 if month >= July)
   const seasonYear = (() => {
@@ -114,80 +108,9 @@ const Standings = () => {
   // Données mock en cas d'erreur API
   const mockPremierLeague = useMockStandings(MAIN_LEAGUES.PREMIER_LEAGUE);
   const mockLaLiga = useMockStandings(MAIN_LEAGUES.LA_LIGA);
-
-  // State to hold fetched standings for the selected league (from API)
-  const [fetchedLeagueData, setFetchedLeagueData] = useState<any | null>(null);
-  const [fetchingStandings, setFetchingStandings] = useState(false);
-
-  // Fetch real standings from the API when a league is selected and no local standings exist
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setFetchedLeagueData(null);
-      if (!selectedLeague) return;
-
-      // If we already have a candidate with standings, don't fetch
-      const candidateHasStandings = safeLeagues.some((l: any) => {
-        const lid = l?.leagueId ?? l?.id ?? l?.league?.id;
-        if (typeof lid !== 'number' || lid !== selectedLeague) return false;
-        return Array.isArray(l.standings) && l.standings.length > 0;
-      });
-      if (candidateHasStandings) return;
-
-      setFetchingStandings(true);
-      try {
-        const res = await footballAPI.getLeagueStandings(selectedLeague, seasonYear);
-        // API shape may be res.response[0].league or res.response[0].standings depending on implementation
-        const item = res?.response?.[0] ?? res?.response ?? null;
-        if (!item) {
-          setFetchedLeagueData(null);
-          return;
-        }
-
-        const lid = item?.league?.id ?? item?.leagueId ?? selectedLeague;
-        const leagueName = item?.league?.name ?? getLeagueById(lid)?.name ?? getLeagueName(getLeagueById(lid) as any, currentLanguage);
-        const leagueLogo = item?.league?.logo ?? getLeagueById(lid)?.logo ?? '';
-
-        // Try common locations for standings
-        let standingsArr: any[] = [];
-        if (Array.isArray(item.standings) && item.standings.length) {
-          // Some APIs return an array of groups (e.g., standings[0].table)
-          if (Array.isArray(item.standings[0]?.table)) {
-            standingsArr = item.standings[0].table;
-          } else {
-            standingsArr = item.standings.flatMap((s: any) => s.table || s || []);
-          }
-        } else if (Array.isArray(item?.table)) {
-          standingsArr = item.table;
-        } else if (Array.isArray(item?.standings?.[0]?.table)) {
-          standingsArr = item.standings[0].table;
-        }
-
-        if (!cancelled) {
-          setFetchedLeagueData({
-            leagueId: lid,
-            leagueName,
-            leagueLogo,
-            country: item?.country?.name || getLeagueById(lid)?.country || '',
-            flag: item?.country?.flag || getLeagueById(lid)?.flag || '🏆',
-            season: seasonYear,
-            standings: standingsArr,
-            loading: false,
-            error: null
-          });
-        }
-      } catch (err) {
-        if (!cancelled) setFetchedLeagueData(null);
-      } finally {
-        if (!cancelled) setFetchingStandings(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedLeague, leagues, seasonYear, currentLanguage]);
+  // Add mocks for Eredivisie and Primeira Liga so they display when API doesn't provide standings
+  const mockEredivisie = useMockStandings(LEAGUE_IDS.EREDIVISIE);
+  const mockPrimeira = useMockStandings(LEAGUE_IDS.PRIMEIRA_LIGA);
 
   // Données des ligues pour l'affichage en liste - Afficher toutes les ligues
   const leaguesList = LEAGUES.map(league => ({
@@ -280,46 +203,16 @@ const Standings = () => {
     if (!selectedLeague) return null;
 
     // useAllLeagueStandings returns normalized LeagueStanding objects
-    // The `leagues` data may come in different shapes depending on the source.
-    // Support multiple common shapes: { leagueId, standings }, { id, standings },
-    // or nested shapes like { league: { id, name, logo }, standings }.
-    const candidateRaw = safeLeagues.find((l: any) => {
-      const raw: any = l;
-      const lid = raw?.leagueId ?? raw?.id ?? raw?.league?.id ?? raw?.league?.leagueId ?? raw?.league?.league?.id;
-      return typeof lid === 'number' && lid === selectedLeague;
+    const candidate = (leagues || []).find((l: any) => {
+      // primary shape has leagueId
+      if (typeof l.leagueId === 'number' && l.leagueId === selectedLeague) return true;
+      // sometimes the shape might include an `id` directly
+      if (typeof l.id === 'number' && l.id === selectedLeague) return true;
+      return false;
     }) as any;
 
-    if (candidateRaw) {
-      // Normalize the object so the UI can consume it consistently
-      const lid = candidateRaw?.leagueId ?? candidateRaw?.id ?? candidateRaw?.league?.id ?? candidateRaw?.league?.leagueId ?? candidateRaw?.league?.league?.id;
-      const leagueName =
-        candidateRaw?.leagueName ||
-        candidateRaw?.league?.name ||
-        candidateRaw?.league?.league?.name ||
-        candidateRaw?.name ||
-        getLeagueById(lid)?.name ||
-        'League';
-      const leagueLogo = candidateRaw?.leagueLogo || candidateRaw?.league?.logo || candidateRaw?.logo || getLeagueById(lid)?.logo || '';
-      const standingsArr = Array.isArray(candidateRaw?.standings) ? candidateRaw.standings : candidateRaw?.standings?.[0]?.table ?? [];
-
-      if (Array.isArray(standingsArr) && standingsArr.length > 0) {
-        return {
-          leagueId: lid,
-          leagueName,
-          leagueLogo,
-          country: getLeagueById(lid)?.country || '',
-          flag: getLeagueById(lid)?.flag || '🏆',
-          season: candidateRaw.season || seasonYear,
-          standings: standingsArr,
-          loading: false,
-          error: null
-        } as any;
-      }
-    }
-
-    // If we fetched standings from the API for this selected league, return them
-    if (fetchedLeagueData && fetchedLeagueData.leagueId === selectedLeague && Array.isArray(fetchedLeagueData.standings) && fetchedLeagueData.standings.length > 0) {
-      return fetchedLeagueData;
+    if (candidate && Array.isArray(candidate.standings) && candidate.standings.length > 0) {
+      return candidate as any; // already in the normalized shape expected by the UI
     }
 
     // Fallback vers les données mock (use seasonYear for consistency)
@@ -344,6 +237,30 @@ const Standings = () => {
         flag: '🇪🇸',
         season: seasonYear,
         standings: mockLaLiga.standings,
+        loading: false,
+        error: null
+      };
+    } else if (selectedLeague === LEAGUE_IDS.EREDIVISIE) {
+      return {
+        leagueId: LEAGUE_IDS.EREDIVISIE,
+        leagueName: getLeagueName(getLeagueById(LEAGUE_IDS.EREDIVISIE)!, currentLanguage) || 'Eredivisie',
+        leagueLogo: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.logo || '',
+        country: getLeagueCountry(getLeagueById(LEAGUE_IDS.EREDIVISIE)!, currentLanguage) || 'Netherlands',
+        flag: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.flag || '🇳🇱',
+        season: seasonYear,
+        standings: mockEredivisie.standings,
+        loading: false,
+        error: null
+      };
+    } else if (selectedLeague === LEAGUE_IDS.PRIMEIRA_LIGA) {
+      return {
+        leagueId: LEAGUE_IDS.PRIMEIRA_LIGA,
+        leagueName: getLeagueName(getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)!, currentLanguage) || 'Primeira Liga',
+        leagueLogo: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.logo || '',
+        country: getLeagueCountry(getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)!, currentLanguage) || 'Portugal',
+        flag: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.flag || '🇵🇹',
+        season: seasonYear,
+        standings: mockPrimeira.standings,
         loading: false,
         error: null
       };
@@ -532,8 +449,7 @@ const Standings = () => {
             <div className="max-w-5xl mx-auto">
               {activeTab === 'teams' && (() => {
                 const leagueData = getSelectedLeagueData();
-                // If no league data or no standings array (empty), show the fallback message
-                if (!leagueData || !Array.isArray(leagueData.standings) || leagueData.standings.length === 0) {
+                if (!leagueData) {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
@@ -645,7 +561,7 @@ const Standings = () => {
                                       className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0"
                                     />
                                     <span className="truncate">
-                                      <TeamNameWithTranslation team={item.statistics?.[0]?.team} currentLanguage={currentLanguage} />
+                                      <TeamNameWithTranslation team={item.statistics?.[0]?.team} />
                                     </span>
                                   </div>
                                 </div>
@@ -706,7 +622,7 @@ const Standings = () => {
                                       className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0"
                                     />
                                     <span className="truncate">
-                                      <TeamNameWithTranslation team={item.statistics?.[0]?.team} currentLanguage={currentLanguage} />
+                                      <TeamNameWithTranslation team={item.statistics?.[0]?.team} />
                                     </span>
                                   </div>
                                 </div>
@@ -791,7 +707,7 @@ const Standings = () => {
                               {/* Équipe domicile */}
                               <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
                                 <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
-                                  <TeamNameWithTranslation team={homeTeam} currentLanguage={currentLanguage} />
+                                  <TeamNameWithTranslation team={homeTeam} />
                                 </span>
                                 <img 
                                   src={homeTeam.logo} 
@@ -815,7 +731,7 @@ const Standings = () => {
                                   className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0"
                                 />
                                 <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
-                                  <TeamNameWithTranslation team={awayTeam} currentLanguage={currentLanguage} />
+                                  <TeamNameWithTranslation team={awayTeam} />
                                 </span>
                               </div>
                             </div>

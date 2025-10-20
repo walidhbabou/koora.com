@@ -178,25 +178,9 @@ export class FootballAPI {
       }
 
       console.log(`🌐 API Request: ${url}`);
-
-      // If running in a browser (client-side), route requests through our serverless proxy to avoid CORS.
-      const isBrowser = typeof globalThis !== 'undefined' && typeof (globalThis as any).document !== 'undefined';
-      let response: Response;
-      if (isBrowser) {
-        // Build proxy URL using endpoint path and params
-        const endpointPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-        const baseHref = (globalThis as any).location?.href || '/';
-        const proxyUrl = new URL('/api/football', baseHref);
-        proxyUrl.searchParams.set('endpoint', endpointPath);
-        if (params) {
-          for (const [k, v] of Object.entries(params)) {
-            proxyUrl.searchParams.set(k, String(v));
-          }
-        }
-        response = await fetch(proxyUrl.toString(), { headers: { 'Content-Type': 'application/json' } });
-      } else {
-        response = await fetch(url, { headers: API_CONFIG.HEADERS });
-      }
+      const response = await fetch(url, {
+        headers: API_CONFIG.HEADERS
+      });
       
       if (!response.ok) {
         throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -214,14 +198,11 @@ export class FootballAPI {
       // Gestion spéciale pour les erreurs CORS ou pour les transferts
       if (error instanceof TypeError && error.message.includes('Failed to fetch') || endpoint.includes('transfers')) {
         console.warn('🚫 CORS Error detected or transfers endpoint. Using mock data.');
-        // Utiliser les données mock en cas d'erreur API (server-side/dev only)
+        // Utiliser les données mock en cas d'erreur API
         try {
-          const maybeMock = (this as any).getMockData;
-          if (typeof maybeMock === 'function') {
-            const mockData = await maybeMock.call(this, endpoint);
-            console.log('📦 Using mock data for:', endpoint);
-            return mockData;
-          }
+          const mockData = await this.getMockData(endpoint);
+          console.log('📦 Using mock data for:', endpoint);
+          return mockData;
         } catch (mockError) {
           console.error('❌ Mock data failed:', mockError);
         }
