@@ -203,16 +203,40 @@ const Standings = () => {
     if (!selectedLeague) return null;
 
     // useAllLeagueStandings returns normalized LeagueStanding objects
-    const candidate = (leagues || []).find((l: any) => {
-      // primary shape has leagueId
-      if (typeof l.leagueId === 'number' && l.leagueId === selectedLeague) return true;
-      // sometimes the shape might include an `id` directly
-      if (typeof l.id === 'number' && l.id === selectedLeague) return true;
-      return false;
-    }) as any;
+    // The `leagues` data may come in different shapes depending on the source.
+    // Support multiple common shapes: { leagueId, standings }, { id, standings },
+    // or nested shapes like { league: { id, name, logo }, standings }.
+    const candidateRaw = (leagues || []).find((l: any) => {
+      const lid = l?.leagueId ?? l?.id ?? l?.league?.id ?? l?.league?.leagueId ?? l?.league?.league?.id;
+      return typeof lid === 'number' && lid === selectedLeague;
+    });
 
-    if (candidate && Array.isArray(candidate.standings) && candidate.standings.length > 0) {
-      return candidate as any; // already in the normalized shape expected by the UI
+    if (candidateRaw) {
+      // Normalize the object so the UI can consume it consistently
+      const lid = candidateRaw?.leagueId ?? candidateRaw?.id ?? candidateRaw?.league?.id ?? candidateRaw?.league?.leagueId ?? candidateRaw?.league?.league?.id;
+      const leagueName =
+        candidateRaw?.leagueName ||
+        candidateRaw?.league?.name ||
+        candidateRaw?.league?.league?.name ||
+        candidateRaw?.name ||
+        getLeagueById(lid)?.name ||
+        'League';
+      const leagueLogo = candidateRaw?.leagueLogo || candidateRaw?.league?.logo || candidateRaw?.logo || getLeagueById(lid)?.logo || '';
+      const standingsArr = Array.isArray(candidateRaw.standings) ? candidateRaw.standings : candidateRaw?.standings?.[0]?.table ?? [];
+
+      if (Array.isArray(standingsArr) && standingsArr.length > 0) {
+        return {
+          leagueId: lid,
+          leagueName,
+          leagueLogo,
+          country: getLeagueById(lid)?.country || '',
+          flag: getLeagueById(lid)?.flag || '🏆',
+          season: candidateRaw.season || seasonYear,
+          standings: standingsArr,
+          loading: false,
+          error: null
+        } as any;
+      }
     }
 
     // Fallback vers les données mock (use seasonYear for consistency)
