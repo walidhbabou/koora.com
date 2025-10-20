@@ -1113,59 +1113,6 @@ const NewsDetails: React.FC = () => {
             if (found) {
               await loadSupabaseNews(String(found.id));
             } else {
-              // If not found in Supabase, try WordPress REST API by slug (title-only WP slugs)
-              try {
-                const wpLookupRes = await fetch(`https://beta.koora.com/wp-json/wp/v2/posts?slug=${encodeURIComponent(slug)}&_embed`);
-                if (wpLookupRes.ok) {
-                  const wpPosts = await wpLookupRes.json();
-                  if (Array.isArray(wpPosts) && wpPosts.length > 0) {
-                    const wpPost = wpPosts[0] as any;
-                    // Build transformed NewsRow for WordPress
-                    let imageUrl = wpPost._embedded?.['wp:featuredmedia']?.[0]?.source_url || null;
-                    if (!imageUrl && wpPost.content?.rendered) {
-                      const m = /<img[^>]+src=["']([^"'>]+)["']/i.exec(wpPost.content.rendered);
-                      if (m && m[1]) imageUrl = m[1];
-                    }
-                    const transformedNews: NewsRow = {
-                      id: wpPost.id,
-                      title: stripHtml(wpPost.title?.rendered || ''),
-                      content: cleanWordPressHtml(wpPost.content?.rendered || ''),
-                      created_at: wpPost.date,
-                      image_url: imageUrl,
-                      source: 'wordpress'
-                    };
-                    setNews(transformedNews);
-                    setIsWordPressNews(true);
-                    // Try to populate relatedNews from same WP category if available
-                    try {
-                      const categoryIds: number[] = [];
-                      if (wpPost._embedded && wpPost._embedded['wp:term']) {
-                        const terms = wpPost._embedded['wp:term'];
-                        for (const termGroup of terms) {
-                          if (Array.isArray(termGroup)) {
-                            for (const t of termGroup) {
-                              if (t?.taxonomy === 'category' && t?.id) categoryIds.push(t.id);
-                            }
-                          }
-                        }
-                      }
-                      if (categoryIds.length > 0) {
-                        const relRes = await fetch(`https://beta.koora.com/wp-json/wp/v2/posts?categories=${categoryIds[0]}&per_page=6&_embed`);
-                        if (relRes.ok) {
-                          const relPosts = await relRes.json();
-                          const mapped = (relPosts || []).filter((p: any) => p.id !== wpPost.id).slice(0,5).map((p: any) => ({ id: p.id, title: stripHtml(p.title.rendered), image_url: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || null, created_at: p.date, source: 'wordpress' } as RelatedNewsItem));
-                          setRelatedNews(mapped);
-                        }
-                      }
-                    } catch (rr) {
-                      // ignore related fetch errors
-                    }
-                    return; // done
-                  }
-                }
-              } catch (wpErr) {
-                console.warn('WordPress slug lookup failed', wpErr);
-              }
               throw new Error('ID invalide dans le slug');
             }
           } catch (lookupError) {
@@ -1561,7 +1508,7 @@ const NewsDetails: React.FC = () => {
                     {relatedNews.map((item, idx) => (
                                   <Link
                                     key={item.id}
-                                    to={`/news/${generateSlug(item.title)}`}
+                                    to={`/news/${item.source === 'wordpress' ? `${generateSlug(item.title)}-wp_${item.id}` : `${generateSlug(item.title)}`}`}
                         className="block"
                         aria-label={item.title}
                       >

@@ -3,7 +3,7 @@ import { useLocation, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import NewsCard from "@/components/NewsCard";
 import Header from "@/components/Header";
-import { generateSlug } from "@/utils/slugUtils";
+import { generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 
 const Search = () => {
   // Récupère le paramètre 'q' de l'URL
@@ -141,7 +141,7 @@ const Search = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 animate-in fade-in-50">
             {filteredNews.map(news => (
               news.source === 'wordpress' ? (
-                <Link key={news.id} to={`/news/${generateSlug(news.title)}`} className="block">
+                <Link key={news.id} to={`/news/${generateWordPressSlug(news.title, Number(news.id.toString().replace('wp_', '')))}`} className="block">
                   <NewsCard news={news} size="medium" />
                 </Link>
               ) : (
