@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import DOMPurify from 'dompurify';
 import { useAuth } from "@/contexts/AuthContext";
 import { useTranslation } from "@/hooks/useTranslation";
-import { extractIdFromSlug, isWordPressSlug, generateSlug } from "@/utils/slugUtils";
+import { extractIdFromSlug, isWordPressSlug, generateSlug, generateUniqueSlug, generateWordPressSlug } from "@/utils/slugUtils";
 
 // Instagram Embed using react-instagram-embed
 // Custom Instagram Embed for React 18
@@ -822,6 +822,10 @@ const newsContentStyles = `
 
 const NewsDetails: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
+  // Keep the original slug (may contain an id) so we can still use it
+  // for internal operations (reporting, comments) after we replace
+  // the visible URL to hide the id.
+  const originalSlugRef = React.useRef<string | undefined>(slug);
   const [news, setNews] = useState<NewsRow | null>(null);
   const [relatedNews, setRelatedNews] = useState<RelatedNewsItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -912,6 +916,17 @@ const NewsDetails: React.FC = () => {
 
       setNews(transformedNews);
       setIsWordPressNews(true);
+      // Hide the id from the visible URL while keeping it available internally
+      try {
+        if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
+          const displaySlug = generateWordPressSlug(transformedNews.title || '', transformedNews.id as number);
+          const newPath = `/news/${displaySlug}`;
+          const newUrl = newPath + (window.location.search || '');
+          window.history.replaceState(window.history.state, document.title, newUrl);
+        }
+      } catch (e) {
+        // ignore
+      }
       
       // Pour WordPress: récupérer les catégories du post puis charger les posts WP
       try {
@@ -1033,6 +1048,18 @@ const NewsDetails: React.FC = () => {
       setNews(newsWithSource);
       setIsWordPressNews(false);
 
+      // Hide numeric id from the visible URL for Supabase news too
+      try {
+        if (typeof window !== 'undefined' && window.history && typeof window.history.replaceState === 'function') {
+          const displaySlug = generateUniqueSlug(newsWithSource.title || '', newsWithSource.id as number || String(newsWithSource.id));
+          const newPath = `/news/${displaySlug}`;
+          const newUrl = newPath + (window.location.search || '');
+          window.history.replaceState(window.history.state, document.title, newUrl);
+        }
+      } catch (e) {
+        // ignore
+      }
+
       // Parse content pour Supabase (Editor.js)
       if (data?.content) {
         const blocks = parseEditorJsBlocks(data.content);
@@ -1147,12 +1174,19 @@ const NewsDetails: React.FC = () => {
     
     setReporting(true);
     try {
+      // Use the original slug (may contain id) when computing the numeric id for reporting
+      const reportingSlug = originalSlugRef.current ?? slug!;
+      let idForReport = extractIdFromSlug(reportingSlug);
+      if (!idForReport && news?.id) {
+        // fallback to loaded news id
+        idForReport = String(news.id);
+      }
       const { error } = await supabase
         .from('reports')
         .insert([
           {
             user_id: user.id,
-            news_id: Number(extractIdFromSlug(slug!)),
+            news_id: Number(idForReport),
             description: reportDesc.trim(),
           },
         ]);
@@ -1178,9 +1212,11 @@ const NewsDetails: React.FC = () => {
     }
   };
 
+  // Ensure we remember the original slug before we possibly replace the URL
   useEffect(() => {
+    originalSlugRef.current = slug;
     load();
-  }, [load]);
+  }, [load, slug]);
 
   // Scroll to top and focus title when a news is loaded or when preview mode is active
   useEffect(() => {
@@ -1489,8 +1525,8 @@ const NewsDetails: React.FC = () => {
               {/* preview mode handled earlier */}
 
               {/* Comments Section - Only for Supabase news */}
-              {!isWordPressNews && slug && extractIdFromSlug(slug) && (
-                <CommentsSection newsId={Number(extractIdFromSlug(slug))} />
+              {!isWordPressNews && (originalSlugRef.current ?? slug) && extractIdFromSlug(originalSlugRef.current ?? slug) && (
+                <CommentsSection newsId={Number(extractIdFromSlug(originalSlugRef.current ?? slug)!)} />
               )}
               
               
