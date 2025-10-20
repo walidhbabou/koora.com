@@ -468,8 +468,29 @@ const Standings = () => {
                   );
                 }
 
+                // If the league data exists but standings array is empty and not loading -> show fallback
+                const standingsEmpty = Array.isArray(leagueData.standings) && leagueData.standings.length === 0 && !leagueData.loading;
+
                 // Vérifier si c'est une ligue basée sur des groupes
                 if (selectedLeague && isGroupBasedLeague(selectedLeague)) {
+                  // if group standings are empty and not loading, show fallback
+                  const groupEmpty = !Array.isArray(groupStandings) || groupStandings.length === 0;
+                  if (groupEmpty && !loadingGroupStandings) {
+                    return (
+                      <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                          {currentLanguage === 'ar' ? 'البيانات غير متوفرة حالياً' : 'Données non disponibles actuellement'}
+                        </h3>
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                          {currentLanguage === 'ar' 
+                            ? 'لا توجد بيانات للمجموعات في هذه البطولة حالياً' 
+                            : 'Les données par groupe pour cette compétition ne sont pas disponibles pour le moment'
+                          }
+                        </p>
+                      </Card>
+                    );
+                  }
+
                   return (
                     <GroupStandingsTable
                       standings={groupStandings}
@@ -477,6 +498,23 @@ const Standings = () => {
                       leagueLogo={leagueData?.leagueLogo || ''}
                       loading={loadingGroupStandings}
                     />
+                  );
+                }
+
+                // For normal leagues, if standings are empty (and not loading) show fallback message
+                if (standingsEmpty) {
+                  return (
+                    <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                        {currentLanguage === 'ar' ? 'الترتيب غير متوفر حالياً' : "Classement non disponible"}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                        {currentLanguage === 'ar' 
+                          ? 'قد تكون البيانات مؤقتاً غير متاحة، حاول التحقق لاحقاً أو تفقد إحصائيات اللاعبين والمباريات.' 
+                          : 'Les données du classement sont temporairement indisponibles. Vérifiez les statistiques des joueurs ou le calendrier.'
+                        }
+                      </p>
+                    </Card>
                   );
                 }
 
