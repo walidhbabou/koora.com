@@ -42,35 +42,22 @@ const SPECIFIC_LEAGUES = [
     country: "MA المغرب",
   },
 ];
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
-
-const NEWS_PER_PAGE = 30; // Augmenté à 30 actualités par page comme News.tsx
+import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { generateSlug, generateWordPressSlug } from "../utils/slugUtils";
+import { useMatchesByDateAndLeague, useLeagues } from "@/hooks/useFootballAPI";
 import SEO from "@/components/SEO";
 import { Link } from "react-router-dom";
-import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import Sidebar from "@/components/Sidebar";
 import NewsCard from "@/components/NewsCard";
 import NewsSlider from "@/components/NewsSlider";
 import Footer from "@/components/Footer";
-import {
-  HeaderAd,
-  SidebarAd,
-  MobileAd,
-  SponsorsSection,
-} from "@/components/AdWrapper";
+import { MobileAd } from "@/components/AdWrapper";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/lib/supabase";
 import {
   fetchWordPressNewsFirstPageOptimized,
   fetchWordPressNewsBackgroundOptimized
 } from "@/utils/optimizedNewsUtils";
-import { globalCache } from "@/utils/globalCache";
-import { footballAPI } from "@/config/api";
-import { generateSlug } from "@/utils/slugUtils";
-import { Filter } from "lucide-react";
-import { useMatchesByDateAndLeague, useLeagues } from "@/hooks/useFootballAPI";
-import { Fixture } from "@/config/api";
 
 // Type for matches data structure
 type MatchData = {
@@ -107,7 +94,7 @@ type MatchData = {
     date?: string;
   };
 };
-import { SELECTED_LEAGUES } from "@/config/api";
+
 
 type NewsCardItem = {
   id: string;
@@ -391,10 +378,6 @@ const Index = () => {
         description={`تابع نتائج ومباريات اليوم - ${formattedDate}. أحدث الأخبار من الدوريات الأوروبية والعربية.`}
         canonical="/"
       />
-      <Header />
-
-    
-
       <TeamsLogos />
 
       {/* Mobile Ad */}
@@ -422,6 +405,7 @@ const Index = () => {
                   news={newsItems.slice(0, 5).map((item) => ({
                     ...item,
                     summary: item.summary,
+                    source: item.source === 'wordpress' || item.source === 'supabase' ? item.source : 'wordpress', // Ensure source matches expected type
                   }))}
                   autoplay={true}
                   autoplayDelay={3000}
@@ -676,6 +660,7 @@ const Index = () => {
                 news={newsItems.slice(0, 5).map((item) => ({
                   ...item,
                   summary: item.summary,
+                  source: item.source === 'wordpress' || item.source === 'supabase' ? item.source : 'wordpress', // Ensure source matches expected type
                 }))}
                 autoplay={true}
                 autoplayDelay={4000}
