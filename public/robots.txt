@@ -35,4 +35,4 @@ Allow: /*.svg
 Allow: /*.ico
 
 # Sitemap location
-Sitemap: https://koora.com/pages/sitemap-news-[page].xml.js
+Sitemap: https://koora.com/sitemap.xml
