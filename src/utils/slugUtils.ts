@@ -20,7 +20,7 @@ export function generateSlug(title: string): string {
 }
 
 /**
- * Génère un slug unique en ajoutant l'ID à la fin
+ * Génère un slug unique en ajoutant l'ID à la fi
  */
 export function generateUniqueSlug(title: string, id: number | string): string {
   const baseSlug = generateSlug(title);

@@ -13,6 +13,8 @@
   ],
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/$1.ts" },
+  { "src": "/sitemap\\.xml", "dest": "/api/sitemap.ts" },
+  { "src": "/sitemap-news-(\\\\d+)\\\\.xml", "dest": "/api/sitemap-news.ts?page=$1" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]

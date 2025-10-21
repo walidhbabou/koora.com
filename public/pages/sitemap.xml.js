@@ -4,11 +4,21 @@ export async function getServerSideProps({ res }) {
   const baseUrl = "https://koora.com";
 
   // 👇 عدّل الروابط أدناه حسب API موقعك
-  const [matches, leagues, teams] = await Promise.all([
+  const [matches, leagues, teams, news] = await Promise.all([
     fetch(`${baseUrl}/api/matches`).then((r) => r.json()).catch(() => []),
     fetch(`${baseUrl}/api/leagues`).then((r) => r.json()).catch(() => []),
     fetch(`${baseUrl}/api/teams`).then((r) => r.json()).catch(() => []),
+    // Fetch latest news/posts to include in sitemap for better indexing
+    fetch(`${baseUrl}/api/news`).then((r) => r.json()).catch(() => []),
   ]);
+
+  // Normalise les news (certaines APIs retournent { posts: [] } ou [] directement)
+  let newsList = [];
+  if (Array.isArray(news)) {
+    newsList = news;
+  } else if (news && Array.isArray(news.posts)) {
+    newsList = news.posts;
+  }
 
   // 🏟️ روابط المباريات
   const matchUrls = matches
@@ -47,6 +57,22 @@ export async function getServerSideProps({ res }) {
     )
     .join("");
 
+  // 📰 روابط المقالات/الأخبار
+  const newsUrls = (newsList || [])
+    .map((n) => {
+      // Support common fields: slug, id, or fallback to title-based slug
+  const slug = n.slug || n.slugified || n.id || (n.title ? encodeURIComponent(String(n.title).toLowerCase().replaceAll(/\s+/g, '-')) : 'article');
+      const lastmod = new Date(n.updatedAt || n.publishedAt || n.date || Date.now()).toISOString();
+      return `
+    <url>
+      <loc>${baseUrl}/news/${slug}</loc>
+      <lastmod>${lastmod}</lastmod>
+      <changefreq>daily</changefreq>
+      <priority>0.9</priority>
+    </url>`;
+    })
+    .join("");
+
   // 🏠 صفحات ثابتة (اختياري)
   const staticUrls = `
     <url>
@@ -68,9 +94,34 @@ export async function getServerSideProps({ res }) {
   `;
 
   // 🧩 جمع كل الروابط
+  // If we have many news items, return a sitemap index that references paginated news sitemaps
+  const newsPerPage = 1000; // sensible default; adjust if needed
+  if ((newsList || []).length > newsPerPage) {
+    const pages = Math.ceil(newsList.length / newsPerPage);
+    const sitemapIndexEntries = Array.from({ length: pages }).
+      map((_, i) => `
+    <sitemap>
+      <loc>${baseUrl}/sitemap-news-${i + 1}.xml</loc>
+      <lastmod>${new Date().toISOString()}</lastmod>
+    </sitemap>`)
+      .join('');
+
+    const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>
+  <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    ${sitemapIndexEntries}
+  </sitemapindex>`;
+
+    res.setHeader("Content-Type", "text/xml");
+    res.write(sitemapIndex);
+    res.end();
+
+    return { props: {} };
+  }
+
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
     ${staticUrls}
+    ${newsUrls}
     ${leagueUrls}
     ${teamUrls}
     ${matchUrls}
