@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- This static sitemap is a minimal fallback. The dynamic sitemap is served by /sitemap.xml via the serverless API. -->
+<!-- Static sitemap index (fallback). It points to the news sitemap and placeholder sitemaps for matches and standings.
+     The dynamic /sitemap.xml endpoint remains the primary generator and will include live content when available. -->
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
     <loc>https://koora.com/sitemap-news-1.xml</loc>
+    <lastmod>2025-10-22</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://koora.com/sitemap-matches.xml</loc>
+    <lastmod>2025-10-22</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://koora.com/sitemap-standings.xml</loc>
     <lastmod>2025-10-22</lastmod>
   </sitemap>
 </sitemapindex>

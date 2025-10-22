@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder sitemap for standings. -->
+<!-- This file is intentionally empty until the dynamic /api/standings handler returns data. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Example: <url><loc>https://koora.com/standings/premier-league</loc><lastmod>2025-10-22</lastmod></url> -->
+</urlset>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Placeholder sitemap for matches. -->
+<!-- This file is intentionally empty until the dynamic /api/matches handler is configured with a football API key. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Example: <url><loc>https://koora.com/matches/12345</loc><lastmod>2025-10-22</lastmod></url> -->
+</urlset>
