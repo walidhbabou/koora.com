@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const BASE_URL = 'https://koora.com';
+const BASE_URL = process.env.SITE_URL || 'https://koora.com';
 const NEWS_PER_PAGE = 1000;
 
 async function fetchJson(path: string) {
@@ -54,8 +54,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const matchUrls = (matches || []).map((m: unknown) => {
       const obj = m as Record<string, unknown>;
       const id = obj.id ?? '';
-      const updatedAt = obj.updatedAt ?? Date.now();
-      return `\n    <url>\n      <loc>${BASE_URL}/match/${id}</loc>\n      <lastmod>${new Date(String(updatedAt) ? Number(updatedAt) : Date.now()).toISOString()}</lastmod>\n      <changefreq>hourly</changefreq>\n      <priority>0.9</priority>\n    </url>`;
+            const updatedAtRaw = (obj.updatedAt ?? (typeof (obj as any)['updated_at'] !== 'undefined' ? (obj as any)['updated_at'] : undefined)) ?? Date.now();
+      const updatedAtNum = Number(String(updatedAtRaw)) || Date.now();
+      return `\n    <url>\n      <loc>${BASE_URL}/match/${id}</loc>\n      <lastmod>${new Date(updatedAtNum).toISOString()}</lastmod>\n      <changefreq>hourly</changefreq>\n      <priority>0.9</priority>\n    </url>`;
     }).join('');
 
     const leagueUrls = (leagues || []).map((l: unknown) => {
@@ -73,7 +74,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const newsUrls = (newsList || []).map((n: unknown) => {
       const slug = slugFor(n);
       const obj = n as Record<string, unknown>;
-      const lastmod = new Date(obj.updatedAt ?? obj.publishedAt ?? obj.date ?? Date.now()).toISOString();
+      const lastmodRaw = (obj.updatedAt ?? obj.publishedAt ?? obj.date) ?? Date.now();
+      const lastmodNum = Number(String(lastmodRaw)) || Date.now();
+      const lastmod = new Date(lastmodNum).toISOString();
       return `\n    <url>\n      <loc>${BASE_URL}/news/${slug}</loc>\n      <lastmod>${lastmod}</lastmod>\n      <changefreq>daily</changefreq>\n      <priority>0.9</priority>\n    </url>`;
     }).join('');
 

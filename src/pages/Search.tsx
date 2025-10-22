@@ -35,7 +35,8 @@ const Search = () => {
       // WordPress
       try {
         // On demande l'inclusion de l'image à l'API WordPress
-        const wpRes = await fetch(`https://koora.com/wp-json/wp/v2/posts?per_page=20&status=publish&search=${encodeURIComponent(query)}&_embed=wp:featuredmedia`);
+  const WP_API = import.meta.env.VITE_WP_API_URL || 'https://koora.com/wp-json';
+  const wpRes = await fetch(`${WP_API}/wp/v2/posts?per_page=20&status=publish&search=${encodeURIComponent(query)}&_embed=wp:featuredmedia`);
         if (wpRes.ok) {
           const wpData = await wpRes.json();
           setWpNews(Array.isArray(wpData) ? wpData : []);

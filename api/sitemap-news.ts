@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const BASE_URL = 'https://koora.com';
+const BASE_URL = process.env.SITE_URL || 'https://koora.com';
 const PER_PAGE = 1000;
 
 async function fetchJson(path: string) {

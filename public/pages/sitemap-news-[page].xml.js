@@ -1,7 +1,7 @@
 // pages/sitemap-news-[page].xml.js
 
 export async function getServerSideProps({ params, res }) {
-  const baseUrl = "https://koora.com";
+  const baseUrl = process.env.SITE_URL || (typeof process !== 'undefined' && process.env && process.env.SITE_URL) || "https://koora.com";
   const page = parseInt(params.page || '1', 10) || 1;
   const perPage = 1000; // same as sitemap.xml.js
 

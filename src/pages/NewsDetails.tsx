@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import SEO from "@/components/SEO";
+import { SITE_URL } from '@/config/constants';
 import { useParams, Link, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -1330,12 +1331,23 @@ const NewsDetails: React.FC = () => {
     );
   }
 
+  // build canonical and alternate (hreflang) urls for article
+  const slugForUrl = news.slug || generateSlug(news.title || '');
+  const canonicalUrl = `${SITE_URL}/news/${slugForUrl}`;
+  const alternateUrls = [
+    { locale: 'ar', url: `${SITE_URL}/news/${slugForUrl}` },
+    { locale: 'fr', url: `${SITE_URL}/fr/news/${slugForUrl}` },
+    { locale: 'en', url: `${SITE_URL}/en/news/${slugForUrl}` },
+  ];
+
   return (
     <>
       <SEO 
         title={news.title}
         description={news.title}
         image={news.image_url || undefined}
+        canonical={canonicalUrl}
+        alternateUrls={alternateUrls}
       />
       
       <style dangerouslySetInnerHTML={{ __html: newsContentStyles }} />

@@ -1,7 +1,7 @@
 // pages/sitemap.xml.js
 
 export async function getServerSideProps({ res }) {
-  const baseUrl = "https://koora.com";
+  const baseUrl = process.env.SITE_URL || (typeof process !== 'undefined' && process.env && process.env.SITE_URL) || "https://koora.com";
 
   // 👇 عدّل الروابط أدناه حسب API موقعك
   const [matches, leagues, teams, news] = await Promise.all([

@@ -6,6 +6,9 @@ export const APP_CONFIG = {
   version: '1.0.0'
 };
 
+// Base site URL (from Vite env for client-side usage)
+export const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://koora.com';
+
 // Configuration des langues
 export const LANGUAGES = {
   ar: {
