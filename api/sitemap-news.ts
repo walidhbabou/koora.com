@@ -34,8 +34,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pageParam = (req.query && (req.query.page as string)) || '1';
     const page = Math.max(1, parseInt(String(pageParam), 10) || 1);
 
-    const newsRaw = await fetchJson(`${BASE_URL}/api/news`);
-    const newsList = normalizeNews(newsRaw);
+    let newsRaw = await fetchJson(`${BASE_URL}/api/news`);
+    let newsList = normalizeNews(newsRaw);
+
+    if (!newsList || newsList.length === 0) {
+      try {
+        const WP_API = process.env.WP_API_URL || 'https://beta.koora.com/wp-json/wp/v2/posts?_embed&per_page=100';
+        const wpRes = await fetch(WP_API);
+        if (wpRes.ok) {
+          const wpJson = await wpRes.json();
+          if (Array.isArray(wpJson) && wpJson.length) {
+            newsList = wpJson.map((p: any) => ({
+              id: p.id,
+              slug: p.slug,
+              title: p.title?.rendered,
+              updatedAt: p.modified || p.date,
+              publishedAt: p.date,
+              image: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || undefined,
+            }));
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
 
     const start = (page - 1) * PER_PAGE;
     const slice = (newsList || []).slice(start, start + PER_PAGE);

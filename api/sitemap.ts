@@ -6,9 +6,10 @@ const NEWS_PER_PAGE = 1000;
 async function fetchJson(path: string) {
   try {
     const res = await fetch(path);
+    if (!res.ok) return null;
     return await res.json();
   } catch (e) {
-    return [];
+    return null;
   }
 }
 
@@ -37,7 +38,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       fetchJson(`${BASE_URL}/api/news`),
     ]);
 
-    const newsList = normalizeNews(newsRaw);
+    let newsList = normalizeNews(newsRaw);
+
+    // If /api/news didn't return anything, fall back to WordPress REST API (if available)
+    if (!newsList || newsList.length === 0) {
+      try {
+        const WP_API = process.env.WP_API_URL || 'https://beta.koora.com/wp-json/wp/v2/posts?_embed&per_page=100';
+        const wpRes = await fetch(WP_API);
+        if (wpRes.ok) {
+          const wpJson = await wpRes.json();
+          if (Array.isArray(wpJson) && wpJson.length) {
+            // Map WP post objects to a lightweight structure the sitemap generator can consume
+            newsList = wpJson.map((p: any) => ({
+              id: p.id,
+              slug: p.slug,
+              title: p.title?.rendered,
+              updatedAt: p.modified || p.date,
+              publishedAt: p.date,
+              image: p._embedded?.['wp:featuredmedia']?.[0]?.source_url || undefined,
+            }));
+          }
+        }
+      } catch (e) {
+        // ignore and proceed with empty list
+      }
+    }
 
     // If too many news, return sitemap index referencing paginated news sitemaps
     if ((newsList || []).length > NEWS_PER_PAGE) {
