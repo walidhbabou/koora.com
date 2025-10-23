@@ -397,8 +397,7 @@ const Index = () => {
 
       <TeamsLogos />
 
-      {/* Mobile Ad */}
-      <MobileAd testMode={false} />
+      
 
       <div className="container mx-auto px-4 py-4 sm:py-8">
         {/* Desktop layout */}
@@ -817,12 +816,7 @@ const Index = () => {
                     </div>
                   </Link>
                   
-                  {/* Insérer une annonce après chaque 4 articles sur mobile */}
-                  {(idx + 1) % 4 === 0 && idx < newsItems.slice(5).length - 1 && (
-                    <div className="my-4">
-                      <MobileAd testMode={false} />
-                    </div>
-                  )}
+               
                 </div>
               ))}
             
