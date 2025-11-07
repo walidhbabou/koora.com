@@ -27,10 +27,11 @@ dayjs.extend(timezone);
 // ...existing code...
 
 // Composant carte de match moderne inspiré des images
-const MatchCard = ({ match, currentLanguage, leagueLogo }: { 
+const MatchCard = ({ match, currentLanguage, leagueLogo, leagueName }: { 
   match: import("@/config/api").Fixture, 
   currentLanguage: string,
-  leagueLogo?: string 
+  leagueLogo?: string,
+  leagueName?: string
 }) => {
   const { isRTL, direction } = useTranslation();
   const navigate = useNavigate();
@@ -70,38 +71,44 @@ const MatchCard = ({ match, currentLanguage, leagueLogo }: {
   return (
     <div 
       dir={direction}
-      className={`match-card-container bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 mb-3 cursor-pointer hover:shadow-md transition-all duration-200 ${isRTL ? 'rtl' : 'ltr'}`}
-      onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
+      className={`match-card-container bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 mb-3 overflow-hidden ${isRTL ? 'rtl' : 'ltr'}`}
     >
-      {/* En-tête avec ligue et date */}
-      <div className={`flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-700 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      {/* En-tête avec ligue */}
+      <div className={`flex items-center justify-between px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {leagueLogo && (
-            <img src={leagueLogo} alt="League" className="w-5 h-5 object-contain" />
+            <img src={leagueLogo} alt="League" className="w-4 h-4 object-contain" />
           )}
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            {match.league?.name || ''}
+          <span className={`text-xs font-medium text-slate-600 dark:text-slate-300 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {leagueName || match.league?.name || ''}
           </span>
         </div>
-        {isLive && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-red-50 dark:bg-red-900/20 rounded-full match-card-live-badge">
-            <div className="w-2 h-2 bg-red-500 rounded-full live-indicator-dot"></div>
-            <span className="text-xs font-semibold text-red-500">
-              {currentLanguage === 'ar' ? 'مباشر' : 'EN DIRECT'}
-            </span>
-          </div>
-        )}
+        <button 
+          className="text-blue-600 dark:text-blue-400 hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            // Navigation vers la page de classement
+            navigate(`/standings?league=${match.league?.id}`);
+          }}
+        >
+          <span className={`text-xs ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {currentLanguage === 'ar' ? '< ترتيب' : 'Classement >'}
+          </span>
+        </button>
       </div>
       
       {/* Corps du match */}
-      <div className={`flex items-center justify-between gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Équipe domicile */}
-        <div className={`flex-1 flex items-center gap-3 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
-          <div className="team-logo-container w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
-            {homeLogo ? (
+      <div 
+        className={`flex items-center justify-between px-4 py-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+        onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
+      >
+        {/* Équipe à droite (away en mode normal, home en RTL) */}
+        <div className={`flex flex-col items-center gap-2 flex-1 max-w-[120px] ${isRTL ? '' : 'order-3'}`}>
+          <div className="w-12 h-12 flex items-center justify-center">
+            {(isRTL ? homeLogo : awayLogo) ? (
               <img 
-                src={homeLogo} 
-                alt={displayHomeName} 
+                src={isRTL ? homeLogo : awayLogo} 
+                alt={isRTL ? displayHomeName : displayAwayName} 
                 className="w-full h-full object-contain"
                 loading="lazy"
                 onError={(e) => {
@@ -110,50 +117,55 @@ const MatchCard = ({ match, currentLanguage, leagueLogo }: {
                 }}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                {displayHomeName.charAt(0)}
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+                {(isRTL ? displayHomeName : displayAwayName).charAt(0)}
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`font-semibold text-sm sm:text-base text-slate-800 dark:text-slate-100 truncate ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-              {displayHomeName}
-            </p>
-          </div>
+          <span className={`text-sm font-semibold text-slate-800 dark:text-slate-100 text-center line-clamp-2 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayHomeName : displayAwayName}
+          </span>
         </div>
         
-        {/* Score / Heure */}
-        <div className="flex flex-col items-center justify-center min-w-[80px]">
+        {/* Score / Heure au centre */}
+        <div className={`flex flex-col items-center justify-center px-4 ${isRTL ? '' : 'order-2'}`}>
           {(isLive || isFinished) ? (
             <>
-              <div className={`match-score-display text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white ${isRTL ? 'flex-row-reverse' : ''} flex gap-2`}>
-                <span className="match-score-number">{homeScore}</span>
-                <span className="text-slate-400">-</span>
-                <span className="match-score-number">{awayScore}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl font-bold text-slate-900 dark:text-white match-score-number">
+                  {isRTL ? homeScore : awayScore}
+                </span>
+                <span className="text-xl text-slate-400">-</span>
+                <span className="text-2xl font-bold text-slate-900 dark:text-white match-score-number">
+                  {isRTL ? awayScore : homeScore}
+                </span>
               </div>
-              <span className="match-time-display text-xs text-slate-500 dark:text-slate-400 mt-1">
-                {getMatchTimeDisplay()}
+              <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {statusShort === 'FT' 
+                  ? (currentLanguage === 'ar' ? 'انتهت' : 'Terminé')
+                  : getMatchTimeDisplay()
+                }
               </span>
             </>
           ) : (
             <>
-              <div className="match-time-display text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400">
+              <div className="text-xl font-bold text-blue-600 dark:text-blue-400 match-time-display">
                 {getMatchTimeDisplay()}
               </div>
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 text-center">
-                {currentLanguage === 'ar' ? 'لم تبدأ' : 'À venir'}
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                {currentLanguage === 'ar' ? 'م' : 'pm'}
               </span>
             </>
           )}
         </div>
         
-        {/* Équipe extérieure */}
-        <div className={`flex-1 flex items-center gap-3 ${isRTL ? 'flex-row text-left' : 'flex-row-reverse text-right'}`}>
-          <div className="team-logo-container w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
-            {awayLogo ? (
+        {/* Équipe à gauche (home en mode normal, away en RTL) */}
+        <div className={`flex flex-col items-center gap-2 flex-1 max-w-[120px] ${isRTL ? '' : 'order-1'}`}>
+          <div className="w-12 h-12 flex items-center justify-center">
+            {(isRTL ? awayLogo : homeLogo) ? (
               <img 
-                src={awayLogo} 
-                alt={displayAwayName} 
+                src={isRTL ? awayLogo : homeLogo} 
+                alt={isRTL ? displayAwayName : displayHomeName} 
                 className="w-full h-full object-contain"
                 loading="lazy"
                 onError={(e) => {
@@ -162,17 +174,30 @@ const MatchCard = ({ match, currentLanguage, leagueLogo }: {
                 }}
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                {displayAwayName.charAt(0)}
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold">
+                {(isRTL ? displayAwayName : displayHomeName).charAt(0)}
               </div>
             )}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className={`font-semibold text-sm sm:text-base text-slate-800 dark:text-slate-100 truncate ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-              {displayAwayName}
-            </p>
-          </div>
+          <span className={`text-sm font-semibold text-slate-800 dark:text-slate-100 text-center line-clamp-2 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayAwayName : displayHomeName}
+          </span>
         </div>
+      </div>
+      
+      {/* Pied de page avec lien vers le classement */}
+      <div className={`px-4 py-2 border-t border-slate-200 dark:border-slate-600 text-center ${isRTL ? 'text-right' : 'text-left'}`}>
+        <button 
+          className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/standings?league=${match.league?.id}`);
+          }}
+        >
+          <span className={currentLanguage === 'ar' ? 'arabic-text' : ''}>
+            {currentLanguage === 'ar' ? '< ترتيب الدوري الفرنسي - الدرجة الثانية' : '< Classement du championnat'}
+          </span>
+        </button>
       </div>
     </div>
   );
@@ -583,30 +608,8 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
             ];
             if (matches.length === 0) return null;
             return (
-              <div key={league.id} className="mb-6">
-                {/* En-tête de la ligue avec design amélioré */}
-                <div className={`league-header-gradient flex items-center gap-3 mb-3 px-4 py-3 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-slate-800 dark:via-slate-750 dark:to-slate-700 rounded-2xl border border-blue-100 dark:border-slate-600 shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <div className="flex items-center justify-center w-10 h-10 bg-white dark:bg-slate-800 rounded-xl shadow-sm p-1.5">
-                    <img src={league.logo} alt={league.name} className="w-full h-full object-contain" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className={`text-base font-bold text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-                      {league.name}
-                    </h3>
-                    {league.country && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {currentLanguage === 'ar' ? league.countryAr : league.country}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full shadow-sm">
-                      {matches.length}
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Liste des matches */}
+              <div key={league.id} className="mb-4">
+                {/* Liste des matches sans en-tête de groupe */}
                 <div className="space-y-2">
                   {matches.map((match, index) => (
                     <MatchCard
@@ -614,6 +617,7 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
                       match={match}
                       currentLanguage={currentLanguage}
                       leagueLogo={league.logo}
+                      leagueName={league.name}
                     />
                   ))}
                 </div>
