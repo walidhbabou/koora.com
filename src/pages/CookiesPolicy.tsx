@@ -15,7 +15,7 @@ const CookiesPolicy = () => {
       />
       <Header />
       <main className="container mx-auto flex-grow py-8 px-4">
-        <div className={`bg-white dark:bg-[#23272a] rounded-lg shadow p-8 ${isRTL && currentLanguage === "ar" ? "text-right" : "text-left"}`} dir={direction}>
+        <div className={`bg-white dark:bg-[#23272a] rounded-lg shadow p-8 ${currentLanguage === "ar" ? "text-right" : "text-left"}`} dir={direction}>
           {currentLanguage === "ar" ? (
             <>
               <h1 className="text-2xl font-bold mb-6 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
