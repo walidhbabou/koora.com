@@ -279,7 +279,7 @@ export class FootballAPI {
     }
 
     const filteredMatches = apiResponse.response.filter((match: Fixture) => 
-      SELECTED_LEAGUES.includes(match.league?.id)
+      SELECTED_LEAGUES.includes(match.league?.id as any)
     );
 
     return {
@@ -1025,22 +1025,33 @@ export interface NewsItem {
 export interface Fixture {
   id: number;
   date: string;
-  status: string;
+  status: {
+    long?: string;
+    short?: string;
+    elapsed?: number | null;
+    extra?: number | null;
+  } | string;
   league: {
     id: number;
     name: string;
     logo: string;
+    country?: string;
+    flag?: string;
+    season?: number;
+    round?: string;
   };
   teams: {
     home: {
       id: number;
       name: string;
       logo: string;
+      winner?: boolean | null;
     };
     away: {
       id: number;
       name: string;
       logo: string;
+      winner?: boolean | null;
     };
   };
   goals: {
@@ -1048,14 +1059,27 @@ export interface Fixture {
     away: number | null;
   };
   score: {
-    halftime: {
+    halftime?: {
       home: number | null;
       away: number | null;
     };
-    fulltime: {
+    fulltime?: {
       home: number | null;
       away: number | null;
     };
+    extratime?: {
+      home: number | null;
+      away: number | null;
+    };
+    penalty?: {
+      home: number | null;
+      away: number | null;
+    };
+  };
+  venue?: {
+    id?: number;
+    name?: string;
+    city?: string;
   };
 }
 

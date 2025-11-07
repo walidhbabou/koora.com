@@ -1,0 +1,102 @@
+/* Styles pour les cartes de match */
+
+.match-card-container {
+  transition: all 0.3s ease;
+}
+
+.match-card-container:hover {
+  transform: translateY(-2px);
+}
+
+.match-card-live-badge {
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+}
+
+.match-score-display {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.match-time-display {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Animation pour les logos d'équipe */
+.team-logo-container {
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.match-card-container:hover .team-logo-container {
+  transform: scale(1.1);
+}
+
+/* Styles RTL spécifiques */
+.rtl .match-card-container {
+  direction: rtl;
+}
+
+.rtl .arabic-text {
+  font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Animation pour le badge en direct */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.live-indicator-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* Gradient overlay pour les en-têtes de ligue */
+.league-header-gradient {
+  background: linear-gradient(135deg, 
+    rgba(59, 130, 246, 0.1) 0%, 
+    rgba(99, 102, 241, 0.1) 100%
+  );
+}
+
+.dark .league-header-gradient {
+  background: linear-gradient(135deg, 
+    rgba(30, 41, 59, 0.8) 0%, 
+    rgba(51, 65, 85, 0.8) 100%
+  );
+}
+
+/* Amélioration de la lisibilité des scores */
+.match-score-number {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.dark .match-score-number {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive pour très petits écrans */
+@media (max-width: 375px) {
+  .match-card-container {
+    padding: 0.75rem;
+  }
+  
+  .team-logo-container {
+    width: 2rem;
+    height: 2rem;
+  }
+}
