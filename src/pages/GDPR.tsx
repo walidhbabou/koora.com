@@ -18,11 +18,11 @@ const GDPR = () => {
         <div className={`bg-white dark:bg-[#23272a] rounded-lg shadow p-8 ${currentLanguage === "ar" ? "text-right" : "text-left"}`} dir={direction}>
           {currentLanguage === "ar" ? (
             <>
-              <h1 className="text-2xl font-bold mb-6 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
+              <h1 className="text-2xl font-bold mb-6 text-[#1dbf73] dark:text-[#1dbf73] arabic-text" dir="rtl">
                 اللائحة العامة لحماية البيانات
               </h1>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   التزامنا بحماية خصوصيتك
                 </h2>
@@ -31,7 +31,7 @@ const GDPR = () => {
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   البيانات التي نقوم بجمعها
                 </h2>
@@ -51,7 +51,7 @@ const GDPR = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   كيفية استخدام البيانات
                 </h2>
@@ -66,7 +66,7 @@ const GDPR = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   مشاركة البيانات
                 </h2>
@@ -79,7 +79,7 @@ const GDPR = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   حقوقك كزائر
                 </h2>
@@ -105,7 +105,7 @@ const GDPR = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   تأمين البيانات
                 </h2>
@@ -119,7 +119,7 @@ const GDPR = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   سياسة ملفات تعريف الارتباط
                 </h2>
@@ -135,7 +135,7 @@ const GDPR = () => {
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   اتصل بنا
                 </h2>

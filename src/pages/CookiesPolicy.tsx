@@ -18,17 +18,17 @@ const CookiesPolicy = () => {
         <div className={`bg-white dark:bg-[#23272a] rounded-lg shadow p-8 ${currentLanguage === "ar" ? "text-right" : "text-left"}`} dir={direction}>
           {currentLanguage === "ar" ? (
             <>
-              <h1 className="text-2xl font-bold mb-6 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
+              <h1 className="text-2xl font-bold mb-6 text-[#1dbf73] dark:text-[#1dbf73] arabic-text" dir="rtl">
                 سياسة ملفات تعريف الارتباط
               </h1>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <p className="mb-4 dark:text-gray-200 arabic-text">
                   يستخدم موقع koora.com ملفات تعريف الارتباط (Cookies) لتحسين تجربة التصفح وتقديم محتوى وإعلانات مخصصة. باستخدامك للموقع، فإنك توافق على استخدامنا للكوكيز كما هو موضح في هذه السياسة.
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   ما هي ملفات تعريف الارتباط؟
                 </h2>
@@ -37,7 +37,7 @@ const CookiesPolicy = () => {
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   أنواع ملفات تعريف الارتباط التي نستخدمها
                 </h2>
@@ -54,7 +54,7 @@ const CookiesPolicy = () => {
                 </ul>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   ملفات تعريف الارتباط الخاصة بالأطراف الثالثة
                 </h2>
@@ -72,7 +72,7 @@ const CookiesPolicy = () => {
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   كيفية إدارة ملفات تعريف الارتباط
                 </h2>
@@ -81,7 +81,7 @@ const CookiesPolicy = () => {
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   موافقتك
                 </h2>
@@ -90,7 +90,7 @@ const CookiesPolicy = () => {
                 </p>
               </section>
 
-              <section className="mb-8">
+              <section className="mb-8" dir="rtl">
                 <h2 className="text-xl font-bold mt-6 mb-2 text-[#1dbf73] dark:text-[#1dbf73] arabic-text">
                   حقوقك وخصوصيتك
                 </h2>
