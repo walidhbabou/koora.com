@@ -19,6 +19,8 @@ const Footer = () => {
   const links = {
     liens: [
       { title: currentLanguage === "ar" ? "سياسة الخصوصية" : "Politique de confidentialité", path: "/privacy" },
+      { title: currentLanguage === "ar" ? "اللائحة العامة لحماية البيانات" : "RGPD", path: "/gdpr" },
+      { title: currentLanguage === "ar" ? "سياسة ملفات تعريف الارتباط" : "Politique de Cookies", path: "/cookies" },
       { title: currentLanguage === "ar" ? "من نحن" : "À propos de nous", path: "/about" },
       { title: currentLanguage === "ar" ? "اتصل بنا" : "Contactez-nous", path: "/contact" },
     ],
