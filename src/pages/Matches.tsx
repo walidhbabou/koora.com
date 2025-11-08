@@ -71,83 +71,78 @@ const MatchCard = ({ match, currentLanguage, leagueLogo, leagueName }: {
   return (
     <div 
       dir={direction}
-      className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-200 ${isRTL ? 'rtl' : 'ltr'}`}
+      className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 mb-2 overflow-hidden cursor-pointer hover:shadow-md transition-all ${isRTL ? 'rtl' : 'ltr'}`}
       onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
-      {/* Header with league and status */}
-      <div className={`flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-700/30 dark:to-slate-600/30 border-b border-slate-100 dark:border-slate-600`}>
-        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      {/* Header compact avec league */}
+      <div className={`flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-700/30 border-b border-slate-100 dark:border-slate-600 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {leagueLogo && (
-            <img src={leagueLogo} alt="League" className="w-5 h-5 object-contain" />
+            <img src={leagueLogo} alt="League" className="w-3.5 h-3.5 object-contain" />
           )}
-          <span className={`text-xs font-semibold text-slate-700 dark:text-slate-300 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+          <span className={`text-[11px] text-slate-500 dark:text-slate-400 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
             {leagueName || match.league?.name || ''}
           </span>
         </div>
-        <span className={`text-xs font-medium text-emerald-600 dark:text-emerald-400 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+        <span className={`text-[11px] text-slate-500 dark:text-slate-400 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
           {currentLanguage === 'ar' ? 'نهائي' : 'Final'}
         </span>
       </div>
       
-      {/* Match content */}
-      <div className="px-4 py-5">
-        {/* Teams layout */}
-        <div className="space-y-4">
-          {/* Home team */}
-          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <img 
-              src={homeLogo} 
-              alt={displayHomeName} 
-              className="w-9 h-9 object-contain flex-shrink-0"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
-            <span className={`text-sm font-semibold text-slate-800 dark:text-slate-100 flex-1 ${currentLanguage === 'ar' ? 'arabic-text text-right' : 'text-left'}`}>
-              {displayHomeName}
-            </span>
-            {(isLive || isFinished) && (
-              <span className="text-2xl font-bold text-slate-800 dark:text-slate-200 min-w-[30px] text-center">
-                {homeScore}
-              </span>
-            )}
-          </div>
-          
-          {/* Away team */}
-          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <img 
-              src={awayLogo} 
-              alt={displayAwayName} 
-              className="w-9 h-9 object-contain flex-shrink-0"
-              loading="lazy"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = 'none';
-              }}
-            />
-            <span className={`text-sm font-semibold text-slate-800 dark:text-slate-100 flex-1 ${currentLanguage === 'ar' ? 'arabic-text text-right' : 'text-left'}`}>
-              {displayAwayName}
-            </span>
-            {(isLive || isFinished) && (
-              <span className="text-2xl font-bold text-slate-800 dark:text-slate-200 min-w-[30px] text-center">
-                {awayScore}
-              </span>
-            )}
-          </div>
+      {/* Corps du match - Design horizontal comme dans l'image */}
+      <div className={`flex items-center justify-between px-4 py-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        {/* Équipe 1 avec logo et nom */}
+        <div className={`flex items-center gap-3 flex-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <img 
+            src={isRTL ? awayLogo : homeLogo} 
+            alt={isRTL ? displayAwayName : displayHomeName} 
+            className="w-8 h-8 object-contain flex-shrink-0"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 truncate ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayAwayName : displayHomeName}
+          </span>
         </div>
         
-        {/* Time or status for upcoming matches */}
-        {!isLive && !isFinished && (
-          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
-            <div className="text-center">
-              <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                {getMatchTimeDisplay()}
+        {/* Score ou heure au centre */}
+        <div className="flex items-center justify-center px-4 min-w-[100px]">
+          {(isLive || isFinished) ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold text-slate-900 dark:text-white">
+                {isRTL ? awayScore : homeScore}
+              </span>
+              <span className="text-slate-400 text-sm">-</span>
+              <span className="text-xl font-bold text-slate-900 dark:text-white">
+                {isRTL ? homeScore : awayScore}
               </span>
             </div>
-          </div>
-        )}
+          ) : (
+            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+              {getMatchTimeDisplay()}
+            </span>
+          )}
+        </div>
+        
+        {/* Équipe 2 avec nom et logo */}
+        <div className={`flex items-center gap-3 flex-1 justify-end ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}>
+          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 truncate ${isRTL ? 'text-left' : 'text-right'} ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayHomeName : displayAwayName}
+          </span>
+          <img 
+            src={isRTL ? homeLogo : awayLogo} 
+            alt={isRTL ? displayHomeName : displayAwayName} 
+            className="w-8 h-8 object-contain flex-shrink-0"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
       </div>
     </div>
   );
@@ -362,24 +357,27 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
             liveMatches.refetch();
             selectedMatches.refetch();
           }} />
-          {/* Affichage en grid responsive pour les matches */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {leagues.map(league => {
-              const matches = [
-                ...(liveMatchesByLeague[league.id] || []),
-                ...(scheduledMatchesByLeague[league.id] || [])
-              ];
-              return matches.map((match, index) => (
-                <MatchCard
-                  key={`${league.id}-${match.id}-${match.date}-${index}`}
-                  match={match}
-                  currentLanguage={currentLanguage}
-                  leagueLogo={league.logo}
-                  leagueName={league.name}
-                />
-              ));
-            }).flat()}
-          </div>
+          {/* Affichage des matches en liste verticale comme dans l'image */}
+          {leagues.map(league => {
+            const matches = [
+              ...(liveMatchesByLeague[league.id] || []),
+              ...(scheduledMatchesByLeague[league.id] || [])
+            ];
+            if (matches.length === 0) return null;
+            return (
+              <div key={league.id} className="space-y-2">
+                {matches.map((match, index) => (
+                  <MatchCard
+                    key={`${league.id}-${match.id}-${match.date}-${index}`}
+                    match={match}
+                    currentLanguage={currentLanguage}
+                    leagueLogo={league.logo}
+                    leagueName={league.name}
+                  />
+                ))}
+              </div>
+            );
+          })}
 </div>
 </div>
 {/* Filter Dialog */}
