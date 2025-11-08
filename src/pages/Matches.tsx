@@ -66,18 +66,6 @@ const Matches = () => {
     name: getLeagueName(league, currentLanguage)
   }));
 
-  // Préparer les données pour LeagueAccordion
-  const leaguesWithCounts = leagues.map(league => {
-    const liveCount = (liveMatchesByLeague[league.id] || []).length;
-    const scheduledCount = (scheduledMatchesByLeague[league.id] || []).length;
-    return {
-      id: league.id,
-      name: league.name,
-      logo: league.logo,
-      matchCount: liveCount + scheduledCount
-    };
-  }).filter(league => league.matchCount > 0);
-
   // Fonction pour vérifier si un match est en direct
   const isLiveMatch = (match: unknown): boolean => {
     const matchData = match as { status?: string };
@@ -191,6 +179,18 @@ const Matches = () => {
       return !liveIds.includes(item.id);
     });
   });
+
+  // Préparer les données pour LeagueAccordion - APRÈS la définition des autres variables
+  const leaguesWithCounts = leagues.map(league => {
+    const liveCount = (liveMatchesByLeague[league.id] || []).length;
+    const scheduledCount = (scheduledMatchesByLeague[league.id] || []).length;
+    return {
+      id: league.id,
+      name: league.name,
+      logo: league.logo,
+      matchCount: liveCount + scheduledCount
+    };
+  }).filter(league => league.matchCount > 0);
 
   // Simplification des labels pour les filtres
 const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', language: string): string => {
