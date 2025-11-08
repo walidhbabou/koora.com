@@ -82,9 +82,9 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
       onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
       {/* Corps du match - Design horizontal comme dans l'image */}
-      <div className={`flex items-center px-4 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Nom équipe 1 */}
-        <div className={`flex-1 ${isRTL ? 'text-left' : 'text-right'} ${isRTL ? 'ml-3' : 'mr-3'}`}>
+      <div className={`flex items-center justify-center px-4 py-4 gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        {/* Nom équipe 1 - plus proche du centre */}
+        <div className="text-right">
           <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
             {isRTL ? displayAwayName : displayHomeName}
           </span>
@@ -136,8 +136,8 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
           />
         </div>
         
-        {/* Nom équipe 2 */}
-        <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'mr-3' : 'ml-3'}`}>
+        {/* Nom équipe 2 - plus proche du centre */}
+        <div className="text-left">
           <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
             {isRTL ? displayHomeName : displayAwayName}
           </span>
