@@ -151,8 +151,8 @@ const Standings = () => {
       const year = date.getFullYear();
       
       const arabicMonths = [
-        'ÙŠÙ†Ø§ÙŠØ±', 'ÙØ¨Ø±Ø§ÙŠØ±', 'Ù…Ø§Ø±Ø³', 'Ø£Ø¨Ø±ÙŠÙ„', 'Ù…Ø§ÙŠÙˆ', 'ÙŠÙˆÙ†ÙŠÙˆ',
-        'ÙŠÙˆÙ„ÙŠÙˆ', 'Ø£ØºØ³Ø·Ø³', 'Ø³Ø¨ØªÙ…Ø¨Ø±', 'Ø£ÙƒØªÙˆØ¨Ø±', 'Ù†ÙˆÙÙ…Ø¨Ø±', 'Ø¯ÙŠØ³Ù…Ø¨Ø±'
+        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
       ];
       
       return `${day} ${arabicMonths[month]} ${year}`;
@@ -164,35 +164,35 @@ const Standings = () => {
     });
   };
 
-  // Fonction pour traduire les mots franÃ§ais
+  // Fonction pour traduire les mots français
   const translateText = (text: string) => {
     if (currentLanguage === 'ar') {
       const translations: { [key: string]: string } = {
-        'Round': 'Ø§Ù„Ø¬ÙˆÙ„Ø©',
-        'Regular Season': ' Ø§Ù„Ø¬ÙˆÙ„Ø©',
-        'Ã€ venir': 'Ù‚Ø±ÙŠØ¨Ø§Ù‹',
-        'LIVE': 'Ù…Ø¨Ø§Ø´Ø±',
-        'TerminÃ©': 'Ø§Ù†ØªÙ‡Ù‰',
-        'Aucun match disponible': 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ù…ØªØ§Ø­Ø©',
-        'Classement': 'Ø§Ù„ØªØ±ØªÙŠØ¨',
-        'RÃ©sultats': 'Ø§Ù„Ù†ØªØ§Ø¦Ø¬',
-        'Joueurs': 'Ø§Ù„Ù„Ø§Ø¹Ø¨ÙˆÙ†',
-        'Statistiques': 'Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª',
-        'Prochains matchs': 'Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ø§Ù„Ù‚Ø§Ø¯Ù…Ø©',
-        'Matchs prÃ©cÃ©dents': 'Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ø§Ù„Ø³Ø§Ø¨Ù‚Ø©',
-        'Points': 'Ø§Ù„Ù†Ù‚Ø§Ø·',
-        'J': 'Ù…',
-        'V': 'Ù',
-        'N': 'Øª',
-        'D': 'Ø®',
-        'BP': 'Ù„Ù‡',
-        'BC': 'Ø¹Ù„ÙŠÙ‡',
-        'Diff': 'ÙØ±Ù‚'
+        'Round': 'الجولة',
+        'Regular Season': ' الجولة',
+        'À venir': 'قريباً',
+        'LIVE': 'مباشر',
+        'Terminé': 'انتهى',
+        'Aucun match disponible': 'لا توجد مباريات متاحة',
+        'Classement': 'الترتيب',
+        'Résultats': 'النتائج',
+        'Joueurs': 'اللاعبون',
+        'Statistiques': 'الإحصائيات',
+        'Prochains matchs': 'المباريات القادمة',
+        'Matchs précédents': 'المباريات السابقة',
+        'Points': 'النقاط',
+        'J': 'م',
+        'V': 'ف',
+        'N': 'ت',
+        'D': 'خ',
+        'BP': 'له',
+        'BC': 'عليه',
+        'Diff': 'فرق'
       };
       
-      // GÃ©rer les cas spÃ©ciaux comme "Regular Season - 24"
+      // Gérer les cas spéciaux comme "Regular Season - 24"
       if (text.includes('Regular Season')) {
-        return text.replace('Regular Season', 'Ø§Ù„Ø¬ÙˆÙ„Ø© ');
+        return text.replace('Regular Season', 'الجولة ');
       }
       
       return translations[text] || text;
@@ -290,9 +290,9 @@ const Standings = () => {
   return (
     <div className={`min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419] ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       <SEO 
-        title="ØªØ±ØªÙŠØ¨ Ø§Ù„ÙØ±Ù‚ | ÙƒÙˆØ±Ø© - Ø¬Ø¯Ø§ÙˆÙ„ ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¯ÙˆØ±ÙŠØ§Øª Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© ÙˆØ§Ù„Ø¹Ø§Ù„Ù…ÙŠØ©"
-        description="ØªØ§Ø¨Ø¹ ØªØ±ØªÙŠØ¨ Ø§Ù„ÙØ±Ù‚ ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø¯ÙˆØ±ÙŠØ§Øª Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© ÙˆØ§Ù„Ø¹Ø§Ù„Ù…ÙŠØ©ØŒ Ø¬Ø¯Ø§ÙˆÙ„ Ø§Ù„Ù†Ù‚Ø§Ø· Ø§Ù„Ù…Ø­Ø¯Ø«Ø© Ù„Ø­Ø¸Ø© Ø¨Ù„Ø­Ø¸Ø©ØŒ ÙˆØ¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„ÙØ±Ù‚ ÙˆØ§Ù„Ø¯ÙˆØ±ÙŠØ§Øª."
-        keywords={["ØªØ±ØªÙŠØ¨ Ø§Ù„ÙØ±Ù‚", "Ø¬Ø¯Ø§ÙˆÙ„ Ø§Ù„Ø¯ÙˆØ±ÙŠØ§Øª", "ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¯ÙˆØ±ÙŠ", "Ù†Ù‚Ø§Ø· Ø§Ù„ÙØ±Ù‚", "Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø¯ÙˆØ±ÙŠ Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ", "Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø¯ÙˆØ±ÙŠ Ø§Ù„Ø¥Ø³Ø¨Ø§Ù†ÙŠ", "ØªØ±ØªÙŠØ¨ Ø¯ÙˆØ±ÙŠ Ø§Ù„Ù…Ø­ØªØ±ÙÙŠÙ†"]}
+        title="ترتيب الفرق | كوورة - جداول ترتيب الدوريات العربية والعالمية"
+        description="تابع ترتيب الفرق في جميع الدوريات العربية والعالمية، جداول النقاط المحدثة لحظة بلحظة، وإحصائيات الفرق والدوريات."
+        keywords={["ترتيب الفرق", "جداول الدوريات", "ترتيب الدوري", "نقاط الفرق", "جدول الدوري الإنجليزي", "جدول الدوري الإسباني", "ترتيب دوري المحترفين"]}
         type="website"
       />
       <Header />
@@ -306,10 +306,10 @@ const Standings = () => {
             <div className={`flex flex-col gap-4 mb-6 sm:mb-8 ${isRTL ? 'text-right' : 'text-left'}`} dir="rtl">
               <div dir="rtl"> 
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-2 tracking-tight">
-                  {currentLanguage === 'ar' ? 'ÙƒÙˆÙˆØ±Ø© - ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¨Ø·ÙˆÙ„Ø§Øª' : 'koora - Classement des tournois'}
+                  {currentLanguage === 'ar' ? 'كوورة - ترتيب البطولات' : 'koora - Classement des tournois'}
                 </h1>
                 <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base md:text-lg font-medium">
-                  {currentLanguage === 'ar' ? 'Ø§Ø®ØªØ± Ø§Ù„Ø¨Ø·ÙˆÙ„Ø© Ù„Ø¹Ø±Ø¶ Ø§Ù„ØªØ±ØªÙŠØ¨ ÙˆØ§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª' : 'SÃ©lectionnez un tournoi pour voir le classement et les statistiques'}
+                  {currentLanguage === 'ar' ? 'اختر البطولة لعرض الترتيب والإحصائيات' : 'Sélectionnez un tournoi pour voir le classement et les statistiques'}
                 </p>
               </div>
               
@@ -366,16 +366,16 @@ const Standings = () => {
                 <div className="text-center py-8">
                   <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                    {currentLanguage === 'ar' ? 'Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ù†ØªØ§Ø¦Ø¬' : 'Aucun rÃ©sultat trouvÃ©'}
+                    {currentLanguage === 'ar' ? 'لم يتم العثور على نتائج' : 'Aucun résultat trouvé'}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
                     {currentLanguage === 'ar' 
-                      ? 'Ø¬Ø±Ø¨ Ø§Ù„Ø¨Ø­Ø« Ø¨ÙƒÙ„Ù…Ø§Øª Ù…Ø®ØªÙ„ÙØ© Ø£Ùˆ Ø§Ø³Ù… Ø§Ù„Ø¨Ø·ÙˆÙ„Ø©' 
-                      : 'Essayez avec des mots-clÃ©s diffÃ©rents ou le nom du tournoi'
+                      ? 'جرب البحث بكلمات مختلفة أو اسم البطولة' 
+                      : 'Essayez avec des mots-clés différents ou le nom du tournoi'
                     }
                   </p>
                   <Button onClick={() => setSearchTerm("")} variant="outline">
-                    {currentLanguage === 'ar' ? 'Ù…Ø³Ø­ Ø§Ù„Ø¨Ø­Ø«' : 'Effacer la recherche'}
+                    {currentLanguage === 'ar' ? 'مسح البحث' : 'Effacer la recherche'}
                   </Button>
                 </div>
               )}
@@ -399,10 +399,10 @@ const Standings = () => {
                   />
                   <div className={`min-w-0 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className="text-lg sm:text-xl font-extrabold text-gray-800 dark:text-gray-100 truncate">
-                      {currentLanguage === 'ar' ? (getSelectedLeagueData()?.leagueName || 'Ø§Ù„Ø¨Ø·ÙˆÙ„Ø©') : (getSelectedLeagueData()?.leagueName || 'League')}
+                      {currentLanguage === 'ar' ? (getSelectedLeagueData()?.leagueName || 'البطولة') : (getSelectedLeagueData()?.leagueName || 'League')}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {currentLanguage === 'ar' ? 'Ø§Ù„ÙØ±Ù‚' : 'Ã‰quipes'} Â· {seasonYear}/{seasonYear + 1}
+                      {currentLanguage === 'ar' ? 'الفرق' : 'Équipes'} · {seasonYear}/{seasonYear + 1}
                     </div>
                   </div>
                 </div>
@@ -414,7 +414,7 @@ const Standings = () => {
                   size="sm"
                   className="shrink-0 text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  {currentLanguage === 'ar' ? 'Ø±Ø¬ÙˆØ¹' : 'Retour'}
+                  {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
                 </Button>
               </div>
 
@@ -426,7 +426,7 @@ const Standings = () => {
                     activeTab === 'teams' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {currentLanguage === 'ar' ? 'Ø§Ù„ÙØ±Ù‚' : 'Ã‰quipes'}
+                  {currentLanguage === 'ar' ? 'الفرق' : 'Équipes'}
                 </button>
                 <button
                   onClick={() => setActiveTab('players')}
@@ -434,7 +434,7 @@ const Standings = () => {
                     activeTab === 'players' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {currentLanguage === 'ar' ? 'Ø§Ù„Ù„Ø§Ø¹Ø¨ÙˆÙ†' : 'Joueurs'}
+                  {currentLanguage === 'ar' ? 'اللاعبون' : 'Joueurs'}
                 </button>
                 <button
                   onClick={() => setActiveTab('fixtures')}
@@ -442,7 +442,7 @@ const Standings = () => {
                     activeTab === 'fixtures' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {currentLanguage === 'ar' ? 'Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª' : 'Calendrier'}
+                  {currentLanguage === 'ar' ? 'المباريات' : 'Calendrier'}
                 </button>
               </div>
             </Card>
@@ -455,16 +455,16 @@ const Standings = () => {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                        {currentLanguage === 'ar' ? 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ù…ØªÙˆÙØ±Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' : 'DonnÃ©es non disponibles actuellement'}
+                        {currentLanguage === 'ar' ? 'البيانات غير متوفرة حالياً' : 'Données non disponibles actuellement'}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                         {currentLanguage === 'ar' 
-                          ? 'Ù‚Ø¯ ØªÙƒÙˆÙ† Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø·ÙˆÙ„Ø© Ù…Ù† Ù†ÙˆØ¹ Ø§Ù„ÙƒØ¤ÙˆØ³ (Ø¨Ø¯ÙˆÙ† ØªØ±ØªÙŠØ¨) Ø£Ùˆ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ù…Ø¤Ù‚ØªØ§Ù‹' 
+                          ? 'قد تكون هذه البطولة من نوع الكؤوس (بدون ترتيب) أو البيانات غير متاحة مؤقتاً' 
                           : 'Ce tournoi peut Ãªtre une compÃ©tition Ã  Ã©limination directe (sans classement) ou les donnÃ©es sont temporairement indisponibles'
                         }
                       </p>
                       <p className="text-sm text-gray-500">
-                        {currentLanguage === 'ar' ? 'Ø¬Ø±Ø¨ ØªØµÙØ­ Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø£Ùˆ Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ø¨Ø¯Ù„Ø§Ù‹ Ù…Ù† Ø°Ù„Ùƒ' : 'Essayez de consulter les statistiques ou les matchs Ã  la place'}
+                        {currentLanguage === 'ar' ? 'جرب تصفح الإحصائيات أو المباريات بدلاً من ذلك' : 'Essayez de consulter les statistiques ou les matchs à la place'}
                       </p>
                     </Card>
                   );
@@ -481,11 +481,11 @@ const Standings = () => {
                     return (
                       <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                          {currentLanguage === 'ar' ? 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ù…ØªÙˆÙØ±Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' : 'DonnÃ©es non disponibles actuellement'}
+                          {currentLanguage === 'ar' ? 'البيانات غير متوفرة حالياً' : 'Données non disponibles actuellement'}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-4">
                           {currentLanguage === 'ar' 
-                            ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù„Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø·ÙˆÙ„Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' 
+                            ? 'لا توجد بيانات للمجموعات في هذه البطولة حالياً'
                             : 'Les donnÃ©es par groupe pour cette compÃ©tition ne sont pas disponibles pour le moment'
                           }
                         </p>
@@ -508,11 +508,11 @@ const Standings = () => {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                        {currentLanguage === 'ar' ? 'Ø§Ù„ØªØ±ØªÙŠØ¨ ØºÙŠØ± Ù…ØªÙˆÙØ± Ø­Ø§Ù„ÙŠØ§Ù‹' : "Classement non disponible"}
+                        {currentLanguage === 'ar' ? 'الترتيب غير متوفر حالياً' : "Classement non disponible"}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                         {currentLanguage === 'ar' 
-                          ? 'Ù‚Ø¯ ØªÙƒÙˆÙ† Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø¤Ù‚ØªØ§Ù‹ ØºÙŠØ± Ù…ØªØ§Ø­Ø©ØŒ Ø­Ø§ÙˆÙ„ Ø§Ù„ØªØ­Ù‚Ù‚ Ù„Ø§Ø­Ù‚Ø§Ù‹ Ø£Ùˆ ØªÙÙ‚Ø¯ Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ù„Ø§Ø¹Ø¨ÙŠÙ† ÙˆØ§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª.' 
+                          ? 'قد تكون البيانات مؤقتاً غير متاحة، حاول التحقق لاحقاً أو تفقد إحصائيات اللاعبين والمباريات.'
                           : 'Les donnÃ©es du classement sont temporairement indisponibles. VÃ©rifiez les statistiques des joueurs ou le calendrier.'
                         }
                       </p>
@@ -546,7 +546,7 @@ const Standings = () => {
                           playersTab === 'topscorers' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        Ø§Ù„Ù‡Ø¯Ø§ÙÙˆÙ†
+                        الهدافون
                       </button>
                       <button
                         onClick={() => setPlayersTab('topassists')}
@@ -554,7 +554,7 @@ const Standings = () => {
                           playersTab === 'topassists' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        Ø§Ù„ØªÙ…Ø±ÙŠØ±Ø§Øª
+                        التمريرات
                       </button>
                     </div>
                   </div>
@@ -564,7 +564,7 @@ const Standings = () => {
                     <>
                       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                         <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Ø§Ù„Ù‡Ø¯Ø§ÙÙˆÙ†</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">الهدافون</h2>
                       </div>
                       {loadingScorers ? (
                         <div className="space-y-2 sm:space-y-3">
@@ -611,21 +611,21 @@ const Standings = () => {
                                   {item.statistics?.[0]?.goals?.total || 0}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {currentLanguage === 'ar' ? 'Ù‡Ø¯Ù' : 'Buts'}
+                                  {currentLanguage === 'ar' ? 'هدف' : 'Buts'}
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù‡Ø¯Ø§ÙÙŠÙ† Ù…ØªØ§Ø­Ø©</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا توجد بيانات هدافين متاحة</div>
                       )}
                     </>
                   ) : (
                     <>
                       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                         <Award className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Ø£ÙØ¶Ù„ Ø§Ù„Ù…Ù…Ø±Ø±ÙŠÙ†</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">أفضل الممررين</h2>
                       </div>
                       {loadingAssists ? (
                         <div className="space-y-2 sm:space-y-3">
@@ -669,13 +669,13 @@ const Standings = () => {
                               </div>
                               <div className="text-right min-w-[35px] sm:min-w-[40px] flex-shrink-0">
                                 <div className="text-lg sm:text-xl font-bold text-blue-600">{item.statistics?.[0]?.goals?.assists || 0}</div>
-                                <div className="text-xs text-gray-500">ØªÙ…Ø±ÙŠØ±Ø©</div>
+                                <div className="text-xs text-gray-500">تمريرة</div>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª ØªÙ…Ø±ÙŠØ±Ø§Øª Ù…ØªØ§Ø­Ø©</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا توجد بيانات تمريرات متاحة</div>
                       )}
                     </>
                   )}
@@ -686,7 +686,7 @@ const Standings = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                     <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
                     <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">
-                      {currentLanguage === 'ar' ? 'Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª' : 'Calendrier des matchs'}
+                      {currentLanguage === 'ar' ? 'جدول المباريات' : 'Calendrier des matchs'}
                     </h2>
                   </div>
                   
@@ -795,7 +795,7 @@ const Standings = () => {
                     </div>
                   ) : (
                     <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
-                      {currentLanguage === 'ar' ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ù…ØªØ§Ø­Ø©' : 'Aucun match disponible'}
+                      {currentLanguage === 'ar' ? 'لا توجد مباريات متاحة' : 'Aucun match disponible'}
                     </div>
                   )}
                 </Card>
