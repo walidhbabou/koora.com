@@ -1,4 +1,4 @@
-import SEO from "@/components/SEO";
+﻿import SEO from "@/components/SEO";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TeamsLogos from "@/components/TeamsLogos";
@@ -24,7 +24,7 @@ import { useSingleTeamTranslation } from "@/hooks/useTeamTranslation";
 const Standings = () => {
   const { currentLanguage, t, isRTL, direction } = useTranslation();
 
-  // Fonction pour déterminer si une ligue utilise des groupes
+  // Fonction pour dÃ©terminer si une ligue utilise des groupes
   const isGroupBasedLeague = (leagueId: number): boolean => {
     const groupBasedLeagues: number[] = [
       LEAGUE_IDS.CHAMPIONS_LEAGUE,
@@ -40,18 +40,18 @@ const Standings = () => {
     return groupBasedLeagues.includes(leagueId);
   };
 
-  // Fonction pour obtenir le nom de l'équipe dans la langue appropriée
+  // Fonction pour obtenir le nom de l'Ã©quipe dans la langue appropriÃ©e
   const getTeamName = (team: any) => {
     if (!team) return '';
-    // Si c'est une chaîne, on la traite directement
+    // Si c'est une chaÃ®ne, on la traite directement
     if (typeof team === 'string') {
       return currentLanguage === 'ar' ? getTeamTranslation(team) : team;
     }
-    // Si c'est un objet avec une propriété name
+    // Si c'est un objet avec une propriÃ©tÃ© name
     return currentLanguage === 'ar' ? getTeamTranslation(team.name) : team.name;
   };
 
-  // Composant pour afficher un nom d'équipe avec traduction automatique
+  // Composant pour afficher un nom d'Ã©quipe avec traduction automatique
   const TeamNameWithTranslation = ({ team }: { team: any }) => {
     const teamName = typeof team === 'string' ? team : team?.name || '';
     const { translatedName, isInitialized } = useSingleTeamTranslation(teamName);
@@ -69,7 +69,7 @@ const Standings = () => {
   const [activeTab, setActiveTab] = useState<'teams' | 'players' | 'fixtures'>('teams');
   const [playersTab, setPlayersTab] = useState<'topscorers' | 'topassists'>('topscorers');
   
-  // Récupérer les classements de toutes les ligues
+  // RÃ©cupÃ©rer les classements de toutes les ligues
   const { leagues, isLoading, hasError, refetchAll } = useAllLeagueStandings();
   
   // Determine current football season start year (e.g., 2025 for 2025/26 if month >= July)
@@ -99,26 +99,28 @@ const Standings = () => {
     translateContent: true
   });
   
-  // Hook pour les classements par groupes (pour les compétitions comme Champions League)
+  // Hook pour les classements par groupes (pour les compÃ©titions comme Champions League)
   const { standings: groupStandings, loading: loadingGroupStandings } = useGroupStandings(
     selectedLeague && isGroupBasedLeague(selectedLeague) ? selectedLeague : 0,
     seasonYear
   );
   
-  // Données mock en cas d'erreur API
+  // DonnÃ©es mock en cas d'erreur API
   const mockPremierLeague = useMockStandings(MAIN_LEAGUES.PREMIER_LEAGUE);
   const mockLaLiga = useMockStandings(MAIN_LEAGUES.LA_LIGA);
   // Add mocks for Eredivisie and Primeira Liga so they display when API doesn't provide standings
   const mockEredivisie = useMockStandings(LEAGUE_IDS.EREDIVISIE);
   const mockPrimeira = useMockStandings(LEAGUE_IDS.PRIMEIRA_LIGA);
 
-  // Données des ligues pour l'affichage en liste - Afficher toutes les ligues
-  const leaguesList = LEAGUES.map(league => ({
+  // DonnÃ©es des ligues pour l'affichage en liste - Afficher toutes les ligues
+  const leaguesList = LEAGUES
+    .filter(league => LEAGUE_GROUPS.STANDINGS_AVAILABLE.includes(league.id))
+    .map(league => ({
     id: league.id,
     name: getLeagueName(league, currentLanguage),
     logo: league.logo,
     country: getLeagueCountry(league, currentLanguage),
-    flag: league.flag || '🏆'
+    flag: league.flag || 'ðŸ†'
   }));
 
   // Filtrer les ligues selon la recherche
@@ -127,13 +129,13 @@ const Standings = () => {
     league.country.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Fonction pour gérer le clic sur une ligue
+  // Fonction pour gÃ©rer le clic sur une ligue
   const handleLeagueClick = (leagueId: number) => {
     setSelectedLeague(leagueId);
     setShowLeagueDetail(true);
   };
 
-  // Fonction pour revenir à la liste des ligues
+  // Fonction pour revenir Ã  la liste des ligues
   const handleBackToList = () => {
     setShowLeagueDetail(false);
     setSelectedLeague(null);
@@ -149,8 +151,8 @@ const Standings = () => {
       const year = date.getFullYear();
       
       const arabicMonths = [
-        'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-        'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        'ÙŠÙ†Ø§ÙŠØ±', 'ÙØ¨Ø±Ø§ÙŠØ±', 'Ù…Ø§Ø±Ø³', 'Ø£Ø¨Ø±ÙŠÙ„', 'Ù…Ø§ÙŠÙˆ', 'ÙŠÙˆÙ†ÙŠÙˆ',
+        'ÙŠÙˆÙ„ÙŠÙˆ', 'Ø£ØºØ³Ø·Ø³', 'Ø³Ø¨ØªÙ…Ø¨Ø±', 'Ø£ÙƒØªÙˆØ¨Ø±', 'Ù†ÙˆÙÙ…Ø¨Ø±', 'Ø¯ÙŠØ³Ù…Ø¨Ø±'
       ];
       
       return `${day} ${arabicMonths[month]} ${year}`;
@@ -162,35 +164,35 @@ const Standings = () => {
     });
   };
 
-  // Fonction pour traduire les mots français
+  // Fonction pour traduire les mots franÃ§ais
   const translateText = (text: string) => {
     if (currentLanguage === 'ar') {
       const translations: { [key: string]: string } = {
-        'Round': 'الجولة',
-        'Regular Season': ' الجولة',
-        'À venir': 'قريباً',
-        'LIVE': 'مباشر',
-        'Terminé': 'انتهى',
-        'Aucun match disponible': 'لا توجد مباريات متاحة',
-        'Classement': 'الترتيب',
-        'Résultats': 'النتائج',
-        'Joueurs': 'اللاعبون',
-        'Statistiques': 'الإحصائيات',
-        'Prochains matchs': 'المباريات القادمة',
-        'Matchs précédents': 'المباريات السابقة',
-        'Points': 'النقاط',
-        'J': 'م',
-        'V': 'ف',
-        'N': 'ت',
-        'D': 'خ',
-        'BP': 'له',
-        'BC': 'عليه',
-        'Diff': 'فرق'
+        'Round': 'Ø§Ù„Ø¬ÙˆÙ„Ø©',
+        'Regular Season': ' Ø§Ù„Ø¬ÙˆÙ„Ø©',
+        'Ã€ venir': 'Ù‚Ø±ÙŠØ¨Ø§Ù‹',
+        'LIVE': 'Ù…Ø¨Ø§Ø´Ø±',
+        'TerminÃ©': 'Ø§Ù†ØªÙ‡Ù‰',
+        'Aucun match disponible': 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ù…ØªØ§Ø­Ø©',
+        'Classement': 'Ø§Ù„ØªØ±ØªÙŠØ¨',
+        'RÃ©sultats': 'Ø§Ù„Ù†ØªØ§Ø¦Ø¬',
+        'Joueurs': 'Ø§Ù„Ù„Ø§Ø¹Ø¨ÙˆÙ†',
+        'Statistiques': 'Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª',
+        'Prochains matchs': 'Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ø§Ù„Ù‚Ø§Ø¯Ù…Ø©',
+        'Matchs prÃ©cÃ©dents': 'Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ø§Ù„Ø³Ø§Ø¨Ù‚Ø©',
+        'Points': 'Ø§Ù„Ù†Ù‚Ø§Ø·',
+        'J': 'Ù…',
+        'V': 'Ù',
+        'N': 'Øª',
+        'D': 'Ø®',
+        'BP': 'Ù„Ù‡',
+        'BC': 'Ø¹Ù„ÙŠÙ‡',
+        'Diff': 'ÙØ±Ù‚'
       };
       
-      // Gérer les cas spéciaux comme "Regular Season - 24"
+      // GÃ©rer les cas spÃ©ciaux comme "Regular Season - 24"
       if (text.includes('Regular Season')) {
-        return text.replace('Regular Season', 'الجولة ');
+        return text.replace('Regular Season', 'Ø§Ù„Ø¬ÙˆÙ„Ø© ');
       }
       
       return translations[text] || text;
@@ -198,7 +200,7 @@ const Standings = () => {
     return text;
   };
 
-  // Obtenir les données de classement pour la ligue sélectionnée
+  // Obtenir les donnÃ©es de classement pour la ligue sÃ©lectionnÃ©e
   const getSelectedLeagueData = () => {
     if (!selectedLeague) return null;
 
@@ -215,14 +217,14 @@ const Standings = () => {
       return candidate as any; // already in the normalized shape expected by the UI
     }
 
-    // Fallback vers les données mock (use seasonYear for consistency)
+    // Fallback vers les donnÃ©es mock (use seasonYear for consistency)
     if (selectedLeague === MAIN_LEAGUES.PREMIER_LEAGUE) {
       return {
         leagueId: MAIN_LEAGUES.PREMIER_LEAGUE,
         leagueName: 'Premier League',
         leagueLogo: 'https://media.api-sports.io/football/leagues/39.png',
         country: 'England',
-        flag: '🏴',
+        flag: 'ðŸ´',
         season: seasonYear,
         standings: mockPremierLeague.standings,
         loading: false,
@@ -234,7 +236,7 @@ const Standings = () => {
         leagueName: 'La Liga',
         leagueLogo: 'https://media.api-sports.io/football/leagues/140.png',
         country: 'Spain',
-        flag: '🇪🇸',
+        flag: 'ðŸ‡ªðŸ‡¸',
         season: seasonYear,
         standings: mockLaLiga.standings,
         loading: false,
@@ -246,7 +248,7 @@ const Standings = () => {
         leagueName: getLeagueName(getLeagueById(LEAGUE_IDS.EREDIVISIE)!, currentLanguage) || 'Eredivisie',
         leagueLogo: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.logo || '',
         country: getLeagueCountry(getLeagueById(LEAGUE_IDS.EREDIVISIE)!, currentLanguage) || 'Netherlands',
-        flag: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.flag || '🇳🇱',
+        flag: getLeagueById(LEAGUE_IDS.EREDIVISIE)?.flag || 'ðŸ‡³ðŸ‡±',
         season: seasonYear,
         standings: mockEredivisie.standings,
         loading: false,
@@ -258,7 +260,7 @@ const Standings = () => {
         leagueName: getLeagueName(getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)!, currentLanguage) || 'Primeira Liga',
         leagueLogo: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.logo || '',
         country: getLeagueCountry(getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)!, currentLanguage) || 'Portugal',
-        flag: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.flag || '🇵🇹',
+        flag: getLeagueById(LEAGUE_IDS.PRIMEIRA_LIGA)?.flag || 'ðŸ‡µðŸ‡¹',
         season: seasonYear,
         standings: mockPrimeira.standings,
         loading: false,
@@ -274,7 +276,7 @@ const Standings = () => {
         leagueName: getLeagueName(meta, currentLanguage),
         leagueLogo: meta.logo,
         country: getLeagueCountry(meta, currentLanguage),
-        flag: meta.flag || '🏆',
+        flag: meta.flag || 'ðŸ†',
         season: seasonYear,
         standings: [], // no standings available yet
         loading: false,
@@ -288,9 +290,9 @@ const Standings = () => {
   return (
     <div className={`min-h-screen bg-[#f6f7fa] dark:bg-[#0f1419] ${isRTL ? 'rtl' : 'ltr'}`} dir={direction}>
       <SEO 
-        title="ترتيب الفرق | كورة - جداول ترتيب الدوريات العربية والعالمية"
-        description="تابع ترتيب الفرق في جميع الدوريات العربية والعالمية، جداول النقاط المحدثة لحظة بلحظة، وإحصائيات الفرق والدوريات."
-        keywords={["ترتيب الفرق", "جداول الدوريات", "ترتيب الدوري", "نقاط الفرق", "جدول الدوري الإنجليزي", "جدول الدوري الإسباني", "ترتيب دوري المحترفين"]}
+        title="ØªØ±ØªÙŠØ¨ Ø§Ù„ÙØ±Ù‚ | ÙƒÙˆØ±Ø© - Ø¬Ø¯Ø§ÙˆÙ„ ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¯ÙˆØ±ÙŠØ§Øª Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© ÙˆØ§Ù„Ø¹Ø§Ù„Ù…ÙŠØ©"
+        description="ØªØ§Ø¨Ø¹ ØªØ±ØªÙŠØ¨ Ø§Ù„ÙØ±Ù‚ ÙÙŠ Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø¯ÙˆØ±ÙŠØ§Øª Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© ÙˆØ§Ù„Ø¹Ø§Ù„Ù…ÙŠØ©ØŒ Ø¬Ø¯Ø§ÙˆÙ„ Ø§Ù„Ù†Ù‚Ø§Ø· Ø§Ù„Ù…Ø­Ø¯Ø«Ø© Ù„Ø­Ø¸Ø© Ø¨Ù„Ø­Ø¸Ø©ØŒ ÙˆØ¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„ÙØ±Ù‚ ÙˆØ§Ù„Ø¯ÙˆØ±ÙŠØ§Øª."
+        keywords={["ØªØ±ØªÙŠØ¨ Ø§Ù„ÙØ±Ù‚", "Ø¬Ø¯Ø§ÙˆÙ„ Ø§Ù„Ø¯ÙˆØ±ÙŠØ§Øª", "ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¯ÙˆØ±ÙŠ", "Ù†Ù‚Ø§Ø· Ø§Ù„ÙØ±Ù‚", "Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø¯ÙˆØ±ÙŠ Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ", "Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø¯ÙˆØ±ÙŠ Ø§Ù„Ø¥Ø³Ø¨Ø§Ù†ÙŠ", "ØªØ±ØªÙŠØ¨ Ø¯ÙˆØ±ÙŠ Ø§Ù„Ù…Ø­ØªØ±ÙÙŠÙ†"]}
         type="website"
       />
       <Header />
@@ -300,14 +302,14 @@ const Standings = () => {
         {/* Vue liste des ligues */}
         {!showLeagueDetail && (
           <>
-            {/* En-tête de la page */}
+            {/* En-tÃªte de la page */}
             <div className={`flex flex-col gap-4 mb-6 sm:mb-8 ${isRTL ? 'text-right' : 'text-left'}`} dir="rtl">
               <div dir="rtl"> 
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold bg-gradient-to-r from-green-500 to-blue-600 dark:from-green-400 dark:to-blue-400 bg-clip-text text-transparent mb-2 tracking-tight">
-                  {currentLanguage === 'ar' ? 'كوورة - ترتيب البطولات' : 'koora - Classement des tournois'}
+                  {currentLanguage === 'ar' ? 'ÙƒÙˆÙˆØ±Ø© - ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¨Ø·ÙˆÙ„Ø§Øª' : 'koora - Classement des tournois'}
                 </h1>
                 <p className="text-gray-700 dark:text-gray-300 text-sm sm:text-base md:text-lg font-medium">
-                  {currentLanguage === 'ar' ? 'اختر البطولة لعرض الترتيب والإحصائيات' : 'Sélectionnez un tournoi pour voir le classement et les statistiques'}
+                  {currentLanguage === 'ar' ? 'Ø§Ø®ØªØ± Ø§Ù„Ø¨Ø·ÙˆÙ„Ø© Ù„Ø¹Ø±Ø¶ Ø§Ù„ØªØ±ØªÙŠØ¨ ÙˆØ§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª' : 'SÃ©lectionnez un tournoi pour voir le classement et les statistiques'}
                 </p>
               </div>
               
@@ -359,21 +361,21 @@ const Standings = () => {
                 ))}
               </ul>
 
-              {/* Message si aucun résultat */}
+              {/* Message si aucun rÃ©sultat */}
               {filteredLeagues.length === 0 && (
                 <div className="text-center py-8">
                   <Search className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                    {currentLanguage === 'ar' ? 'لم يتم العثور على نتائج' : 'Aucun résultat trouvé'}
+                    {currentLanguage === 'ar' ? 'Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ù†ØªØ§Ø¦Ø¬' : 'Aucun rÃ©sultat trouvÃ©'}
                   </h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
                     {currentLanguage === 'ar' 
-                      ? 'جرب البحث بكلمات مختلفة أو اسم البطولة' 
-                      : 'Essayez avec des mots-clés différents ou le nom du tournoi'
+                      ? 'Ø¬Ø±Ø¨ Ø§Ù„Ø¨Ø­Ø« Ø¨ÙƒÙ„Ù…Ø§Øª Ù…Ø®ØªÙ„ÙØ© Ø£Ùˆ Ø§Ø³Ù… Ø§Ù„Ø¨Ø·ÙˆÙ„Ø©' 
+                      : 'Essayez avec des mots-clÃ©s diffÃ©rents ou le nom du tournoi'
                     }
                   </p>
                   <Button onClick={() => setSearchTerm("")} variant="outline">
-                    {currentLanguage === 'ar' ? 'مسح البحث' : 'Effacer la recherche'}
+                    {currentLanguage === 'ar' ? 'Ù…Ø³Ø­ Ø§Ù„Ø¨Ø­Ø«' : 'Effacer la recherche'}
                   </Button>
                 </div>
               )}
@@ -381,7 +383,7 @@ const Standings = () => {
           </>
         )}
 
-        {/* Vue détail du classement */}
+        {/* Vue dÃ©tail du classement */}
         {showLeagueDetail && selectedLeague && (
           <>
             {/* Header Card + Tabs (match mockup style) */}
@@ -397,10 +399,10 @@ const Standings = () => {
                   />
                   <div className={`min-w-0 flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className="text-lg sm:text-xl font-extrabold text-gray-800 dark:text-gray-100 truncate">
-                      {currentLanguage === 'ar' ? (getSelectedLeagueData()?.leagueName || 'البطولة') : (getSelectedLeagueData()?.leagueName || 'League')}
+                      {currentLanguage === 'ar' ? (getSelectedLeagueData()?.leagueName || 'Ø§Ù„Ø¨Ø·ÙˆÙ„Ø©') : (getSelectedLeagueData()?.leagueName || 'League')}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {currentLanguage === 'ar' ? 'الفرق' : 'Équipes'} · {seasonYear}/{seasonYear + 1}
+                      {currentLanguage === 'ar' ? 'Ø§Ù„ÙØ±Ù‚' : 'Ã‰quipes'} Â· {seasonYear}/{seasonYear + 1}
                     </div>
                   </div>
                 </div>
@@ -412,7 +414,7 @@ const Standings = () => {
                   size="sm"
                   className="shrink-0 text-xs sm:text-sm px-2 sm:px-3"
                 >
-                  {currentLanguage === 'ar' ? 'رجوع' : 'Retour'}
+                  {currentLanguage === 'ar' ? 'Ø±Ø¬ÙˆØ¹' : 'Retour'}
                 </Button>
               </div>
 
@@ -424,7 +426,7 @@ const Standings = () => {
                     activeTab === 'teams' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {currentLanguage === 'ar' ? 'الفرق' : 'Équipes'}
+                  {currentLanguage === 'ar' ? 'Ø§Ù„ÙØ±Ù‚' : 'Ã‰quipes'}
                 </button>
                 <button
                   onClick={() => setActiveTab('players')}
@@ -432,7 +434,7 @@ const Standings = () => {
                     activeTab === 'players' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {currentLanguage === 'ar' ? 'اللاعبون' : 'Joueurs'}
+                  {currentLanguage === 'ar' ? 'Ø§Ù„Ù„Ø§Ø¹Ø¨ÙˆÙ†' : 'Joueurs'}
                 </button>
                 <button
                   onClick={() => setActiveTab('fixtures')}
@@ -440,7 +442,7 @@ const Standings = () => {
                     activeTab === 'fixtures' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
                   }`}
                 >
-                  {currentLanguage === 'ar' ? 'المباريات' : 'Calendrier'}
+                  {currentLanguage === 'ar' ? 'Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª' : 'Calendrier'}
                 </button>
               </div>
             </Card>
@@ -453,16 +455,16 @@ const Standings = () => {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                        {currentLanguage === 'ar' ? 'البيانات غير متوفرة حالياً' : 'Données non disponibles actuellement'}
+                        {currentLanguage === 'ar' ? 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ù…ØªÙˆÙØ±Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' : 'DonnÃ©es non disponibles actuellement'}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                         {currentLanguage === 'ar' 
-                          ? 'قد تكون هذه البطولة من نوع الكؤوس (بدون ترتيب) أو البيانات غير متاحة مؤقتاً' 
-                          : 'Ce tournoi peut être une compétition à élimination directe (sans classement) ou les données sont temporairement indisponibles'
+                          ? 'Ù‚Ø¯ ØªÙƒÙˆÙ† Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø·ÙˆÙ„Ø© Ù…Ù† Ù†ÙˆØ¹ Ø§Ù„ÙƒØ¤ÙˆØ³ (Ø¨Ø¯ÙˆÙ† ØªØ±ØªÙŠØ¨) Ø£Ùˆ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ù…ØªØ§Ø­Ø© Ù…Ø¤Ù‚ØªØ§Ù‹' 
+                          : 'Ce tournoi peut Ãªtre une compÃ©tition Ã  Ã©limination directe (sans classement) ou les donnÃ©es sont temporairement indisponibles'
                         }
                       </p>
                       <p className="text-sm text-gray-500">
-                        {currentLanguage === 'ar' ? 'جرب تصفح الإحصائيات أو المباريات بدلاً من ذلك' : 'Essayez de consulter les statistiques ou les matchs à la place'}
+                        {currentLanguage === 'ar' ? 'Ø¬Ø±Ø¨ ØªØµÙØ­ Ø§Ù„Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø£Ùˆ Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ø¨Ø¯Ù„Ø§Ù‹ Ù…Ù† Ø°Ù„Ùƒ' : 'Essayez de consulter les statistiques ou les matchs Ã  la place'}
                       </p>
                     </Card>
                   );
@@ -471,7 +473,7 @@ const Standings = () => {
                 // If the league data exists but standings array is empty and not loading -> show fallback
                 const standingsEmpty = Array.isArray(leagueData.standings) && leagueData.standings.length === 0 && !leagueData.loading;
 
-                // Vérifier si c'est une ligue basée sur des groupes
+                // VÃ©rifier si c'est une ligue basÃ©e sur des groupes
                 if (selectedLeague && isGroupBasedLeague(selectedLeague)) {
                   // if group standings are empty and not loading, show fallback
                   const groupEmpty = !Array.isArray(groupStandings) || groupStandings.length === 0;
@@ -479,12 +481,12 @@ const Standings = () => {
                     return (
                       <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                         <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                          {currentLanguage === 'ar' ? 'البيانات غير متوفرة حالياً' : 'Données non disponibles actuellement'}
+                          {currentLanguage === 'ar' ? 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ù…ØªÙˆÙØ±Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' : 'DonnÃ©es non disponibles actuellement'}
                         </h3>
                         <p className="text-gray-600 dark:text-gray-400 mb-4">
                           {currentLanguage === 'ar' 
-                            ? 'لا توجد بيانات للمجموعات في هذه البطولة حالياً' 
-                            : 'Les données par groupe pour cette compétition ne sont pas disponibles pour le moment'
+                            ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù„Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø¨Ø·ÙˆÙ„Ø© Ø­Ø§Ù„ÙŠØ§Ù‹' 
+                            : 'Les donnÃ©es par groupe pour cette compÃ©tition ne sont pas disponibles pour le moment'
                           }
                         </p>
                       </Card>
@@ -506,12 +508,12 @@ const Standings = () => {
                   return (
                     <Card className="p-8 text-center bg-white dark:bg-[#181a20] border-0 shadow-lg">
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-                        {currentLanguage === 'ar' ? 'الترتيب غير متوفر حالياً' : "Classement non disponible"}
+                        {currentLanguage === 'ar' ? 'Ø§Ù„ØªØ±ØªÙŠØ¨ ØºÙŠØ± Ù…ØªÙˆÙØ± Ø­Ø§Ù„ÙŠØ§Ù‹' : "Classement non disponible"}
                       </h3>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                         {currentLanguage === 'ar' 
-                          ? 'قد تكون البيانات مؤقتاً غير متاحة، حاول التحقق لاحقاً أو تفقد إحصائيات اللاعبين والمباريات.' 
-                          : 'Les données du classement sont temporairement indisponibles. Vérifiez les statistiques des joueurs ou le calendrier.'
+                          ? 'Ù‚Ø¯ ØªÙƒÙˆÙ† Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø¤Ù‚ØªØ§Ù‹ ØºÙŠØ± Ù…ØªØ§Ø­Ø©ØŒ Ø­Ø§ÙˆÙ„ Ø§Ù„ØªØ­Ù‚Ù‚ Ù„Ø§Ø­Ù‚Ø§Ù‹ Ø£Ùˆ ØªÙÙ‚Ø¯ Ø¥Ø­ØµØ§Ø¦ÙŠØ§Øª Ø§Ù„Ù„Ø§Ø¹Ø¨ÙŠÙ† ÙˆØ§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª.' 
+                          : 'Les donnÃ©es du classement sont temporairement indisponibles. VÃ©rifiez les statistiques des joueurs ou le calendrier.'
                         }
                       </p>
                     </Card>
@@ -544,7 +546,7 @@ const Standings = () => {
                           playersTab === 'topscorers' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        الهدافون
+                        Ø§Ù„Ù‡Ø¯Ø§ÙÙˆÙ†
                       </button>
                       <button
                         onClick={() => setPlayersTab('topassists')}
@@ -552,7 +554,7 @@ const Standings = () => {
                           playersTab === 'topassists' ? 'bg-white dark:bg-[#181a20] text-gray-900 dark:text-gray-100 shadow-sm' : 'text-gray-600 dark:text-gray-400'
                         }`}
                       >
-                        التمريرات
+                        Ø§Ù„ØªÙ…Ø±ÙŠØ±Ø§Øª
                       </button>
                     </div>
                   </div>
@@ -562,7 +564,7 @@ const Standings = () => {
                     <>
                       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                         <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">الهدافون</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Ø§Ù„Ù‡Ø¯Ø§ÙÙˆÙ†</h2>
                       </div>
                       {loadingScorers ? (
                         <div className="space-y-2 sm:space-y-3">
@@ -609,21 +611,21 @@ const Standings = () => {
                                   {item.statistics?.[0]?.goals?.total || 0}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {currentLanguage === 'ar' ? 'هدف' : 'Buts'}
+                                  {currentLanguage === 'ar' ? 'Ù‡Ø¯Ù' : 'Buts'}
                                 </div>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا توجد بيانات هدافين متاحة</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù‡Ø¯Ø§ÙÙŠÙ† Ù…ØªØ§Ø­Ø©</div>
                       )}
                     </>
                   ) : (
                     <>
                       <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                         <Award className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">أفضل الممررين</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">Ø£ÙØ¶Ù„ Ø§Ù„Ù…Ù…Ø±Ø±ÙŠÙ†</h2>
                       </div>
                       {loadingAssists ? (
                         <div className="space-y-2 sm:space-y-3">
@@ -667,13 +669,13 @@ const Standings = () => {
                               </div>
                               <div className="text-right min-w-[35px] sm:min-w-[40px] flex-shrink-0">
                                 <div className="text-lg sm:text-xl font-bold text-blue-600">{item.statistics?.[0]?.goals?.assists || 0}</div>
-                                <div className="text-xs text-gray-500">تمريرة</div>
+                                <div className="text-xs text-gray-500">ØªÙ…Ø±ÙŠØ±Ø©</div>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">لا توجد بيانات تمريرات متاحة</div>
+                        <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª ØªÙ…Ø±ÙŠØ±Ø§Øª Ù…ØªØ§Ø­Ø©</div>
                       )}
                     </>
                   )}
@@ -684,7 +686,7 @@ const Standings = () => {
                   <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
                     <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
                     <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-200">
-                      {currentLanguage === 'ar' ? 'جدول المباريات' : 'Calendrier des matchs'}
+                      {currentLanguage === 'ar' ? 'Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ù…Ø¨Ø§Ø±ÙŠØ§Øª' : 'Calendrier des matchs'}
                     </h2>
                   </div>
                   
@@ -715,7 +717,7 @@ const Standings = () => {
 
                         return Object.entries(groupedFixtures).map(([round, fixtures]: [string, any]) => (
                           <div key={round}>
-                            {/* En-tête du round */}
+                            {/* En-tÃªte du round */}
                             <div className="sticky top-0 bg-white dark:bg-[#0f172a] py-2 px-2 border-b-2 border-gray-200 dark:border-[#23262f] mb-2">
                               <h3 className="text-sm sm:text-base font-bold text-gray-800 dark:text-white uppercase">
                                 {translateText(round)}
@@ -740,9 +742,9 @@ const Standings = () => {
                               </span>
                             </div>
                             
-                            {/* Équipes */}
+                            {/* Ã‰quipes */}
                             <div className="flex-1 flex items-center justify-between mx-3 sm:mx-4">
-                              {/* Équipe domicile */}
+                              {/* Ã‰quipe domicile */}
                               <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
                                 <span className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
                                   <TeamNameWithTranslation team={homeTeam} />
@@ -761,7 +763,7 @@ const Standings = () => {
                                 </span>
                               </div>
                               
-                              {/* Équipe extérieure */}
+                              {/* Ã‰quipe extÃ©rieure */}
                               <div className="flex items-center gap-2 min-w-0 flex-1">
                                 <img 
                                   src={awayTeam.logo} 
@@ -777,11 +779,11 @@ const Standings = () => {
                             {/* Statut du match */}
                             <div className="flex flex-col items-end min-w-[60px] sm:min-w-[80px]">
                               {fixture.fixture.status.short === 'NS' ? (
-                                <span className="text-xs text-gray-500">{translateText('À venir')}</span>
+                                <span className="text-xs text-gray-500">{translateText('Ã€ venir')}</span>
                               ) : fixture.fixture.status.short === 'LIVE' ? (
                                 <span className="text-xs font-medium text-red-600">{translateText('LIVE')}</span>
                               ) : (
-                                <span className="text-xs text-gray-500">{translateText('Terminé')}</span>
+                                <span className="text-xs text-gray-500">{translateText('TerminÃ©')}</span>
                               )}
                             </div>
                           </div>
@@ -793,7 +795,7 @@ const Standings = () => {
                     </div>
                   ) : (
                     <div className="text-center py-6 sm:py-8 text-gray-500 text-sm sm:text-base">
-                      {currentLanguage === 'ar' ? 'لا توجد مباريات متاحة' : 'Aucun match disponible'}
+                      {currentLanguage === 'ar' ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¨Ø§Ø±ÙŠØ§Øª Ù…ØªØ§Ø­Ø©' : 'Aucun match disponible'}
                     </div>
                   )}
                 </Card>
