@@ -250,6 +250,17 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
           {/* Accordéon des ligues */}
           <LeagueAccordion 
             leagues={leaguesWithCounts}
+            matchesByLeague={{
+              ...Object.fromEntries(
+                leagues.map(league => [
+                  league.id, 
+                  [
+                    ...(liveMatchesByLeague[league.id] || []),
+                    ...(scheduledMatchesByLeague[league.id] || [])
+                  ]
+                ])
+              )
+            }}
             onLeagueSelect={(leagueId) => {
               // Navigation vers les matches d'une ligue spécifique ou autre action
               console.log('Ligue sélectionnée:', leagueId);
