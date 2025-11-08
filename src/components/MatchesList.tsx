@@ -81,59 +81,66 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
       className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 mb-2 overflow-hidden cursor-pointer hover:shadow-md transition-all ${isRTL ? 'rtl' : 'ltr'}`}
       onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
-      {/* Corps du match - Design horizontal avec noms à côté des logos */}
+      {/* Corps du match - Design horizontal avec logos collés au score */}
       <div className={`flex items-center justify-between px-4 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Équipe 1 avec logo et nom à côté */}
-        <div className={`flex items-center gap-2 flex-1 ${isRTL ? 'flex-row-reverse justify-end' : 'justify-start'}`}>
-          <img 
-            src={isRTL ? awayLogo : homeLogo} 
-            alt={isRTL ? displayAwayName : displayHomeName} 
-            className="w-7 h-7 object-contain flex-shrink-0"
-            loading="lazy"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-            }}
-          />
+        {/* Équipe 1 avec nom seulement */}
+        <div className={`flex items-center flex-1 ${isRTL ? 'justify-end' : 'justify-start'}`}>
           <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
             {isRTL ? displayAwayName : displayHomeName}
           </span>
         </div>
         
-        {/* Score au centre */}
-        <div className="flex items-center justify-center px-4 min-w-[80px]">
-          {(isLive || isFinished) ? (
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-slate-900 dark:text-white">
-                {isRTL ? awayScore : homeScore}
-              </span>
-              <span className="text-slate-400 text-sm">-</span>
-              <span className="text-lg font-bold text-slate-900 dark:text-white">
-                {isRTL ? homeScore : awayScore}
-              </span>
-            </div>
-          ) : (
-            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-              {getMatchTimeDisplay()}
-            </span>
-          )}
-        </div>
-        
-        {/* Équipe 2 avec nom et logo à côté */}
-        <div className={`flex items-center gap-2 flex-1 ${isRTL ? 'flex-row justify-start' : 'flex-row-reverse justify-end'}`}>
-          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-            {isRTL ? displayHomeName : displayAwayName}
-          </span>
+        {/* Section centrale: Logo1 + Score + Logo2 collés */}
+        <div className="flex items-center justify-center">
+          {/* Logo équipe 1 */}
           <img 
-            src={isRTL ? homeLogo : awayLogo} 
-            alt={isRTL ? displayHomeName : displayAwayName} 
-            className="w-7 h-7 object-contain flex-shrink-0"
+            src={isRTL ? awayLogo : homeLogo} 
+            alt={isRTL ? displayAwayName : displayHomeName} 
+            className="w-6 h-6 object-contain flex-shrink-0"
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
               target.style.display = 'none';
             }}
           />
+          
+          {/* Score collé aux logos */}
+          {(isLive || isFinished) ? (
+            <div className="flex items-center px-2">
+              <span className="text-lg font-bold text-slate-900 dark:text-white">
+                {isRTL ? awayScore : homeScore}
+              </span>
+              <span className="text-slate-400 text-sm mx-1">-</span>
+              <span className="text-lg font-bold text-slate-900 dark:text-white">
+                {isRTL ? homeScore : awayScore}
+              </span>
+            </div>
+          ) : (
+            <div className="px-2">
+              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                {getMatchTimeDisplay()}
+              </span>
+            </div>
+          )}
+          
+          {/* Logo équipe 2 */}
+          <img 
+            src={isRTL ? homeLogo : awayLogo} 
+            alt={isRTL ? displayHomeName : displayAwayName} 
+            className="w-6 h-6 object-contain flex-shrink-0"
+            loading="lazy"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+            }}
+          />
+        </div>
+        
+        {/* Équipe 2 avec nom seulement */}
+        <div className={`flex items-center flex-1 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayHomeName : displayAwayName}
+          </span>
         </div>
       </div>
       
