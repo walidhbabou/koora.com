@@ -81,18 +81,10 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
       className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 mb-2 overflow-hidden cursor-pointer hover:shadow-md transition-all ${isRTL ? 'rtl' : 'ltr'}`}
       onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
-      {/* Corps du match - Design horizontal avec logos au centre */}
+      {/* Corps du match - Design horizontal avec noms à côté des logos */}
       <div className={`flex items-center justify-between px-4 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Équipe 1 avec nom seulement */}
-        <div className={`flex items-center flex-1 ${isRTL ? 'justify-end' : 'justify-start'}`}>
-          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-            {isRTL ? displayAwayName : displayHomeName}
-          </span>
-        </div>
-        
-        {/* Section centrale avec logos et score */}
-        <div className="flex items-center justify-center gap-3 min-w-[140px]">
-          {/* Logo équipe 1 */}
+        {/* Équipe 1 avec logo et nom à côté */}
+        <div className={`flex items-center gap-2 flex-1 ${isRTL ? 'flex-row-reverse justify-end' : 'justify-start'}`}>
           <img 
             src={isRTL ? awayLogo : homeLogo} 
             alt={isRTL ? displayAwayName : displayHomeName} 
@@ -103,8 +95,13 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
               target.style.display = 'none';
             }}
           />
-          
-          {/* Score */}
+          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayAwayName : displayHomeName}
+          </span>
+        </div>
+        
+        {/* Score au centre */}
+        <div className="flex items-center justify-center px-4 min-w-[80px]">
           {(isLive || isFinished) ? (
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-slate-900 dark:text-white">
@@ -120,8 +117,13 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
               {getMatchTimeDisplay()}
             </span>
           )}
-          
-          {/* Logo équipe 2 */}
+        </div>
+        
+        {/* Équipe 2 avec nom et logo à côté */}
+        <div className={`flex items-center gap-2 flex-1 ${isRTL ? 'flex-row justify-start' : 'flex-row-reverse justify-end'}`}>
+          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
+            {isRTL ? displayHomeName : displayAwayName}
+          </span>
           <img 
             src={isRTL ? homeLogo : awayLogo} 
             alt={isRTL ? displayHomeName : displayAwayName} 
@@ -132,13 +134,6 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
               target.style.display = 'none';
             }}
           />
-        </div>
-        
-        {/* Équipe 2 avec nom seulement */}
-        <div className={`flex items-center flex-1 ${isRTL ? 'justify-start' : 'justify-end'}`}>
-          <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
-            {isRTL ? displayHomeName : displayAwayName}
-          </span>
         </div>
       </div>
       
