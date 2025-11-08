@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import TeamsLogos from "@/components/TeamsLogos";
 import MockAPIAlert from "@/components/MockAPIAlert";
 import MatchesList from "@/components/MatchesList";
+import LeagueAccordion from "@/components/LeagueAccordion";
 import { LEAGUES, getLeagueName } from "@/config/leagues";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,18 @@ const Matches = () => {
     ...league,
     name: getLeagueName(league, currentLanguage)
   }));
+
+  // Préparer les données pour LeagueAccordion
+  const leaguesWithCounts = leagues.map(league => {
+    const liveCount = (liveMatchesByLeague[league.id] || []).length;
+    const scheduledCount = (scheduledMatchesByLeague[league.id] || []).length;
+    return {
+      id: league.id,
+      name: league.name,
+      logo: league.logo,
+      matchCount: liveCount + scheduledCount
+    };
+  }).filter(league => league.matchCount > 0);
 
   // Fonction pour vérifier si un match est en direct
   const isLiveMatch = (match: unknown): boolean => {
@@ -233,6 +246,15 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
             liveMatches.refetch();
             selectedMatches.refetch();
           }} />
+          
+          {/* Accordéon des ligues */}
+          <LeagueAccordion 
+            leagues={leaguesWithCounts}
+            onLeagueSelect={(leagueId) => {
+              // Navigation vers les matches d'une ligue spécifique ou autre action
+              console.log('Ligue sélectionnée:', leagueId);
+            }}
+          />
           
           {/* Utilisation du composant MatchesList */}
           <MatchesList 
