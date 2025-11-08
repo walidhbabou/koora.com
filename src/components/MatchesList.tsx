@@ -81,10 +81,10 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
       className={`bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 mb-2 overflow-hidden cursor-pointer hover:shadow-md transition-all ${isRTL ? 'rtl' : 'ltr'}`}
       onClick={() => navigate(`/match/${match.id}`, { state: { match } })}
     >
-      {/* Corps du match - Design horizontal avec logos collés au score */}
-      <div className={`flex items-center justify-between px-4 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Équipe 1 avec nom seulement */}
-        <div className={`flex items-center flex-1 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+      {/* Corps du match - Design horizontal comme dans l'image */}
+      <div className={`flex items-center px-4 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        {/* Nom équipe 1 */}
+        <div className={`flex-1 ${isRTL ? 'text-left' : 'text-right'} ${isRTL ? 'ml-3' : 'mr-3'}`}>
           <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
             {isRTL ? displayAwayName : displayHomeName}
           </span>
@@ -136,8 +136,8 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
           />
         </div>
         
-        {/* Équipe 2 avec nom seulement */}
-        <div className={`flex items-center flex-1 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+        {/* Nom équipe 2 */}
+        <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'mr-3' : 'ml-3'}`}>
           <span className={`text-sm font-medium text-slate-800 dark:text-slate-100 ${currentLanguage === 'ar' ? 'arabic-text' : ''}`}>
             {isRTL ? displayHomeName : displayAwayName}
           </span>
