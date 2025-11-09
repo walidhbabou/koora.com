@@ -92,10 +92,11 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
         
         {/* Section centrale: Logo1 + Score + Logo2 collés */}
         <div className="flex items-center justify-center">
-          {/* Logo équipe 1 */}
+          
+           {/* Logo équipe 2 */}
           <img 
-            src={isRTL ? awayLogo : homeLogo} 
-            alt={isRTL ? displayAwayName : displayHomeName} 
+            src={isRTL ? homeLogo : awayLogo} 
+            alt={isRTL ? displayHomeName : displayAwayName} 
             className="w-6 h-6 object-contain flex-shrink-0"
             loading="lazy"
             onError={(e) => {
@@ -103,7 +104,6 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
               target.style.display = 'none';
             }}
           />
-          
           {/* Score collé aux logos */}
           {(isLive || isFinished) ? (
             <div className="flex items-center px-2">
@@ -123,10 +123,10 @@ const MatchCard = ({ match, currentLanguage, leagueName }: {
             </div>
           )}
           
-          {/* Logo équipe 2 */}
+         {/* Logo équipe 1 */}
           <img 
-            src={isRTL ? homeLogo : awayLogo} 
-            alt={isRTL ? displayHomeName : displayAwayName} 
+            src={isRTL ? awayLogo : homeLogo} 
+            alt={isRTL ? displayAwayName : displayHomeName} 
             className="w-6 h-6 object-contain flex-shrink-0"
             loading="lazy"
             onError={(e) => {
