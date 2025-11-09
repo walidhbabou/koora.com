@@ -247,25 +247,7 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
             selectedMatches.refetch();
           }} />
           
-          {/* Accordéon des ligues */}
-          <LeagueAccordion 
-            leagues={leaguesWithCounts}
-            matchesByLeague={{
-              ...Object.fromEntries(
-                leagues.map(league => [
-                  league.id, 
-                  [
-                    ...(liveMatchesByLeague[league.id] || []),
-                    ...(scheduledMatchesByLeague[league.id] || [])
-                  ]
-                ])
-              )
-            }}
-            onLeagueSelect={(leagueId) => {
-              // Navigation vers les matches d'une ligue spécifique ou autre action
-              console.log('Ligue sélectionnée:', leagueId);
-            }}
-          />
+         
           
           {/* Utilisation du composant MatchesList */}
           <MatchesList 
@@ -323,7 +305,25 @@ const getFilterLabel = (filter: 'all' | 'upcoming' | 'live' | 'finished', langua
 </DialogFooter>
 </DialogContent>
 </Dialog>
-
+ {/* Accordéon des ligues */}
+          <LeagueAccordion 
+            leagues={leaguesWithCounts}
+            matchesByLeague={{
+              ...Object.fromEntries(
+                leagues.map(league => [
+                  league.id, 
+                  [
+                    ...(liveMatchesByLeague[league.id] || []),
+                    ...(scheduledMatchesByLeague[league.id] || [])
+                  ]
+                ])
+              )
+            }}
+            onLeagueSelect={(leagueId) => {
+              // Navigation vers les matches d'une ligue spécifique ou autre action
+              console.log('Ligue sélectionnée:', leagueId);
+            }}
+          />
 
 {/* Global modal removed, using page navigation */}
 <Footer />
